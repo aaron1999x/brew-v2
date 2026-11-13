@@ -4,7 +4,7 @@ Updated at the end of every milestone. Newest information wins over the older pl
 
 ## M0 Foundation
 
-Status: **in progress** (Stage 3 of 7 done)
+Status: **in progress** (Stage 4 of 7 done)
 
 ### Deviations from the docs / prompt
 - **npm environment:** the machine's Node/npm install was repaired by the owner before Stage 1. Bash on this machine may resolve a different `npm` than PowerShell; run npm commands from PowerShell.
@@ -25,10 +25,21 @@ Status: **in progress** (Stage 3 of 7 done)
 - **Supabase calls the staging project "production"** in CLI output (`Target: project brew-staging … · production`). That's Supabase's label for a project's main branch, not our production project. `assert-staging` checks refs, not that label.
 - **pgTAP tests:** `supabase/tests/00_helpers.sql` is included by every test file (`\ir`) right after `begin;`, so the `tests` schema, helper functions and test users are rolled back with each file. Test users use `@test.invalid`. `db-test.mjs` skips `00_helpers.sql`, runs files `NN_*.sql` in order with `psql -v ON_ERROR_STOP=1 -X -q -A -t`, fails on `not ok`, a plan mismatch or a psql error, and then checks that no `@test.invalid` auth users or allowlist rows remain. A canary file with a failing test and a wrong plan was confirmed to fail the run (then deleted).
 
+#### App plumbing (Stage 4)
+- **`proxy.ts`, not `middleware.ts`:** Next.js 16 renamed it (`src/proxy.ts`, exports `proxy`). It only refreshes the Supabase session via `lib/supabase/session.ts`, using `auth.getClaims()` (validates the JWT) and the current `@supabase/ssr` `getAll`/`setAll(cookies, headers)` API with the publishable key. The matcher skips static files, icons, `sw.js` and the manifest.
+- **Error boundary props changed in this Next.js version:** `error.tsx` / `global-error.tsx` receive `{ error: unknown, retry }` (older versions: `{ error, reset }`). `ErrorPanel` focuses its heading on mount and offers Retry plus a link home (a plain `<a href="/">` on purpose, so it also works inside `global-error`).
+- **Sentry v11:** `withSentryConfig` is imported from `@sentry/nextjs/config` (not the package root). Client init is `src/instrumentation-client.ts`; server and edge configs are `sentry.server.config.ts` / `sentry.edge.config.ts`, loaded from `src/instrumentation.ts`. Options live in `src/lib/sentry/options.ts`: `release: app@<version>`, `environment: NEXT_PUBLIC_APP_ENV`, `sendDefaultPii: false`, `beforeSend` strips user email/IP, cookies, headers, bodies and query strings; no performance tracing. Source maps upload only when `SENTRY_AUTH_TOKEN` is set, and also need `SENTRY_ORG` and `SENTRY_PROJECT` (added to `.env.example`; the prompt's list didn't include them). The edge config exists as asked but is unused today because the proxy runs on Node.
+- **Sentry production test:** `GET /api/sentry-test` with `Authorization: Bearer $SENTRY_AUTH_TOKEN` sends one test error and returns the release/environment tags; without the token it is a plain 404, so nobody else can trigger it. Use it for the "Sentry receives a test error from production tagged app@0.1.0 / production" check (needs `SENTRY_AUTH_TOKEN` set at runtime on Vercel Production).
+- **Env validation is lazy** (`getPublicEnv()` / `getServerEnv()` validate on first use, not at import), so a build or page that never touches Supabase doesn't need every variable. Invalid values throw one error listing every problem. Public variables are read by literal name so Next inlines them.
+- **TanStack Query:** defaults per amendments §2 (`staleTime` 30 s, retry twice on network/5xx and never on 4xx, refetch on focus, `networkMode: 'offlineFirst'`). Mutations don't retry. Devtools render only when `NODE_ENV === 'development'`.
+- **Error messages:** `lib/errors/messages.ts` maps every name the schema raises (including `invite_only`, `recipe_not_found`, `version_not_found`, `immutable_field`, `brew_version_immutable`, `cannot_suspend_self`) plus RLS refusals (`42501`), expired sessions and network failures. Unknown errors return the generic message and `isUnexpectedError()` tells callers to report them to Sentry.
+- **Checks run:** `server-only` verified by temporarily importing `lib/supabase/admin.ts` from a client component (the build failed, file removed). Built app served locally against staging: `/status` showed version, commit `local`, environment, the staging host and "Database reachable"; unknown URLs return 404; `.next/static` contains no `sb_secret_`, `service_role` or `c2VydmljZV9yb2xl`. The build uses Turbopack.
+
 ### Stage log
 - Stage 1: scaffold and tooling.
 - Stage 2: placeholder tokens, base styles, home page, `lint:tokens`.
 - Stage 3: Supabase on staging. 7 migrations applied with `npm run db:push`; `src/types/database.ts` generated; 77 pgTAP tests in 5 files pass with `npm run db:test`, and nothing is left behind.
+- Stage 4: app plumbing (env, Supabase clients, proxy, TanStack Query, Sonner, error messages and boundaries, Sentry, `/status`).
 
 ## M1 UI kit and app shell
 ## M2 Accounts, onboarding, profile, settings
