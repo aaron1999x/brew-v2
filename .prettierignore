@@ -2,7 +2,6 @@ docs/
 node_modules/
 .next/
 package-lock.json
-src/types/database.ts
 supabase/migrations/
 CHANGELOG.md
 public/
