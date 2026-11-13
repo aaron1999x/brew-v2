@@ -1,3 +1,4 @@
+import { withSerwist } from '@serwist/turbopack';
 import { withSentryConfig } from '@sentry/nextjs/config';
 import type { NextConfig } from 'next';
 import pkg from './package.json' with { type: 'json' };
@@ -12,7 +13,7 @@ const nextConfig: NextConfig = {
 
 const hasSentryToken = Boolean(process.env.SENTRY_AUTH_TOKEN);
 
-export default withSentryConfig(nextConfig, {
+export default withSentryConfig(withSerwist(nextConfig), {
   // Source maps are uploaded only when an auth token is present (Vercel builds), never locally.
   authToken: process.env.SENTRY_AUTH_TOKEN,
   org: process.env.SENTRY_ORG,

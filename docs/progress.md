@@ -4,7 +4,7 @@ Updated at the end of every milestone. Newest information wins over the older pl
 
 ## M0 Foundation
 
-Status: **in progress** (Stage 4 of 7 done)
+Status: **in progress** (Stage 5 of 7 done)
 
 ### Deviations from the docs / prompt
 - **npm environment:** the machine's Node/npm install was repaired by the owner before Stage 1. Bash on this machine may resolve a different `npm` than PowerShell; run npm commands from PowerShell.
@@ -29,17 +29,29 @@ Status: **in progress** (Stage 4 of 7 done)
 - **`proxy.ts`, not `middleware.ts`:** Next.js 16 renamed it (`src/proxy.ts`, exports `proxy`). It only refreshes the Supabase session via `lib/supabase/session.ts`, using `auth.getClaims()` (validates the JWT) and the current `@supabase/ssr` `getAll`/`setAll(cookies, headers)` API with the publishable key. The matcher skips static files, icons, `sw.js` and the manifest.
 - **Error boundary props changed in this Next.js version:** `error.tsx` / `global-error.tsx` receive `{ error: unknown, retry }` (older versions: `{ error, reset }`). `ErrorPanel` focuses its heading on mount and offers Retry plus a link home (a plain `<a href="/">` on purpose, so it also works inside `global-error`).
 - **Sentry v11:** `withSentryConfig` is imported from `@sentry/nextjs/config` (not the package root). Client init is `src/instrumentation-client.ts`; server and edge configs are `sentry.server.config.ts` / `sentry.edge.config.ts`, loaded from `src/instrumentation.ts`. Options live in `src/lib/sentry/options.ts`: `release: app@<version>`, `environment: NEXT_PUBLIC_APP_ENV`, `sendDefaultPii: false`, `beforeSend` strips user email/IP, cookies, headers, bodies and query strings; no performance tracing. Source maps upload only when `SENTRY_AUTH_TOKEN` is set, and also need `SENTRY_ORG` and `SENTRY_PROJECT` (added to `.env.example`; the prompt's list didn't include them). The edge config exists as asked but is unused today because the proxy runs on Node.
-- **Sentry production test:** `GET /api/sentry-test` with `Authorization: Bearer $SENTRY_AUTH_TOKEN` sends one test error and returns the release/environment tags; without the token it is a plain 404, so nobody else can trigger it. Use it for the "Sentry receives a test error from production tagged app@0.1.0 / production" check (needs `SENTRY_AUTH_TOKEN` set at runtime on Vercel Production).
+- **Sentry production test:** `GET /api/sentry-test?key=<SENTRY_TEST_KEY>` (or `Authorization: Bearer <key>`) sends one test error and returns the release/environment tags. `SENTRY_TEST_KEY` is a separate random string set on Vercel Production only (not `SENTRY_AUTH_TOKEN`, which stays build-time only); it is compared in constant time (SHA-256 digests + `timingSafeEqual`). If the variable is unset or the key is wrong the route is a plain 404. **Delete the route and unset `SENTRY_TEST_KEY` once the production Sentry check has passed.** Note the key appears in the URL, so it can end up in browser history and request logs; treat it as single-use and rotate it afterwards.
 - **Env validation is lazy** (`getPublicEnv()` / `getServerEnv()` validate on first use, not at import), so a build or page that never touches Supabase doesn't need every variable. Invalid values throw one error listing every problem. Public variables are read by literal name so Next inlines them.
 - **TanStack Query:** defaults per amendments §2 (`staleTime` 30 s, retry twice on network/5xx and never on 4xx, refetch on focus, `networkMode: 'offlineFirst'`). Mutations don't retry. Devtools render only when `NODE_ENV === 'development'`.
 - **Error messages:** `lib/errors/messages.ts` maps every name the schema raises (including `invite_only`, `recipe_not_found`, `version_not_found`, `immutable_field`, `brew_version_immutable`, `cannot_suspend_self`) plus RLS refusals (`42501`), expired sessions and network failures. Unknown errors return the generic message and `isUnexpectedError()` tells callers to report them to Sentry.
 - **Checks run:** `server-only` verified by temporarily importing `lib/supabase/admin.ts` from a client component (the build failed, file removed). Built app served locally against staging: `/status` showed version, commit `local`, environment, the staging host and "Database reachable"; unknown URLs return 404; `.next/static` contains no `sb_secret_`, `service_role` or `c2VydmljZV9yb2xl`. The build uses Turbopack.
+
+#### PWA basics (Stage 5)
+- **Serwist with Turbopack, no webpack needed:** `@serwist/next` is webpack-only, so it was removed. The current Serwist docs for Next.js with Turbopack use `@serwist/turbopack` (9.5.13, same version as `serwist`) plus `esbuild`: a route handler `src/app/serwist/[path]/route.ts` (`createSerwistRoute`) builds the worker at `next build` time and serves it at `/serwist/sw.js`; `SerwistProvider` in the root layout registers it; `withSerwist` wraps the Next config (inside `withSentryConfig`). `next build` stays plain (Turbopack); no `--webpack` flag.
+- **Service worker source is `src/sw/sw.ts`** (outside `src/app`; it is not a route). It is deliberately minimal: precache manifest, `skipWaiting`/`clientsClaim`, one `NetworkOnly` route for page navigations and a fallback to `/~offline` for document requests that fail. **No `defaultCache` / runtime caching of data or pages** (that is M5).
+- **What is precached (27 entries, ~847 KiB):** Serwist's default glob of the Next build output (`.next/static`) and `public/`, plus `/~offline` (revision = `VERCEL_GIT_COMMIT_SHA`, random locally). The offline page is a normal route (`src/app/~offline`, static, noindex).
+- **`useNativeEsbuild: true` is required:** Serwist defaults to `esbuild-wasm` on non-Windows (i.e. Vercel and CI), which isn't installed.
+- **The worker is registered in production builds only** (`disable` in development, so dev never serves stale caches) and `reloadOnOnline` is off. The proxy matcher skips `/serwist/*` and `/~offline`.
+- **Verified in real browsers** (Playwright Chromium and WebKit against `next start`): the worker registers with scope `/`, takes control after one reload, the precache holds 27 entries, and with the network off a navigation to `/status` shows the "You're offline" page. This should become an e2e test in Stage 6.
+- **Manifest** (`src/app/manifest.ts`, from `site.ts`): name, short name, `start_url: /`, `display: standalone`, colours, three icons (192, 512, maskable 512). **iOS:** `appleWebApp` metadata (capable, title, status bar), 180 px `apple-touch-icon.png` (opaque), favicon SVG.
+- **Placeholder icons** come from `scripts/make-icons.mjs` (no image library; draws a filled circle in the accent colour with a white "A" and encodes the PNGs itself). Replace `public/brand/` when the real logo exists.
+- **npm install scripts:** this npm blocks lifecycle scripts until approved (`npm install-scripts`). `esbuild` and `@swc/core` (a Serwist dependency) show as not approved; nothing needs them (esbuild runs from its prebuilt binary), so they were left unapproved.
 
 ### Stage log
 - Stage 1: scaffold and tooling.
 - Stage 2: placeholder tokens, base styles, home page, `lint:tokens`.
 - Stage 3: Supabase on staging. 7 migrations applied with `npm run db:push`; `src/types/database.ts` generated; 77 pgTAP tests in 5 files pass with `npm run db:test`, and nothing is left behind.
 - Stage 4: app plumbing (env, Supabase clients, proxy, TanStack Query, Sonner, error messages and boundaries, Sentry, `/status`).
+- Stage 5: PWA manifest, icons, iOS metadata, Serwist (Turbopack) minimal service worker with offline page.
 
 ## M1 UI kit and app shell
 ## M2 Accounts, onboarding, profile, settings
