@@ -45,4 +45,5 @@ jobs:
             db
             infra
             deps
+            main
           requireScope: false

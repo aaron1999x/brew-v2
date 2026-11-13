@@ -40,6 +40,7 @@
         'db',
         'infra',
         'deps',
+        'main',
       ],
     ],
     'subject-case': [0],
