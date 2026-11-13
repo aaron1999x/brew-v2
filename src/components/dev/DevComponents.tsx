@@ -5,7 +5,9 @@ import { Icon } from '@/components/ui/Icon/Icon';
 import { VisuallyHidden } from '@/components/ui/VisuallyHidden/VisuallyHidden';
 import { ActionsSection } from './ActionsSection';
 import { CardsSection } from './CardsSection';
+import { FeedbackSection } from './FeedbackSection';
 import { InputsSection } from './InputsSection';
+import { OverlaysSection } from './OverlaysSection';
 import { SelectionSection } from './SelectionSection';
 import { devSections } from './sections';
 import { ThemeSwitch } from './ThemeSwitch';
@@ -82,6 +84,10 @@ export function DevComponents() {
               <SelectionSection />
             ) : s.id === 'cards' ? (
               <CardsSection />
+            ) : s.id === 'overlays' ? (
+              <OverlaysSection />
+            ) : s.id === 'feedback' ? (
+              <FeedbackSection />
             ) : (
               <p className={styles.note}>Coming in a later stage.</p>
             )}

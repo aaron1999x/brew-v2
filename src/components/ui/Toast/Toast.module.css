@@ -1,0 +1,81 @@
+.toast {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: min(100vw - var(--space-8), calc(var(--space-16) * 6));
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+  border: var(--border-width-default) solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-raised);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-2);
+}
+
+.success {
+  border-color: var(--color-status-success);
+}
+
+.error {
+  border-color: var(--color-status-danger);
+}
+
+.undo {
+  border-color: var(--color-border-strong);
+}
+
+.message {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--type-body-small-size);
+  line-height: var(--type-body-small-line-height);
+  overflow-wrap: anywhere;
+}
+
+/* "Success:" / "Error:" is spoken, not shown; the icon and border show it. */
+.srTitle {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.action {
+  flex: none;
+  min-height: var(--size-target-min);
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-accent-default);
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
+  cursor: pointer;
+}
+
+.close {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: var(--size-target-min);
+  height: var(--size-target-min);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+
+.action:focus-visible,
+.close:focus-visible {
+  outline: var(--border-width-focus) solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.action:hover,
+.close:hover {
+  background: var(--color-bg-inset);
+}
