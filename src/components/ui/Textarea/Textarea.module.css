@@ -1,0 +1,7 @@
+.area {
+  display: block;
+  padding-block: var(--space-3);
+  resize: none;
+  field-sizing: content;
+  overflow: hidden;
+}

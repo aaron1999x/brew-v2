@@ -19,10 +19,13 @@ for (const scheme of ['light', 'dark'] as const) {
 for (const theme of ['light', 'dark'] as const) {
   test(`the theme switch forces ${theme} and stays accessible`, async ({ page }) => {
     await page.goto('/dev/components');
-    await page.getByRole('radio', { name: theme === 'light' ? 'Light' : 'Dark' }).check();
+    await page
+      .getByText(theme === 'light' ? 'Light' : 'Dark', { exact: true })
+      .first()
+      .click();
     await expect(page.locator('html')).toHaveAttribute('data-theme', theme);
     await expectNoAxeViolations(page);
-    await page.getByRole('radio', { name: 'System' }).check();
+    await page.getByText('System', { exact: true }).first().click();
     await expect(page.locator('html')).not.toHaveAttribute('data-theme');
   });
 }

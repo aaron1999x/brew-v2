@@ -1,0 +1,66 @@
+.button {
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  border: var(--border-width-default) solid transparent;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: background var(--motion-duration-fast) var(--motion-easing-standard);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.md {
+  width: var(--size-target-min);
+  height: var(--size-target-min);
+}
+
+.sm {
+  width: var(--space-8);
+  height: var(--space-8);
+}
+
+.button:focus-visible,
+.button[data-focus-visible] {
+  outline: var(--border-width-focus) solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.ghost {
+  background: transparent;
+  color: var(--color-text-primary);
+}
+
+.ghost[data-hovered],
+.ghost[data-pressed] {
+  background: var(--color-bg-inset);
+}
+
+.secondary {
+  background: var(--color-bg-surface);
+  border-color: var(--color-border-strong);
+  color: var(--color-text-primary);
+}
+
+.secondary[data-hovered],
+.secondary[data-pressed] {
+  background: var(--color-bg-inset);
+}
+
+.primary {
+  background: var(--color-accent-default);
+  color: var(--color-text-on-accent);
+}
+
+.primary[data-hovered] {
+  background: var(--color-accent-hover);
+}
+
+.primary[data-pressed] {
+  background: var(--color-accent-pressed);
+}
+
+.button[data-disabled] {
+  color: var(--color-text-muted);
+  background: transparent;
+  cursor: not-allowed;
+}

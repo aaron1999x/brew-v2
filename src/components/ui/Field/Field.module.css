@@ -1,0 +1,95 @@
+/* Shared look for labelled form fields. Other components import this module for .control. */
+.label {
+  display: block;
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
+  line-height: var(--type-label-line-height);
+}
+
+.required {
+  color: var(--color-text-secondary);
+}
+
+.hint {
+  display: block;
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-small-size);
+  line-height: var(--type-body-small-line-height);
+}
+
+.error {
+  display: block;
+  color: var(--color-status-danger);
+  font-size: var(--type-body-small-size);
+  font-weight: var(--type-label-weight);
+  line-height: var(--type-body-small-line-height);
+}
+
+/* The bordered box used by text inputs, number fields, select triggers and comboboxes. */
+.control {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: var(--size-target-min);
+  padding: 0 var(--space-3);
+  border: var(--border-width-default) solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+}
+
+.control:hover {
+  border-color: var(--color-text-primary);
+}
+
+.control:focus-within,
+.control[data-focus-within],
+.control[data-focus-visible] {
+  outline: var(--border-width-focus) solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.control[data-invalid],
+.control:has(:invalid[data-invalid]) {
+  border-color: var(--color-status-danger);
+}
+
+.control[data-disabled],
+.control:has(:disabled) {
+  background: var(--color-bg-inset);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+
+/* The bare <input>/<textarea> inside a .control (or standing alone). */
+.input {
+  flex: 1;
+  min-width: 0;
+  min-height: calc(var(--size-target-min) - 2 * var(--border-width-default));
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  outline: none;
+}
+
+.input::placeholder {
+  color: var(--color-text-muted);
+}
+
+.suffix {
+  flex: none;
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-small-size);
+}
+
+/* Vertical stack: label, control, hint, error. */
+.field {
+  display: grid;
+  gap: var(--space-1);
+  width: 100%;
+}

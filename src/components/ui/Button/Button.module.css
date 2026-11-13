@@ -1,0 +1,143 @@
+.button {
+  display: inline-grid;
+  place-items: center;
+  gap: var(--space-2);
+  min-width: var(--size-target-min);
+  padding: 0 var(--space-4);
+  border: var(--border-width-default) solid transparent;
+  border-radius: var(--radius-md);
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
+  line-height: var(--type-label-line-height);
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background var(--motion-duration-fast) var(--motion-easing-standard),
+    border-color var(--motion-duration-fast) var(--motion-easing-standard);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.button:focus-visible,
+.button[data-focus-visible] {
+  outline: var(--border-width-focus) solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.sm {
+  min-height: var(--size-target-compact);
+  height: var(--space-8);
+}
+
+.md {
+  min-height: var(--size-target-min);
+}
+
+.lg {
+  min-height: calc(var(--size-target-min) + var(--space-2));
+  padding: 0 var(--space-6);
+  font-size: var(--type-body-size);
+}
+
+.full {
+  display: grid;
+  width: 100%;
+}
+
+/* Label and pending layers share one grid cell. */
+.content,
+.pending {
+  grid-area: 1 / 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.pending {
+  visibility: hidden;
+}
+
+.button[data-pending] .content {
+  visibility: hidden;
+}
+
+.button[data-pending] .pending {
+  visibility: visible;
+}
+
+.spinner {
+  width: var(--size-icon-sm);
+  height: var(--size-icon-sm);
+  border: var(--border-width-focus) solid currentcolor;
+  border-right-color: transparent;
+  border-radius: var(--radius-full);
+  animation: spin var(--motion-duration-slow) linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Variants */
+.primary {
+  background: var(--color-accent-default);
+  color: var(--color-text-on-accent);
+}
+
+.primary[data-hovered] {
+  background: var(--color-accent-hover);
+}
+
+.primary[data-pressed] {
+  background: var(--color-accent-pressed);
+}
+
+.secondary {
+  background: var(--color-bg-surface);
+  border-color: var(--color-border-strong);
+  color: var(--color-text-primary);
+}
+
+.secondary[data-hovered] {
+  background: var(--color-bg-inset);
+}
+
+.secondary[data-pressed] {
+  background: var(--color-bg-inset);
+  border-color: var(--color-text-primary);
+}
+
+.ghost {
+  background: transparent;
+  color: var(--color-accent-default);
+}
+
+.ghost[data-hovered],
+.ghost[data-pressed] {
+  background: var(--color-bg-inset);
+}
+
+.destructive {
+  background: var(--color-status-danger);
+  color: var(--color-text-on-accent);
+}
+
+.destructive[data-hovered],
+.destructive[data-pressed] {
+  filter: brightness(0.92);
+}
+
+/* Disabled: pending keeps its look but ignores presses (React Aria sets data-pending only). */
+.button[data-disabled] {
+  background: var(--color-bg-inset);
+  border-color: var(--color-bg-inset);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+  filter: none;
+}
+
+.button[data-pending] {
+  cursor: progress;
+}
