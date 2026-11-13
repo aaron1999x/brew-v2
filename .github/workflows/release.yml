@@ -1,0 +1,65 @@
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+# Differs from docs/release-and-versioning.md §4 (see docs/progress.md): Supabase CLI pinned to 3.1.0,
+# and migrations are pushed through the session pooler with a full connection URL
+# (`db push --remote=<url>`) instead of `supabase link` + plain `db push`. The CLI 3.x `db push`
+# targets a LOCAL database unless --remote is given, and GitHub runners have no IPv6.
+
+jobs:
+  migrate-staging:
+    name: Apply migrations to staging
+    runs-on: ubuntu-latest
+    env:
+      STAGING_DB_URL: ${{ secrets.STAGING_DB_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 3.1.0
+      - run: supabase db push --remote="$STAGING_DB_URL" --yes
+
+  release-please:
+    name: Update Release PR or create release
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.rp.outputs.release_created }}
+      tag_name: ${{ steps.rp.outputs.tag_name }}
+    steps:
+      - uses: googleapis/release-please-action@v4
+        id: rp
+        with:
+          config-file: release-please-config.json
+          manifest-file: .release-please-manifest.json
+
+  ship-production:
+    name: Ship to production
+    needs: [migrate-staging, release-please]
+    if: needs.release-please.outputs.release_created == 'true'
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      PRODUCTION_DB_URL: ${{ secrets.PRODUCTION_DB_URL }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release-please.outputs.tag_name }}
+          fetch-depth: 0
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 3.1.0
+      - name: Apply migrations to production
+        run: supabase db push --remote="$PRODUCTION_DB_URL" --yes
+      - name: Move the production branch to this release
+        run: git push --force origin HEAD:refs/heads/production

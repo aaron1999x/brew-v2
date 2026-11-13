@@ -4,7 +4,7 @@ Updated at the end of every milestone. Newest information wins over the older pl
 
 ## M0 Foundation
 
-Status: **in progress** (Stage 5 of 7 done)
+Status: **in progress** (Stage 6 of 7 done)
 
 ### Deviations from the docs / prompt
 - **npm environment:** the machine's Node/npm install was repaired by the owner before Stage 1. Bash on this machine may resolve a different `npm` than PowerShell; run npm commands from PowerShell.
@@ -46,12 +46,24 @@ Status: **in progress** (Stage 5 of 7 done)
 - **Placeholder icons** come from `scripts/make-icons.mjs` (no image library; draws a filled circle in the accent colour with a white "A" and encodes the PNGs itself). Replace `public/brand/` when the real logo exists.
 - **npm install scripts:** this npm blocks lifecycle scripts until approved (`npm install-scripts`). `esbuild` and `@swc/core` (a Serwist dependency) show as not approved; nothing needs them (esbuild runs from its prebuilt binary), so they were left unapproved.
 
+#### CI, releases, backups (Stage 6)
+- **Differences from `release-and-versioning.md` §4** (`release.yml`; the other files match the doc):
+  - The Supabase CLI is **pinned to 3.1.0** (the version used locally; the doc says `latest`). The same pin is in `package.json` and in the CI `db` job.
+  - Migrations go through the **session pooler** with a full connection URL: `supabase db push --remote="$STAGING_DB_URL" --yes` (and `$PRODUCTION_DB_URL` on release). The doc ran `supabase link` then plain `supabase db push`; in CLI 3.x that targets a **local** database, and GitHub runners have no IPv6 for the direct host. The flag is `--remote`, not `--db-url` (CLI 3.1.0 has no `--db-url` on `db push`); a dry run with the full URL (password included) was checked locally.
+  - **Secrets:** `STAGING_DB_URL` and `PRODUCTION_DB_URL` (full pooler URLs) replace `SUPABASE_ACCESS_TOKEN`, `STAGING_PROJECT_REF`, `PRODUCTION_PROJECT_REF`, `STAGING_DB_PASSWORD` and `PRODUCTION_DB_PASSWORD` in the workflows. Those older secrets are no longer used by any workflow and can be removed.
+- **`ci.yml`:** job `app` (typecheck, lint, `lint:tokens`, unit tests, build with dummy `sb_publishable_…` env, secret-leak grep of `.next/static` for `sb_secret_`, `service_role`, `c2VydmljZV9yb2xl`); job `db` (`supabase start` on the runner with unneeded services excluded, then `node scripts/db-test.mjs --db-url postgresql://postgres:postgres@127.0.0.1:54322/postgres` with `SKIP_ASSERT_STAGING=1`, which `assert-staging` only honours for a 127.0.0.1/localhost URL); job `e2e` (production build, `next start`, Playwright "iphone" = WebKit iPhone 15 and "desktop" = Chromium, axe in light and dark, offline service-worker test).
+- **Not verifiable locally:** there is no Docker here, so the `db` job (including which services `supabase start -x …` can leave out) is checked for the first time on GitHub. If it fails, fix the exclusion list rather than the tests.
+- **e2e run locally with CI's dummy env (no `.env.local`):** 16/16 passed. `/status` then shows "Database: not reachable" and still renders (as designed).
+- **Release PRs and CI:** PRs created by release-please with the default `GITHUB_TOKEN` don't trigger CI (accepted in the doc). The repo setting "Allow GitHub Actions to create and approve pull requests" must be on, or release-please can't open the Release PR.
+- `release-please-config.json`, `.release-please-manifest.json` (`0.0.0`), `pr-title.yml` and `backup.yml` are exactly as in the docs and prompt.
+
 ### Stage log
 - Stage 1: scaffold and tooling.
 - Stage 2: placeholder tokens, base styles, home page, `lint:tokens`.
 - Stage 3: Supabase on staging. 7 migrations applied with `npm run db:push`; `src/types/database.ts` generated; 77 pgTAP tests in 5 files pass with `npm run db:test`, and nothing is left behind.
 - Stage 4: app plumbing (env, Supabase clients, proxy, TanStack Query, Sonner, error messages and boundaries, Sentry, `/status`).
 - Stage 5: PWA manifest, icons, iOS metadata, Serwist (Turbopack) minimal service worker with offline page.
+- Stage 6: CI (app, db, e2e), PR-title check, release-please, release and nightly backup workflows, Playwright suite with axe and offline test.
 
 ## M1 UI kit and app shell
 ## M2 Accounts, onboarding, profile, settings
