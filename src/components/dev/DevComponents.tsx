@@ -4,7 +4,9 @@ import { Coffee, Star, Timer } from 'lucide-react';
 import { Icon } from '@/components/ui/Icon/Icon';
 import { VisuallyHidden } from '@/components/ui/VisuallyHidden/VisuallyHidden';
 import { ActionsSection } from './ActionsSection';
+import { CardsSection } from './CardsSection';
 import { InputsSection } from './InputsSection';
+import { SelectionSection } from './SelectionSection';
 import { devSections } from './sections';
 import { ThemeSwitch } from './ThemeSwitch';
 import styles from './dev.module.css';
@@ -76,6 +78,10 @@ export function DevComponents() {
               <ActionsSection />
             ) : s.id === 'inputs' ? (
               <InputsSection />
+            ) : s.id === 'selection' ? (
+              <SelectionSection />
+            ) : s.id === 'cards' ? (
+              <CardsSection />
             ) : (
               <p className={styles.note}>Coming in a later stage.</p>
             )}

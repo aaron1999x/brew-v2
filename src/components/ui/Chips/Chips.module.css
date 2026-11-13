@@ -1,0 +1,109 @@
+.chip,
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--size-target-min);
+  padding: 0 var(--space-4);
+  border: var(--border-width-default) solid var(--color-border-strong);
+  border-radius: var(--radius-full);
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
+  cursor: pointer;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.chip[data-hovered],
+.tag[data-hovered] {
+  background: var(--color-bg-inset);
+}
+
+.chip[data-selected],
+.tag[data-selected] {
+  background: var(--color-accent-default);
+  border-color: var(--color-accent-default);
+  color: var(--color-text-on-accent);
+}
+
+.chip[data-focus-visible],
+.tag[data-focus-visible] {
+  outline: var(--border-width-focus) solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.chip[data-disabled],
+.tag[data-disabled] {
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+
+.group {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.groupLabel {
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
+  line-height: var(--type-label-line-height);
+}
+
+.list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.empty {
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-small-size);
+}
+
+.remove {
+  display: grid;
+  place-items: center;
+  width: var(--size-target-compact);
+  height: var(--size-target-compact);
+  margin-inline-end: calc(-1 * var(--space-2));
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.remove[data-focus-visible] {
+  outline: var(--border-width-focus) solid currentcolor;
+  outline-offset: 1px;
+}
+
+.add {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.addRow {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.addInput {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--size-target-min);
+  padding: 0 var(--space-3);
+  border: var(--border-width-default) solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  font: inherit;
+}
+
+.addInput[data-focused] {
+  outline: var(--border-width-focus) solid var(--color-focus-ring);
+  outline-offset: 2px;
+}

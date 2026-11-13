@@ -75,3 +75,26 @@ test('the segmented control moves with the arrow keys', async ({ page }) => {
   await expect(roast.getByRole('radio', { name: 'Dark' })).toBeChecked();
   await expect(page.getByText('Roast: dark')).toBeVisible();
 });
+
+test('flavour tags can be added, selected and removed', async ({ page }) => {
+  const add = page.getByRole('textbox', { name: 'Add your own' });
+  await add.pressSequentially('toasted almond');
+  await add.press('Enter');
+  const tag = page.getByRole('row', { name: /toasted almond/i });
+  await expect(tag).toBeVisible();
+  await expect(tag).toHaveAttribute('aria-selected', 'true');
+  await page.getByRole('button', { name: 'Remove toasted almond' }).click();
+  await expect(page.getByRole('row', { name: /toasted almond/i })).toHaveCount(0);
+});
+
+test('a recipe card is a single link that covers the card', async ({ page }) => {
+  const link = page.getByRole('link', { name: 'Washed Ethiopia, 1:16 V60' }).first();
+  const card = page.locator('article', { has: link }).first();
+  const cardBox = (await card.boundingBox())!;
+  const linkBox = (await link.evaluate((el) => {
+    const r = getComputedStyle(el, '::after');
+    return { position: r.position };
+  })) as { position: string };
+  expect(linkBox.position).toBe('absolute');
+  expect(cardBox.height).toBeGreaterThan(44);
+});
