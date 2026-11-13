@@ -1,6 +1,6 @@
-// assert-staging -> supabase link (staging) -> supabase db push --remote (staging).
+// assert-staging -> supabase db push --remote=<staging pooler URL>. No `supabase link`, no access token.
 // Supabase CLI 3.x: `db push` targets the local database unless --remote is given,
-// and hosted changes need --yes. The DB password is passed via SUPABASE_DB_PASSWORD, never argv.
+// and hosted changes need --yes. The DB password is passed via PGPASSWORD, never argv.
 import { spawnSync } from 'node:child_process';
 import { assertStaging } from './assert-staging.mjs';
 
@@ -8,14 +8,9 @@ import { assertStaging } from './assert-staging.mjs';
 const SUPABASE_CLI = 'node_modules/supabase/dist/supabase.js';
 
 assertStaging();
-const ref = process.env.STAGING_PROJECT_REF;
 const password = decodeURIComponent(new URL(process.env.STAGING_DB_URL).password);
-if (!process.env.SUPABASE_ACCESS_TOKEN) {
-  console.error('db-push: SUPABASE_ACCESS_TOKEN is missing (set it in .env.local).');
-  process.exit(1);
-}
 
-const env = { ...process.env, SUPABASE_DB_PASSWORD: password };
+const env = { ...process.env };
 const run = (args) => {
   console.log(`> supabase ${args.join(' ')}`);
   const r = spawnSync(process.execPath, [SUPABASE_CLI, ...args], { stdio: 'inherit', env });
@@ -28,5 +23,4 @@ const pooler = new URL(process.env.STAGING_DB_URL);
 pooler.password = '';
 env.PGPASSWORD = password;
 
-run(['link', '--project-ref', ref]);
 run(['db', 'push', `--remote=${pooler.toString()}`, '--yes', ...process.argv.slice(2)]);
