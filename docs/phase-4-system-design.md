@@ -3,6 +3,8 @@
 > - Environments: **no Docker / no local Supabase**. Dev and preview use the **brew-staging** project; production is **brew-production**. Migrations are applied with `supabase db push` to staging, and to production only by the release workflow.
 > - Keys: new Supabase API keys. `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (`sb_publishable_…`) and `SUPABASE_SECRET_KEY` (`sb_secret_…`) replace the anon and service-role keys.
 > - Gear catalogue rows ship in a migration, not seed data. Sign-up is invite-only during the alpha (see roadmap §4).
+> - `recipe_counters` rows are created by an `after insert` trigger on `recipes` (migration `…_fix_recipe_counters.sql`); §4's `create_recipe` failed for normal members. See `decision-log.md`.
+> - Database connections use the session pooler (direct host is IPv6-only); the Supabase CLI is pinned and hosted commands pass `--remote`/`--yes` or `--db-url`.
 
 # Phase 4: System design
 
