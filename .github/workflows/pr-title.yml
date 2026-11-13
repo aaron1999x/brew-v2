@@ -1,0 +1,48 @@
+name: PR title
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  pull-requests: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            feat
+            fix
+            perf
+            a11y
+            refactor
+            test
+            docs
+            chore
+            ci
+            build
+            style
+          scopes: |
+            auth
+            profile
+            gear
+            recipes
+            versions
+            timer
+            brews
+            offline
+            public
+            social
+            verified
+            notices
+            mod
+            ui
+            db
+            infra
+            deps
+          requireScope: false

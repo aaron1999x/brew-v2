@@ -1,0 +1,49 @@
+name: Nightly backup and keep-alive
+
+on:
+  schedule:
+    - cron: '30 18 * * *' # 02:30 Malaysia time
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    env:
+      PG_MAJOR: ${{ vars.PG_MAJOR }}
+      DB_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+      KEY: ${{ secrets.BACKUP_ENCRYPTION_KEY }}
+    steps:
+      - name: Install PostgreSQL client matching the server
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y "postgresql-client-${PG_MAJOR}"
+
+      - name: Keep-alive query
+        run: |
+          "/usr/lib/postgresql/${PG_MAJOR}/bin/psql" "$DB_URL" -v ON_ERROR_STOP=1 -c "select count(*) from public.profiles;"
+
+      - name: Dump and encrypt
+        run: |
+          set -euo pipefail
+          STAMP=$(date -u +%Y%m%d-%H%M)
+          "/usr/lib/postgresql/${PG_MAJOR}/bin/pg_dump" "$DB_URL" \
+            --format=custom --no-owner --no-privileges \
+            --schema=public --schema=auth --schema=storage \
+            --file=backup.dump
+          gpg --batch --yes --symmetric --cipher-algo AES256 \
+            --passphrase "$KEY" --output "backup-${STAMP}.dump.gpg" backup.dump
+          rm backup.dump
+          echo "STAMP=${STAMP}" >> "$GITHUB_ENV"
+
+      - name: Upload encrypted backup
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-backup-${{ env.STAMP }}
+          path: backup-*.dump.gpg
+          retention-days: 30
+          if-no-files-found: error

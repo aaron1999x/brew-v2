@@ -1,0 +1,22 @@
+/* Sonner, styled with design tokens only. Sonner reads these custom properties per toast. */
+[data-sonner-toaster] {
+  --normal-bg: var(--color-bg-surface);
+  --normal-text: var(--color-text-primary);
+  --normal-border: var(--color-border-strong);
+  --success-bg: var(--color-bg-surface);
+  --success-text: var(--color-text-primary);
+  --success-border: var(--color-status-success);
+  --error-bg: var(--color-bg-surface);
+  --error-text: var(--color-text-primary);
+  --error-border: var(--color-status-danger);
+  --warning-bg: var(--color-bg-surface);
+  --warning-text: var(--color-text-primary);
+  --warning-border: var(--color-status-warning);
+  --border-radius: var(--radius-md);
+  font-family: var(--font-family-text);
+}
+
+[data-sonner-toast] [data-button] {
+  min-height: 44px;
+  min-width: 44px;
+}

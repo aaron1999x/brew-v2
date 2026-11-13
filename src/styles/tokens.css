@@ -1,0 +1,145 @@
+/*
+ * PLACEHOLDER — replaced when the design system arrives.
+ * Structure: primitives (never used by components) -> semantic Light on :root ->
+ * semantic Dark on [data-theme="dark"] and, when the user has not forced light,
+ * inside prefers-color-scheme: dark. Components use only semantic names.
+ * This is the only CSS file allowed to contain raw colours and px font sizes.
+ */
+
+:root {
+  /* ---------- Primitives ---------- */
+  --color-neutral-0: #ffffff;
+  --color-neutral-50: #f6f2ec;
+  --color-neutral-100: #ece6dd;
+  --color-neutral-300: #c9bfb2;
+  --color-neutral-600: #6b6158;
+  --color-neutral-800: #2e2824;
+  --color-neutral-900: #1f1a17;
+  --color-neutral-950: #141110;
+  --color-roast-300: #e08a55;
+  --color-roast-600: #9a4a1f;
+  --color-roast-700: #7c3a17;
+  --color-green-300: #6cc08a;
+  --color-green-600: #2f7d4a;
+  --color-amber-300: #e7b45a;
+  --color-amber-600: #9a6400;
+  --color-red-300: #f08a80;
+  --color-red-600: #b3261e;
+  --color-teal-300: #5cc4cc;
+  --color-teal-600: #0e7c86;
+  --color-violet-300: #a996f0;
+  --color-violet-600: #6b4fc8;
+
+  /* Spacing (4 px scale) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+
+  /* Radius */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-full: 999px;
+
+  /* Typography */
+  --font-family-text: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-family-numeric: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --type-body-size: 16px;
+  --type-body-weight: 400;
+  --type-body-line-height: 1.5;
+  --type-label-size: 14px;
+  --type-label-weight: 500;
+  --type-label-line-height: 1.4;
+  --type-h1-size: 28px;
+  --type-h1-weight: 600;
+  --type-h1-line-height: 1.2;
+  --type-h1-letter-spacing: -0.4px;
+  --type-timer-size: 120px;
+  --type-timer-weight: 600;
+  --type-timer-line-height: 1;
+  --type-timer-letter-spacing: -2px;
+
+  /* Motion */
+  --motion-duration-fast: 120ms;
+  --motion-duration-normal: 240ms;
+  --motion-easing-standard: cubic-bezier(0.2, 0, 0, 1);
+
+  /* ---------- Semantic: Light (default) ---------- */
+  --color-bg-canvas: var(--color-neutral-50);
+  --color-bg-surface: var(--color-neutral-0);
+  --color-bg-inset: var(--color-neutral-100);
+  --color-text-primary: var(--color-neutral-900);
+  --color-text-secondary: var(--color-neutral-600);
+  --color-text-on-accent: var(--color-neutral-0);
+  --color-border-subtle: var(--color-neutral-100);
+  --color-border-strong: var(--color-neutral-600);
+  --color-accent-default: var(--color-roast-600);
+  --color-accent-pressed: var(--color-roast-700);
+  --color-focus-ring: var(--color-roast-600);
+  --color-status-success: var(--color-green-600);
+  --color-status-warning: var(--color-amber-600);
+  --color-status-danger: var(--color-red-600);
+  --color-changed-bg: var(--color-amber-300);
+  --color-changed-fg: var(--color-neutral-900);
+  --color-chart-series-a: var(--color-teal-600);
+  --color-chart-series-b: var(--color-roast-600);
+  --color-chart-series-c: var(--color-violet-600);
+  --color-chart-grid: var(--color-neutral-100);
+  --color-chart-target-band: var(--color-green-300);
+}
+
+/* ---------- Semantic: Dark, forced by [data-theme="dark"] ---------- */
+[data-theme='dark'] {
+  --color-bg-canvas: var(--color-neutral-950);
+  --color-bg-surface: var(--color-neutral-900);
+  --color-bg-inset: var(--color-neutral-800);
+  --color-text-primary: var(--color-neutral-50);
+  --color-text-secondary: var(--color-neutral-300);
+  --color-text-on-accent: var(--color-neutral-950);
+  --color-border-subtle: var(--color-neutral-800);
+  --color-border-strong: var(--color-neutral-300);
+  --color-accent-default: var(--color-roast-300);
+  --color-accent-pressed: var(--color-roast-600);
+  --color-focus-ring: var(--color-roast-300);
+  --color-status-success: var(--color-green-300);
+  --color-status-warning: var(--color-amber-300);
+  --color-status-danger: var(--color-red-300);
+  --color-changed-bg: var(--color-amber-600);
+  --color-changed-fg: var(--color-neutral-50);
+  --color-chart-series-a: var(--color-teal-300);
+  --color-chart-series-b: var(--color-roast-300);
+  --color-chart-series-c: var(--color-violet-300);
+  --color-chart-grid: var(--color-neutral-800);
+  --color-chart-target-band: var(--color-green-600);
+}
+
+/* ---------- Semantic: Dark, following the system unless Light is forced ---------- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --color-bg-canvas: var(--color-neutral-950);
+    --color-bg-surface: var(--color-neutral-900);
+    --color-bg-inset: var(--color-neutral-800);
+    --color-text-primary: var(--color-neutral-50);
+    --color-text-secondary: var(--color-neutral-300);
+    --color-text-on-accent: var(--color-neutral-950);
+    --color-border-subtle: var(--color-neutral-800);
+    --color-border-strong: var(--color-neutral-300);
+    --color-accent-default: var(--color-roast-300);
+    --color-accent-pressed: var(--color-roast-600);
+    --color-focus-ring: var(--color-roast-300);
+    --color-status-success: var(--color-green-300);
+    --color-status-warning: var(--color-amber-300);
+    --color-status-danger: var(--color-red-300);
+    --color-changed-bg: var(--color-amber-600);
+    --color-changed-fg: var(--color-neutral-50);
+    --color-chart-series-a: var(--color-teal-300);
+    --color-chart-series-b: var(--color-roast-300);
+    --color-chart-series-c: var(--color-violet-300);
+    --color-chart-grid: var(--color-neutral-800);
+    --color-chart-target-band: var(--color-green-600);
+  }
+}

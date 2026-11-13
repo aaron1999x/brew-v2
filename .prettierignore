@@ -1,0 +1,9 @@
+docs/
+node_modules/
+.next/
+package-lock.json
+supabase/migrations/
+CHANGELOG.md
+public/
+CLAUDE.md
+.claude/
