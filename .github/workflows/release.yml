@@ -23,8 +23,27 @@ jobs:
     runs-on: ubuntu-latest
     env:
       STAGING_DB_URL: ${{ secrets.STAGING_DB_URL }}
+      STAGING_PROJECT_REF: ${{ secrets.STAGING_PROJECT_REF }}
+      PRODUCTION_PROJECT_REF: ${{ secrets.PRODUCTION_PROJECT_REF }}
     steps:
       - uses: actions/checkout@v4
+      # Same rules as scripts/assert-staging.mjs: a swapped secret must never push staging
+      # migrations (or anything else) at the production database.
+      - name: Guard - STAGING_DB_URL must be the staging database
+        run: |
+          if [ -z "$STAGING_PROJECT_REF" ] || [ -z "$PRODUCTION_PROJECT_REF" ]; then
+            echo "::error::STAGING_PROJECT_REF and PRODUCTION_PROJECT_REF secrets are required for this guard."; exit 1
+          fi
+          if [ "$STAGING_PROJECT_REF" = "$PRODUCTION_PROJECT_REF" ]; then
+            echo "::error::STAGING_PROJECT_REF equals PRODUCTION_PROJECT_REF."; exit 1
+          fi
+          case "$STAGING_DB_URL" in
+            *"$PRODUCTION_PROJECT_REF"*) echo "::error::STAGING_DB_URL contains the production project ref."; exit 1 ;;
+          esac
+          case "$STAGING_DB_URL" in
+            *"$STAGING_PROJECT_REF"*) ;;
+            *) echo "::error::STAGING_DB_URL does not contain STAGING_PROJECT_REF."; exit 1 ;;
+          esac
       - uses: supabase/setup-cli@v1
         with:
           version: 3.1.0

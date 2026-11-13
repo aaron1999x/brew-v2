@@ -4,7 +4,7 @@ Updated at the end of every milestone. Newest information wins over the older pl
 
 ## M0 Foundation
 
-Status: **in progress** (Stage 6 of 7 done)
+Status: **built, PR #1 open, awaiting merge** (Stage 7 done; manual checks below)
 
 ### Deviations from the docs / prompt
 - **npm environment:** the machine's Node/npm install was repaired by the owner before Stage 1. Bash on this machine may resolve a different `npm` than PowerShell; run npm commands from PowerShell.
@@ -50,12 +50,28 @@ Status: **in progress** (Stage 6 of 7 done)
 - **Differences from `release-and-versioning.md` §4** (`release.yml`; the other files match the doc):
   - The Supabase CLI is **pinned to 3.1.0** (the version used locally; the doc says `latest`). The same pin is in `package.json` and in the CI `db` job.
   - Migrations go through the **session pooler** with a full connection URL: `supabase db push --remote="$STAGING_DB_URL" --yes` (and `$PRODUCTION_DB_URL` on release). The doc ran `supabase link` then plain `supabase db push`; in CLI 3.x that targets a **local** database, and GitHub runners have no IPv6 for the direct host. The flag is `--remote`, not `--db-url` (CLI 3.1.0 has no `--db-url` on `db push`); a dry run with the full URL (password included) was checked locally.
-  - **Secrets:** `STAGING_DB_URL` and `PRODUCTION_DB_URL` (full pooler URLs) replace `SUPABASE_ACCESS_TOKEN`, `STAGING_PROJECT_REF`, `PRODUCTION_PROJECT_REF`, `STAGING_DB_PASSWORD` and `PRODUCTION_DB_PASSWORD` in the workflows. Those older secrets are no longer used by any workflow and can be removed.
+  - **Secrets:** `STAGING_DB_URL` and `PRODUCTION_DB_URL` (full pooler URLs) are new. `SUPABASE_ACCESS_TOKEN`, `STAGING_DB_PASSWORD` and `PRODUCTION_DB_PASSWORD` are no longer used by any workflow and can be removed. **Keep `STAGING_PROJECT_REF` and `PRODUCTION_PROJECT_REF`:** the `migrate-staging` job uses them in a guard (mirrors `scripts/assert-staging.mjs`) that fails if `STAGING_DB_URL` contains the production ref or lacks the staging ref.
 - **`ci.yml`:** job `app` (typecheck, lint, `lint:tokens`, unit tests, build with dummy `sb_publishable_…` env, secret-leak grep of `.next/static` for `sb_secret_`, `service_role`, `c2VydmljZV9yb2xl`); job `db` (`supabase start` on the runner with unneeded services excluded, then `node scripts/db-test.mjs --db-url postgresql://postgres:postgres@127.0.0.1:54322/postgres` with `SKIP_ASSERT_STAGING=1`, which `assert-staging` only honours for a 127.0.0.1/localhost URL); job `e2e` (production build, `next start`, Playwright "iphone" = WebKit iPhone 15 and "desktop" = Chromium, axe in light and dark, offline service-worker test).
 - **Not verifiable locally:** there is no Docker here, so the `db` job (including which services `supabase start -x …` can leave out) is checked for the first time on GitHub. If it fails, fix the exclusion list rather than the tests.
 - **e2e run locally with CI's dummy env (no `.env.local`):** 16/16 passed. `/status` then shows "Database: not reachable" and still renders (as designed).
 - **Release PRs and CI:** PRs created by release-please with the default `GITHUB_TOKEN` don't trigger CI (accepted in the doc). The repo setting "Allow GitHub Actions to create and approve pull requests" must be on, or release-please can't open the Release PR.
 - `release-please-config.json`, `.release-please-manifest.json` (`0.0.0`), `pr-title.yml` and `backup.yml` are exactly as in the docs and prompt.
+
+#### Verify and hand over (Stage 7)
+- **PR #1** (`feat(infra): project foundation`) CI: `app`, `db`, `e2e` and `pr-title` all passed on the first run. The `db` job started a local Supabase stack on the runner, applied all 7 migrations from scratch and passed all 77 pgTAP tests with nothing left behind. Playwright: 16/16 (iPhone/WebKit and desktop/Chromium, light and dark, axe, offline).
+- **esbuild (install scripts unapproved):** CI (`app` and `e2e` jobs, `npm ci` + `next build`) built the service worker with native esbuild (`27 precache entries`); the Vercel preview build also finished **Ready**. No approval of the esbuild install script was needed. `npm ci` prints the "install scripts not yet covered by allowScripts" warning for `esbuild` and `@swc/core`; it is harmless.
+- **Vercel preview is behind Vercel's login protection**, so `/status` on the preview could not be fetched automatically. Check it while logged in: it should show environment `staging` and the staging host.
+- **Independent review (`reviewer` subagent):** no blockers. Follow-ups:
+  - Fixed: `release.yml` guard for `STAGING_DB_URL` (above); the `/api/sentry-test` key check moved to `src/lib/sentry/test-key.ts` with unit tests.
+  - **Release PRs get no CI** (release-please uses `GITHUB_TOKEN`). Don't make CI checks *required* for merging the Release PR, or it will wait forever; either leave the checks unrequired for it, merge as admin, or give release-please a PAT/GitHub App token later.
+  - `production` has no branch protection by choice (the release workflow force-pushes it). The workflow applies production migrations *before* that push, so a failing push would leave production migrated but not deployed.
+  - `backup.yml` is exactly Appendix 3, so it passes `--passphrase` on the command line (masked in logs). `--passphrase-fd 0` would be tidier. GitHub disables scheduled workflows after 60 days without repo activity, and the keep-alive depends on the schedule; any push re-enables it.
+  - `assert-staging` loads `.env.local`, so a stray `SKIP_ASSERT_STAGING=1` there is only caught when the URL isn't loopback (it is: a non-loopback URL is refused).
+  - The error boundaries use the `retry` prop: stable since Next.js 16.3.0 (we run 16.4.6; `unstable_retry` was the 16.2 name). Confirm the Retry button on a real render error on the phone.
+- **After the production Sentry check passes:** delete `src/app/api/sentry-test/` and `src/lib/sentry/test-key.ts` (and its test), and remove `SENTRY_TEST_KEY` from Vercel.
+
+### Next (M1)
+UI kit and app shell (`docs/phase-5-roadmap.md` M1), starting from the placeholder tokens unless the design system has arrived. Also: add branch protection on `main` using the job names `Typecheck, lint, unit tests, build`, `Database tests on a throwaway database`, `Playwright (iPhone and desktop) with axe` and `check`.
 
 ### Stage log
 - Stage 1: scaffold and tooling.
@@ -64,6 +80,7 @@ Status: **in progress** (Stage 6 of 7 done)
 - Stage 4: app plumbing (env, Supabase clients, proxy, TanStack Query, Sonner, error messages and boundaries, Sentry, `/status`).
 - Stage 5: PWA manifest, icons, iOS metadata, Serwist (Turbopack) minimal service worker with offline page.
 - Stage 6: CI (app, db, e2e), PR-title check, release-please, release and nightly backup workflows, Playwright suite with axe and offline test.
+- Stage 7: PR #1 opened, CI green, independent review done, hand-over notes.
 
 ## M1 UI kit and app shell
 ## M2 Accounts, onboarding, profile, settings
