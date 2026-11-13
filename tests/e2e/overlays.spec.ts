@@ -2,8 +2,8 @@ import { expect, test } from '@playwright/test';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/dev/components');
-  // Pressing before React has hydrated does nothing, so wait for the page to settle.
-  await page.waitForLoadState('networkidle');
+  // Interacting before React has hydrated does nothing, so wait for the page to say it's ready.
+  await page.locator('[data-hydrated="true"]').waitFor();
 });
 
 test('a sheet traps focus, closes on Escape and returns focus to its opener', async ({ page }) => {

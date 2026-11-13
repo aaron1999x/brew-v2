@@ -2,6 +2,8 @@
 export const siteConfig = {
   name: '[App]',
   shortName: '[App]',
+  /** Text wordmark shown in the shell until a logo exists. */
+  wordmark: '[App]',
   description:
     'Recipes that evolve, a guided brew timer and brew logs for serious home coffee brewers.',
   /** Placeholder values; must match the Light/Dark canvas tokens in src/styles/tokens.css. */

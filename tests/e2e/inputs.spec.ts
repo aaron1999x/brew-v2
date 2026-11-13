@@ -2,8 +2,8 @@ import { expect, test } from '@playwright/test';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/dev/components');
-  // Typing before React has hydrated drops events, so wait for the page to settle.
-  await page.waitForLoadState('networkidle');
+  // Interacting before React has hydrated does nothing, so wait for the page to say it's ready.
+  await page.locator('[data-hydrated="true"]').waitFor();
 });
 
 test('a pending button keeps its width and ignores presses', async ({ page }) => {
@@ -20,6 +20,7 @@ test('a pending button keeps its width and ignores presses', async ({ page }) =>
 
 test('the time input understands what was typed and normalises on blur', async ({ page }) => {
   const input = page.getByLabel('Total time', { exact: true });
+  await input.scrollIntoViewIfNeeded();
   await input.clear();
   await input.pressSequentially('150');
   await expect(page.getByText('Understood as 1:50')).toBeVisible();
@@ -52,6 +53,8 @@ test('the number field puts its unit in the accessible description', async ({ pa
 
 test('the combobox offers "Use what I typed" and reports free text', async ({ page }) => {
   const box = page.getByRole('combobox', { name: 'Grinder (free text allowed)' });
+  // Scroll first: a scroll while the list is open would close it (as it should).
+  await box.scrollIntoViewIfNeeded();
   await box.pressSequentially('Home-made grinder');
   const option = page.getByRole('option', { name: /Use what I typed/ });
   await expect(option).toBeVisible();
@@ -61,6 +64,7 @@ test('the combobox offers "Use what I typed" and reports free text', async ({ pa
 
 test('the combobox filters by every word and shows an empty state', async ({ page }) => {
   const box = page.getByRole('combobox', { name: 'Grinder', exact: true }).first();
+  await box.scrollIntoViewIfNeeded();
   await box.pressSequentially('c40 coman');
   await expect(page.getByRole('option')).toHaveCount(1);
   await box.clear();
@@ -78,6 +82,7 @@ test('the segmented control moves with the arrow keys', async ({ page }) => {
 
 test('flavour tags can be added, selected and removed', async ({ page }) => {
   const add = page.getByRole('textbox', { name: 'Add your own' });
+  await add.scrollIntoViewIfNeeded();
   await add.pressSequentially('toasted almond');
   await add.press('Enter');
   const tag = page.getByRole('row', { name: /toasted almond/i });

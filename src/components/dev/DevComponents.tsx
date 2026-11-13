@@ -1,6 +1,7 @@
 'use client';
 
 import { Coffee, Star, Timer } from 'lucide-react';
+import { useSyncExternalStore } from 'react';
 import { Icon } from '@/components/ui/Icon/Icon';
 import { VisuallyHidden } from '@/components/ui/VisuallyHidden/VisuallyHidden';
 import { ActionsSection } from './ActionsSection';
@@ -26,9 +27,18 @@ const swatches = [
   ['changed-bg', '--color-changed-bg'],
 ] as const;
 
+const noSubscription = () => () => {};
+
 export function DevComponents() {
+  // false while rendering on the server and hydrating, true once React is interactive.
+  // Tests wait for it so they never type into a page that isn't listening yet.
+  const hydrated = useSyncExternalStore(
+    noSubscription,
+    () => true,
+    () => false,
+  );
   return (
-    <div className={styles.page}>
+    <div className={styles.page} data-hydrated={hydrated}>
       <header className={styles.header}>
         <h1 className={styles.title}>Components</h1>
         <ThemeSwitch />
@@ -69,6 +79,18 @@ export function DevComponents() {
             <Icon icon={Star} size="lg" label="Favourite" />
             <VisuallyHidden>Icon sizes: small, medium, large</VisuallyHidden>
           </div>
+          <p className={styles.note}>Shell layouts:</p>
+          <ul className={styles.shellLinks}>
+            <li>
+              <a href="/home">App shell (tab bar / rail)</a>
+            </li>
+            <li>
+              <a href="/dev/logged-out">Logged-out top bar</a>
+            </li>
+            <li>
+              <a href="/dev/fullscreen">Fullscreen (no navigation)</a>
+            </li>
+          </ul>
         </section>
 
         {devSections.slice(1).map((s) => (
