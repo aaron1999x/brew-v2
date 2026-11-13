@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { findViolations } from '../../scripts/lint-tokens.mjs';
+import { findInlineStyleViolations, findViolations } from '../../scripts/lint-tokens.mjs';
 
 describe('lint-tokens', () => {
   it('accepts token usage', () => {
@@ -30,5 +30,34 @@ describe('lint-tokens', () => {
   });
   it('reports line numbers', () => {
     expect(findViolations('a{}\nb{color:#000}')[0]?.line).toBe(2);
+  });
+
+  describe('inline styles in .tsx', () => {
+    it('accepts token-based and dimensionless inline styles', () => {
+      expect(
+        findInlineStyleViolations(
+          `<div style={{ color: 'var(--color-text-primary)', width: 'var(--size-icon-md)' }} />`,
+        ),
+      ).toEqual([]);
+      expect(findInlineStyleViolations(`const x = '#fff'; <div className="a" />`)).toEqual([]);
+    });
+    it('flags raw colours and px font sizes in style props', () => {
+      for (const tsx of [
+        `<div style={{ color: '#fff' }} />`,
+        `<div style={{ background: 'rgb(0, 0, 0)' }} />`,
+        `<div style={{ background: "hsl(10 10% 10%)" }} />`,
+        `<div style={{ fontSize: '14px' }} />`,
+        `<div style={{ fontSize: 14 }} />`,
+        `<div style={{ font: 'x', 'font-size': '12px' }} />`,
+      ]) {
+        expect(findInlineStyleViolations(tsx).length, tsx).toBeGreaterThan(0);
+      }
+    });
+    it('reports the line of the style prop', () => {
+      expect(
+        findInlineStyleViolations(`a
+<div style={{ color: '#000' }} />`)[0]?.line,
+      ).toBe(2);
+    });
   });
 });
