@@ -1,0 +1,50 @@
+﻿const config = {
+  extends: ['@commitlint/config-conventional'],
+  rules: {
+    'type-enum': [
+      2,
+      'always',
+      [
+        'feat',
+        'fix',
+        'perf',
+        'a11y',
+        'refactor',
+        'test',
+        'docs',
+        'chore',
+        'ci',
+        'build',
+        'style',
+        'revert',
+      ],
+    ],
+    'scope-enum': [
+      1,
+      'always',
+      [
+        'auth',
+        'profile',
+        'gear',
+        'recipes',
+        'versions',
+        'timer',
+        'brews',
+        'offline',
+        'public',
+        'social',
+        'verified',
+        'notices',
+        'mod',
+        'ui',
+        'db',
+        'infra',
+        'deps',
+      ],
+    ],
+    'subject-case': [0],
+    'header-max-length': [2, 'always', 100],
+  },
+};
+
+export default config;
