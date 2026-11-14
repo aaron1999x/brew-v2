@@ -96,7 +96,13 @@ export function Combobox({
       }}
       selectedKey={selectedKey}
       onSelectionChange={(key) => {
-        if (key == null || key === LOADING_ID) return;
+        if (key === LOADING_ID) return;
+        if (key == null) {
+          // React Aria reverts with nothing chosen (Escape, blur). In controlled mode putting the
+          // text back is our job; otherwise it sees a mismatch and reopens the list straight away.
+          if (selectedKey == null && !allowsCustomValue) setInputValue('');
+          return;
+        }
         if (key === CUSTOM_ID) {
           const text = inputValue.trim();
           setSelectedKey(null);
@@ -110,6 +116,7 @@ export function Combobox({
         onSelect?.({ kind: 'item', item });
       }}
       allowsEmptyCollection
+      allowsCustomValue={allowsCustomValue}
       className={fieldStyles.field}
     >
       <FieldLabel required={rest.isRequired}>{label}</FieldLabel>

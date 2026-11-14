@@ -20,15 +20,22 @@ test('the service worker registers and the offline page shows when there is no c
   await expect
     .poll(() => page.evaluate(() => Boolean(navigator.serviceWorker.controller)))
     .toBe(true);
+  // The fallback only works once the offline page itself is precached, not merely "some entries".
   await expect
-    .poll(() =>
-      page.evaluate(async () => {
-        const keys = (await caches.keys()).filter((k) => k.includes('precache'));
-        const first = keys[0];
-        return first ? (await (await caches.open(first)).keys()).length : 0;
-      }),
+    .poll(
+      () =>
+        page.evaluate(async () => {
+          for (const name of await caches.keys()) {
+            if (!name.includes('precache')) continue;
+            const cache = await caches.open(name);
+            if ((await cache.keys()).some((r) => new URL(r.url).pathname === '/~offline'))
+              return true;
+          }
+          return false;
+        }),
+      { timeout: 20_000 },
     )
-    .toBeGreaterThan(0);
+    .toBe(true);
 
   // Offline: any page navigation falls back to the precached offline page.
   await context.setOffline(true);

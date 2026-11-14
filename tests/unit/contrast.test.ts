@@ -81,6 +81,9 @@ const pairs: ReadonlyArray<readonly [string, string, number, string]> = [
   ),
   ...surfaces.map((bg) => ['--color-border-strong', bg, 3, 'strong border'] as const),
   ...[...surfaces, '--color-bg-field'].map(
+    (bg) => ['--color-slider-track', bg, 3, 'unfilled slider track'] as const,
+  ),
+  ...[...surfaces, '--color-bg-field'].map(
     (bg) => ['--color-focus-ring', bg, 3, 'focus ring'] as const,
   ),
   ['--color-status-danger', '--color-bg-field', 3, 'invalid field border'],
