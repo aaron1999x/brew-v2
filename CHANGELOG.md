@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/aaron1999x/brew-v2/compare/v0.3.0...v0.4.0) (2026-11-14)
+
+
+### New features
+
+* invite-only accounts, onboarding, profile and settings ([#11](https://github.com/aaron1999x/brew-v2/issues/11)) ([4afa9e1](https://github.com/aaron1999x/brew-v2/commit/4afa9e1f01afe167b2b15facafdea5c79c3c2f55))
+
 ## [0.3.0](https://github.com/aaron1999x/brew-v2/compare/v0.2.0...v0.3.0) (2026-11-14)
 
 
