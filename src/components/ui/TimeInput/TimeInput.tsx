@@ -77,12 +77,9 @@ export function TimeInput({
       className={fieldStyles.field}
     >
       <FieldLabel required={rest.isRequired}>{label}</FieldLabel>
-      <Input
-        placeholder="m:ss"
-        autoComplete="off"
-        className={cx(fieldStyles.control, fieldStyles.input, 'num')}
-        data-primary-control=""
-      />
+      <div className={fieldStyles.control} data-primary-control="">
+        <Input placeholder="m:ss" autoComplete="off" className={cx(fieldStyles.input, 'num')} />
+      </div>
       {hint ? <FieldHint>{hint}</FieldHint> : null}
       <FieldError>{parsed.ok ? '' : parsed.error}</FieldError>
     </AriaTextField>

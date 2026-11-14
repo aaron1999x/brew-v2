@@ -2,6 +2,10 @@
   /* Grid items default to min-width: auto, so a long intrinsic input width would push the
      stepper out of the field. Let the group shrink below its content. */
   min-width: 0;
+}
+
+/* Steppers sit close to the edge so the number keeps its room. */
+.stepped {
   gap: var(--space-1);
   padding-inline: var(--space-2);
 }

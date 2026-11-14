@@ -5,7 +5,6 @@ import {
   TextField as AriaTextField,
   type TextFieldProps as AriaTextFieldProps,
 } from 'react-aria-components';
-import { cx } from '@/lib/cx';
 import { FieldError, FieldHint, FieldLabel, fieldStyles, type FieldChrome } from '../Field/Field';
 
 export type TextFieldProps = Omit<AriaTextFieldProps, 'className' | 'style' | 'children'> &
@@ -21,11 +20,9 @@ export function TextField({
   return (
     <AriaTextField {...rest} className={fieldStyles.field}>
       <FieldLabel required={rest.isRequired}>{label}</FieldLabel>
-      <Input
-        placeholder={placeholder}
-        className={cx(fieldStyles.control, fieldStyles.input)}
-        data-primary-control=""
-      />
+      <div className={fieldStyles.control} data-primary-control="">
+        <Input placeholder={placeholder} className={fieldStyles.input} />
+      </div>
       {description ? <FieldHint>{description}</FieldHint> : null}
       <FieldError>{errorMessage}</FieldError>
     </AriaTextField>

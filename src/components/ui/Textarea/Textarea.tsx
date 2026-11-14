@@ -36,13 +36,15 @@ export function Textarea({
   return (
     <AriaTextField {...rest} className={fieldStyles.field}>
       <FieldLabel required={rest.isRequired}>{label}</FieldLabel>
-      <TextArea
-        ref={ref}
-        rows={rows}
-        placeholder={placeholder}
-        onInput={resize}
-        className={cx(fieldStyles.control, fieldStyles.input, styles.area)}
-      />
+      <div className={cx(fieldStyles.control, styles.shell)}>
+        <TextArea
+          ref={ref}
+          rows={rows}
+          placeholder={placeholder}
+          onInput={resize}
+          className={cx(fieldStyles.input, styles.area)}
+        />
+      </div>
       {description ? <FieldHint>{description}</FieldHint> : null}
       <FieldError>{errorMessage}</FieldError>
     </AriaTextField>

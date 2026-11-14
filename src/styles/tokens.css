@@ -12,6 +12,7 @@
   --color-neutral-50: #f6f2ec;
   --color-neutral-100: #ece6dd;
   --color-neutral-300: #c9bfb2;
+  --color-neutral-500: #8c8176;
   --color-neutral-600: #6b6158;
   --color-neutral-800: #2e2824;
   --color-neutral-900: #1f1a17;
@@ -151,6 +152,8 @@
   --color-selection-bg: var(--color-roast-600);
   --color-selection-fg: var(--color-neutral-0);
   --color-slider-track: var(--color-neutral-300);
+  --color-bg-field: var(--color-neutral-50);
+  --color-border-field: var(--color-neutral-500);
   --color-status-info: var(--color-teal-600);
   --color-status-success-bg: var(--color-green-100);
   --color-status-success-fg: var(--color-green-900);
@@ -195,6 +198,8 @@
   --color-selection-bg: var(--color-roast-300);
   --color-selection-fg: var(--color-neutral-950);
   --color-slider-track: var(--color-neutral-600);
+  --color-bg-field: var(--color-neutral-950);
+  --color-border-field: var(--color-neutral-500);
   --color-status-info: var(--color-teal-300);
   --color-status-success-bg: var(--color-green-900);
   --color-status-success-fg: var(--color-green-100);
@@ -240,6 +245,8 @@
     --color-selection-bg: var(--color-roast-300);
     --color-selection-fg: var(--color-neutral-950);
     --color-slider-track: var(--color-neutral-600);
+    --color-bg-field: var(--color-neutral-950);
+    --color-border-field: var(--color-neutral-500);
     --color-status-info: var(--color-teal-300);
     --color-status-success-bg: var(--color-green-900);
     --color-status-success-fg: var(--color-green-100);

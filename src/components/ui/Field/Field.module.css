@@ -25,7 +25,12 @@
   line-height: var(--type-body-small-line-height);
 }
 
-/* The bordered box used by text inputs, number fields, select triggers and comboboxes. */
+/*
+ * The one field shell. Every field type (text, textarea, select, number, time, combobox) draws
+ * this same box: a 3:1 resting border, a subtle fill, space-3 inner padding, radius-md and a
+ * 44 px minimum height. Single inputs sit INSIDE a .control wrapper (never on the same element as
+ * .control, or .input's resets would erase the border and padding).
+ */
 .control {
   display: flex;
   align-items: center;
@@ -33,38 +38,48 @@
   width: 100%;
   min-height: var(--size-target-min);
   padding: 0 var(--space-3);
-  border: var(--border-width-default) solid var(--color-border-strong);
+  border: var(--border-width-default) solid var(--color-border-field);
   border-radius: var(--radius-md);
-  background: var(--color-bg-surface);
+  background: var(--color-bg-field);
   color: var(--color-text-primary);
   font-size: var(--type-body-size);
   line-height: var(--type-body-line-height);
 }
 
 .control:hover {
-  border-color: var(--color-text-primary);
+  border-color: var(--color-text-secondary);
 }
 
 .control:focus-within,
-.control[data-focus-within],
 .control[data-focus-visible] {
+  border-color: var(--color-accent-default);
   outline: var(--border-width-focus) solid var(--color-focus-ring);
   outline-offset: 2px;
 }
 
+/* Invalid wins over hover and focus for the border; the focus ring still shows. */
 .control[data-invalid],
-.control:has(:invalid[data-invalid]) {
+.control:has([aria-invalid='true']),
+.control:has([data-invalid]) {
   border-color: var(--color-status-danger);
+}
+
+/* Disabled and read-only: a muted fill. */
+.control[data-disabled],
+.control:has(:disabled),
+.control:has(input[readonly]),
+.control:has(textarea[readonly]) {
+  background: var(--color-bg-inset);
+  border-color: var(--color-border-subtle);
+  color: var(--color-text-muted);
 }
 
 .control[data-disabled],
 .control:has(:disabled) {
-  background: var(--color-bg-inset);
-  color: var(--color-text-muted);
   cursor: not-allowed;
 }
 
-/* The bare <input>/<textarea> inside a .control (or standing alone). */
+/* The bare <input>/<textarea> inside a .control. */
 .input {
   flex: 1;
   min-width: 0;

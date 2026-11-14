@@ -43,7 +43,10 @@ export function NumberField({
   return (
     <AriaNumberField {...rest} className={fieldStyles.field}>
       <FieldLabel required={rest.isRequired}>{label}</FieldLabel>
-      <Group className={cx(fieldStyles.control, styles.group)} data-primary-control="">
+      <Group
+        className={cx(fieldStyles.control, styles.group, showStepper && styles.stepped)}
+        data-primary-control=""
+      >
         {showStepper ? (
           <Button
             slot="decrement"
