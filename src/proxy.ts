@@ -10,6 +10,6 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     // Skip static assets, the service worker (/serwist/*), the offline page, the manifest and images.
-    '/((?!_next/static|_next/image|favicon.ico|serwist/|~offline|manifest\\.webmanifest|brand/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|serwist/|~offline|manifest\\.webmanifest|robots\\.txt|brand/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)',
   ],
 };

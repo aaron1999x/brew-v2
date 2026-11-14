@@ -2,8 +2,8 @@ import { expect, test } from '@playwright/test';
 import { expectNoAxeViolations } from './helpers/axe';
 import { openDevPage } from './helpers/dev-page';
 
-// CI builds with NEXT_PUBLIC_APP_ENV=staging or local, so the page exists here.
-// The production 404 is covered by the unit test of isDevToolsEnabled.
+// The gallery is public in every environment, production included (tests/unit/dev-pages.test.tsx
+// checks the gate is gone; /dev/logged-out and /dev/fullscreen are still gated there).
 for (const scheme of ['light', 'dark'] as const) {
   test.describe(`${scheme} theme`, () => {
     test.use({ colorScheme: scheme });
@@ -30,3 +30,29 @@ for (const theme of ['light', 'dark'] as const) {
     await expect(page.locator('html')).not.toHaveAttribute('data-theme');
   });
 }
+
+test('the gallery says what it is, at the top of the page', async ({ page }) => {
+  await page.goto('/dev/components');
+  const notice = page.getByText('Component gallery — placeholder design and sample data.');
+  await expect(notice).toBeVisible();
+  // Above the page heading.
+  const [n, h] = [
+    (await notice.boundingBox())!,
+    (await page.getByRole('heading', { level: 1, name: 'Components' }).boundingBox())!,
+  ];
+  expect(n.y).toBeLessThan(h.y);
+});
+
+test('the gallery is kept out of search engines', async ({ page, request }) => {
+  await page.goto('/dev/components');
+  const robotsMeta = await page.locator('meta[name="robots"]').getAttribute('content');
+  expect(robotsMeta).toMatch(/noindex/);
+  expect(robotsMeta).toMatch(/nofollow/);
+
+  const response = await request.get('/robots.txt');
+  expect(response.ok()).toBe(true);
+  const text = await response.text();
+  expect(text).toMatch(/User-Agent: \*/i);
+  expect(text).toMatch(/Allow: \//);
+  expect(text).toMatch(/Disallow: \/dev\//);
+});
