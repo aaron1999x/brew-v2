@@ -1,5 +1,5 @@
-import { expect, test } from '@playwright/test';
 import { openDevPage } from './helpers/dev-page';
+import { expect, signIn, test } from './helpers/test-users';
 
 test.describe('target size', () => {
   test('primary controls are at least 44×44 and nothing interactive is below 24×24', async ({
@@ -75,7 +75,8 @@ test.describe('target size', () => {
     expect(result.tiny, 'interactive elements under 24×24').toEqual([]);
   });
 
-  test('the shell navigation targets are at least 44×44', async ({ page }) => {
+  test('the shell navigation targets are at least 44×44', async ({ page, users }) => {
+    await signIn(page, users);
     await page.goto('/home');
     const nav = page.getByRole('navigation', { name: 'Main' });
     const links = nav.getByRole('link');

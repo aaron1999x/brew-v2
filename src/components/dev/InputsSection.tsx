@@ -12,6 +12,8 @@ import { Switch } from '@/components/ui/Switch/Switch';
 import { TextField } from '@/components/ui/TextField/TextField';
 import { Textarea } from '@/components/ui/Textarea/Textarea';
 import { TimeInput } from '@/components/ui/TimeInput/TimeInput';
+import { TemperatureField } from '@/components/ui/UnitFields/TemperatureField';
+import { WeightField } from '@/components/ui/UnitFields/WeightField';
 import styles from './sections.module.css';
 
 const methods = [
@@ -44,6 +46,9 @@ export function InputsSection() {
   const [roast, setRoast] = useState('medium');
   const [picked, setPicked] = useState<ComboboxSelection | null>(null);
   const [custom, setCustom] = useState<ComboboxSelection | null>(null);
+  const [imperial, setImperial] = useState('metric');
+  const [storedTemp, setStoredTemp] = useState<number | null>(93);
+  const [storedWeight, setStoredWeight] = useState<number | null>(18);
 
   return (
     <>
@@ -249,6 +254,36 @@ export function InputsSection() {
           />
           <Combobox label="Grinder (disabled)" items={gear} isDisabled />
         </div>
+      </div>
+
+      <div className={styles.group}>
+        <h3 className={styles.groupTitle}>Temperature and weight fields</h3>
+        <SegmentedControl
+          label="Show units as"
+          segments={[
+            { value: 'metric', label: '°C and g' },
+            { value: 'imperial', label: '°F and oz' },
+          ]}
+          value={imperial}
+          onChange={setImperial}
+        />
+        <div className={styles.pair}>
+          <TemperatureField
+            label="Brew temperature"
+            value={storedTemp}
+            onChange={setStoredTemp}
+            units={{ temp_unit: imperial === 'metric' ? 'c' : 'f', weight_unit: 'g' }}
+          />
+          <WeightField
+            label="Brew dose"
+            value={storedWeight}
+            onChange={setStoredWeight}
+            units={{ temp_unit: 'c', weight_unit: imperial === 'metric' ? 'g' : 'oz' }}
+          />
+        </div>
+        <p className={styles.result} data-testid="stored-values">
+          Stored: {storedTemp ?? '–'} °C · {storedWeight ?? '–'} g
+        </p>
       </div>
     </>
   );

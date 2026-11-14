@@ -53,7 +53,7 @@
 
 .link[aria-current='page'] {
   background: var(--color-bg-inset);
-  color: var(--color-accent-default);
+  color: var(--color-accent-on-inset);
   text-decoration: underline;
   text-underline-offset: var(--space-1);
 }

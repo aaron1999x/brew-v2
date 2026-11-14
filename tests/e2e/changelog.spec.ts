@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
-import { expect, test, type Page } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { expectNoAxeViolations } from './helpers/axe';
+import { expect, signIn, test } from './helpers/test-users';
 
 const { version } = JSON.parse(readFileSync('package.json', 'utf8')) as { version: string };
 // Chromium and WebKit both compute "v0.1.0 , view changelog": a space appears between the visible
@@ -77,13 +78,16 @@ test('the version badge is in the public footer, with the right name and link', 
 
 test('the version badge is at the bottom of the profile page on phones and in the rail on desktop', async ({
   page,
+  users,
 }, testInfo) => {
   const phone = testInfo.project.name.startsWith('iphone');
 
+  await signIn(page, users);
   await page.goto('/profile');
   const badge = page.getByRole('link', { name: badgeName });
   // Exactly one badge is visible: the page's on phones, the rail's at 1024 px and wider.
   await expect(badge).toHaveCount(1);
+  await badge.scrollIntoViewIfNeeded(); // the profile summary pushes it below the first screen
   await expect(badge).toBeVisible();
 
   const box = (await badge.boundingBox())!;

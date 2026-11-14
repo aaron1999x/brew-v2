@@ -83,3 +83,68 @@ test('an invalid field has a danger border and a focused one an accent border', 
   await inputs.getByRole('textbox', { name: 'Recipe name' }).first().focus();
   expect(await border(rest)).not.toBe(restColor);
 });
+
+for (const scheme of ['light', 'dark'] as const) {
+  test.describe(`focus ring, ${scheme} theme`, () => {
+    test.use({ colorScheme: scheme });
+
+    test('a focused field shows ONE ring on the shell; the inner input has no outline of its own', async ({
+      page,
+    }) => {
+      await openDevPage(page);
+      // Every shell on the gallery that contains a text input or textarea.
+      const count = await page.locator('#inputs [class*="_control"]:has(input, textarea)').count();
+      expect(count).toBeGreaterThan(8);
+
+      const checked: string[] = [];
+      for (let i = 0; i < count; i++) {
+        const shell = page.locator('#inputs [class*="_control"]:has(input, textarea)').nth(i);
+        const inner = shell.locator('input:not([type="hidden"]), textarea').first();
+        if (!(await inner.isEnabled()) || !(await inner.isVisible())) continue;
+        await inner.focus();
+        // Keyboard-style focus so :focus-visible rules apply.
+        await page.keyboard.press('Shift+Tab');
+        await page.keyboard.press('Tab');
+        const result = await shell.evaluate((el) => {
+          const input = el.querySelector('input:not([type="hidden"]), textarea') as HTMLElement;
+          const own = getComputedStyle(input);
+          const ring = getComputedStyle(el);
+          return {
+            focused: document.activeElement === input,
+            inputOutline: own.outlineStyle,
+            inputBorder: own.borderTopWidth,
+            shellOutlineStyle: ring.outlineStyle,
+            shellOutlineWidth: parseFloat(ring.outlineWidth),
+            shellOutlineColor: ring.outlineColor,
+            canvas: getComputedStyle(document.body).backgroundColor,
+          };
+        });
+        if (!result.focused) continue; // moved on to a stepper button etc.
+        checked.push((await inner.getAttribute('id')) ?? String(i));
+        expect(result.inputOutline, `input ${i} own outline`).toBe('none');
+        expect(result.inputBorder, `input ${i} own border`).toBe('0px');
+        expect(result.shellOutlineStyle, `shell ${i} ring`).toBe('solid');
+        expect(result.shellOutlineWidth, `shell ${i} ring width`).toBeGreaterThanOrEqual(2);
+      }
+      expect(checked.length).toBeGreaterThan(6);
+    });
+
+    test('the select trigger has exactly one ring', async ({ page }) => {
+      await openDevPage(page);
+      const trigger = page
+        .locator('#inputs')
+        .getByRole('button', { name: /Method/ })
+        .first();
+      await page.keyboard.press('Tab');
+      await trigger.focus();
+      await page.keyboard.press('Shift+Tab');
+      await page.keyboard.press('Tab');
+      const ring = await trigger.evaluate((el) => {
+        const s = getComputedStyle(el);
+        return { style: s.outlineStyle, width: parseFloat(s.outlineWidth) };
+      });
+      expect(ring.style).toBe('solid');
+      expect(ring.width).toBeGreaterThanOrEqual(2);
+    });
+  });
+}

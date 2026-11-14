@@ -1,6 +1,7 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { getPublicEnv, getServerEnv, resetEnvCacheForTests } from '@/lib/env';
+import { getPublicEnv, resetEnvCacheForTests } from '@/lib/env';
+import { getServerEnv, resetServerEnvCacheForTests } from '@/lib/env.server';
 
 const valid = {
   NEXT_PUBLIC_SUPABASE_URL: 'https://abcdefghijklmnopqrst.supabase.co',
@@ -20,10 +21,14 @@ function setEnv(overrides: Record<string, string | undefined> = {}) {
 }
 
 describe('env', () => {
-  beforeEach(() => resetEnvCacheForTests());
+  beforeEach(() => {
+    resetEnvCacheForTests();
+    resetServerEnvCacheForTests();
+  });
   afterEach(() => {
     vi.unstubAllEnvs();
     resetEnvCacheForTests();
+    resetServerEnvCacheForTests();
   });
 
   it('accepts valid public env; blank optional values become undefined', () => {

@@ -14,10 +14,11 @@ import { Icon } from '../Icon/Icon';
 import { VisuallyHidden } from '../VisuallyHidden/VisuallyHidden';
 import styles from './NumberField.module.css';
 
-export type Unit = 'g' | 'ml' | '°C' | '°F' | 's';
+export type Unit = 'g' | 'oz' | 'ml' | '°C' | '°F' | 's';
 
 const unitNames: Record<Unit, string> = {
   g: 'grams',
+  oz: 'ounces',
   ml: 'millilitres',
   '°C': 'degrees Celsius',
   '°F': 'degrees Fahrenheit',

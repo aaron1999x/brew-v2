@@ -117,6 +117,7 @@
 .ghost[data-hovered],
 .ghost[data-pressed] {
   background: var(--color-bg-inset);
+  color: var(--color-accent-on-inset);
 }
 
 .destructive {

@@ -5,7 +5,7 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { deflateSync } from 'node:zlib';
 
-const ACCENT = [0x9a, 0x4a, 0x1f]; // --color-roast-600
+const ACCENT = [0x00, 0x7a, 0x87]; // --color-brand-600
 const LETTER = [0xff, 0xff, 0xff]; // --color-neutral-0
 const OUT = 'public/brand';
 
