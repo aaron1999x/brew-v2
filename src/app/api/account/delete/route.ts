@@ -2,7 +2,7 @@ import 'server-only';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import { cookies } from 'next/headers';
 import { NextResponse, type NextRequest } from 'next/server';
-import { deleteAccount, type PasswordCheck } from '@/lib/account/deleteAccount';
+import { deleteAccount, isSameOrigin, type PasswordCheck } from '@/lib/account/deleteAccount';
 import { getPublicEnv } from '@/lib/env';
 import { reportUnexpected } from '@/lib/errors/report';
 import { THEME_COOKIE } from '@/lib/settings/theme';
@@ -10,18 +10,6 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
-
-/** Only requests that come from this site's own pages may delete an account. */
-function isSameOrigin(request: NextRequest): boolean {
-  const origin = request.headers.get('origin');
-  const host = request.headers.get('host');
-  if (!origin || !host) return false;
-  try {
-    return new URL(origin).host === host;
-  } catch {
-    return false;
-  }
-}
 
 async function verifyPassword(email: string, password: string): Promise<PasswordCheck> {
   const env = getPublicEnv();
@@ -40,7 +28,7 @@ async function verifyPassword(email: string, password: string): Promise<Password
 
 /** POST /api/account/delete { password, confirm: "DELETE" }: deletes the signed-in user's account. */
 export async function POST(request: NextRequest) {
-  if (!isSameOrigin(request)) {
+  if (!isSameOrigin(request.headers.get('origin'), request.headers.get('host'))) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 });
   }
 
@@ -60,7 +48,7 @@ export async function POST(request: NextRequest) {
     {
       verifyPassword,
       removeAvatarFiles: async (userId) => {
-        const files = await admin.storage.from('avatars').list(userId);
+        const files = await admin.storage.from('avatars').list(userId, { limit: 1000 });
         if (files.error) throw files.error;
         if (files.data.length === 0) return;
         const removed = await admin.storage

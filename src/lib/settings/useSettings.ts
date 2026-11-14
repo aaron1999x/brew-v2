@@ -23,7 +23,7 @@ import {
   type UnitSettings,
 } from '@/lib/units';
 import type { Json } from '@/types/database';
-import { parseOnboarding, type Onboarding } from './onboarding';
+import { mergeOnboarding, parseOnboarding, type Onboarding } from './onboarding';
 import { isTheme, type Theme } from './theme';
 
 /** `user_settings` as the app uses it: checked unions instead of raw strings. */
@@ -100,7 +100,14 @@ export function useUpdateSettings({ successMessage }: UpdateOptions = {}) {
       await queryClient.cancelQueries({ queryKey: queryKeys.settings() });
       const previous = queryClient.getQueryData<Settings>(queryKeys.settings());
       if (previous)
-        queryClient.setQueryData<Settings>(queryKeys.settings(), { ...previous, ...patch });
+        queryClient.setQueryData<Settings>(queryKeys.settings(), {
+          ...previous,
+          ...patch,
+          // Merge, not replace: two quick onboarding changes must not drop each other.
+          onboarding: patch.onboarding
+            ? mergeOnboarding(previous.onboarding, patch.onboarding)
+            : previous.onboarding,
+        });
       return { previous };
     },
     onError: (error, patch, context) => {

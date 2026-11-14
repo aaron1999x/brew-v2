@@ -3,6 +3,7 @@ import {
   DELETE_PHRASE,
   deleteAccount,
   isDeletePhrase,
+  isSameOrigin,
   type DeleteDeps,
 } from '@/lib/account/deleteAccount';
 import { buildExport, exportFileName, EXPORT_SCHEMA } from '@/lib/export/buildExport';
@@ -19,6 +20,20 @@ function deps(overrides: Partial<DeleteDeps> = {}): DeleteDeps {
     ...overrides,
   };
 }
+
+describe('isSameOrigin', () => {
+  it('accepts only an Origin that matches the Host', () => {
+    expect(isSameOrigin('https://app.example', 'app.example')).toBe(true);
+    expect(isSameOrigin('http://localhost:3210', 'localhost:3210')).toBe(true);
+    expect(isSameOrigin('https://evil.example', 'app.example')).toBe(false);
+    expect(isSameOrigin('https://app.example.evil.com', 'app.example')).toBe(false);
+    expect(isSameOrigin('https://app.example:8443', 'app.example')).toBe(false);
+    expect(isSameOrigin(null, 'app.example')).toBe(false);
+    expect(isSameOrigin('https://app.example', null)).toBe(false);
+    expect(isSameOrigin('not a url', 'app.example')).toBe(false);
+    expect(isSameOrigin('null', 'app.example')).toBe(false);
+  });
+});
 
 describe('deleteAccount', () => {
   it('accepts the phrase in any case with spaces around it', () => {

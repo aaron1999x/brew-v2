@@ -8,6 +8,16 @@ export function isDeletePhrase(value: unknown): boolean {
   return typeof value === 'string' && value.trim().toUpperCase() === DELETE_PHRASE;
 }
 
+/** Only requests that come from this site's own pages may delete an account: Origin must match Host. */
+export function isSameOrigin(origin: string | null, host: string | null): boolean {
+  if (!origin || !host) return false;
+  try {
+    return new URL(origin).host === host;
+  } catch {
+    return false;
+  }
+}
+
 export type PasswordCheck = 'ok' | 'wrong' | 'rate_limited' | 'error';
 
 export type DeleteDeps = {

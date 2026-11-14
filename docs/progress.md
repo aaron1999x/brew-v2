@@ -112,6 +112,8 @@ Status: **complete, awaiting merge** (PR #6, `feat(ui): UI kit and app shell`).
 - `ButtonLink` has no hover state (the Button hover styles use React Aria's `data-hovered`).
 - Tab bar, side nav, stepper and card spacing; chart styling toward the shadcn look; sheet and toast motion.
 - Check Select and Combobox on a real phone; consider the native iOS select.
+- **Chart series A vs accent (added in M2):** the accent is now teal `#007a87` (`--color-brand-600`), and chart series A is `--color-teal-600` `#0e7c86`, almost the same colour. Pick a chart palette that separates series A from the accent (and from the info status colour, which is also teal).
+- **Placeholder name:** the product name is "Bloom" in `src/config/site.ts` and the email templates; the logo and icons are still the placeholder "A" disc (now teal).
 
 ### Stage log
 - Stage 1: tokens, font, icons, `/dev/components` scaffold, inline-style token lint.
@@ -149,7 +151,7 @@ Status: PR `feat(ui): show the component gallery in production`.
 
 ## M2 Accounts, onboarding, profile, settings
 
-Status: **in progress** (branch `feat/m2-accounts`).
+Status: **done, in review** (branch `feat/m2-accounts`, PR #11).
 
 ### Stage 1 notes (database)
 - **Migration `20261114000001_m2_accounts.sql`:** `user_settings.theme` (system/light/dark) and a check that `onboarding` is a JSON object; reserved handles `profile`, `goodbye`, `auth`, `dev`, `changelog`, `status`, `invites`; `handle_status()`, `handle_suggestions()`; `admin_list_invites()`, `admin_add_invite()` (`email_invalid`), `admin_remove_invite()` (`invite_used`: only unused invites can be removed).
@@ -175,6 +177,55 @@ Status: **in progress** (branch `feat/m2-accounts`).
 - **No test may send a real email.** Specs create users with `auth.admin.createUser` or `generateLink` and intercept the browser's sign-up/resend/recover requests. **Incident:** on the first iPhone/WebKit runs those intercepts did **not** catch the requests (the production build's service worker sits in front of `page.route` in WebKit), so a few real sign-up and resend calls for `@test.invalid` addresses reached staging and probably made Supabase send confirmation emails that bounce. Fixed: the auth specs block service workers, and an automatic guard (`emailGuard` in `tests/e2e/helpers/test-users.ts`, on for every test) aborts any email-sending Auth request a spec didn't intercept and fails the test. Check the Resend dashboard for bounces and suppression (see the Stage 2 hand-over).
 - **Test users are always cleaned up:** the `users` fixture deletes users and allowlist rows, and a global teardown fails the run if any `@test.invalid` user or allowlist row remains. A crashed run (the WebKit worker can run out of memory with 3 workers) skips cleanup; run `node` against the admin API or re-run the specs to clear leftovers. Use `--workers=1` or `2` for `--project=iphone`.
 - **CI and the account specs (decided with Aaron):** CI has no staging secret key, so the specs that need one (`auth.spec.ts`, and the shell, accessibility and changelog specs that now log in a test user) **skip with a clear message** there, and everything else still runs. The check is a **local run before each push** (`npm run build`, then `npm run test:e2e`; use `--workers=1` or `2` for `--project=iphone`). No GitHub secret is added for this.
+### Accent colour (between Stage 2 and Stage 3)
+- Aaron changed the accent to teal `#007a87`. It now goes through the tokens: new primitives `--color-brand-300/600/700` (`#4fc3cf`, `#007a87`, `#005f6a`) feed accent default, hover, pressed, focus ring and selection in light, dark and system-dark. Placeholder icons, favicon and email templates follow.
+- **One AA failure found and fixed:** accent text on the inset background was 4.09:1 in light mode (the current side-nav link and the ghost-button hover). New token `--color-accent-on-inset` (`#005f6a` light, `#4fc3cf` dark) is used for those two places; `tests/unit/contrast.test.ts` has a row for it. The accent itself was not changed.
+
+### Stage 3 notes (units, settings, appearance, onboarding)
+- **Units layer** (`src/lib/units/`): `convert`, `format`, `defaults`. Stored values are metric; temperatures are stored to 0.1 °C and weights to 0.01 g, displayed to 1 decimal (°C, °F, g) or 2 (oz). Dates and times use `Intl` parts in the user's zone with `dmy`/`mdy`/`ymd` and `12h`/`24h`. Locale defaults: US, Liberia, Myanmar → °F, oz, mdy, 12h; elsewhere °C, g, dmy, clock from the locale.
+- **`useUnits()`** (`src/lib/settings/useSettings.ts`) reads `['settings']` and returns formatters; before settings load it uses device defaults. **M3/M4 must use `TemperatureField` and `WeightField`** (`src/components/ui/UnitFields/`): they take and emit metric, show the user's unit, and only call `onChange` when the person edits (no rounding drift). They are in `/dev/components`.
+- **Settings:** `/settings` (Profile, Units and region, Appearance, Account, Invites for admins, Log out), `/settings/units` (each choice saves at once, with a live preview line), `/settings/appearance`. Mutations are TanStack Query with optimistic updates and rollback (`useUpdateSettings`).
+- **Mutations read the user from the stored session** (`currentUserId()`), not from `useSession()`: `useSession()` starts empty in every component that calls it, so a save fired right after mount ran with no user (found by the onboarding e2e test: `started_at` was never written).
+- **Theme:** stored in `user_settings.theme` and a `theme` cookie (1 year). A tiny script in `<head>` (`THEME_BOOT_SCRIPT`) copies the cookie onto `<html data-theme>` before first paint, so there is no flash and the root layout never reads cookies: **public pages stay static and cacheable** (`/`, `/changelog`, `/forgot-password`, … show as static in the build). `ThemeSync` in the app layout keeps cookie and page in line with the saved theme (cross-device changes, failed saves). Log out clears the cookie. Note: signed-in pages are still per-request because they check the session, not because of the theme.
+- **Onboarding** (`/welcome`, `src/components/onboarding/`): one step per screen with a progress line, every step skippable. Steps come from `ONBOARDING_STEPS` in `src/lib/settings/onboarding.ts` (handle, units, gear, profile); **`gear` is `enabled: false`, M3 turns it on** when `/settings/gear` exists. State lives in `user_settings.onboarding` (Zod-validated: per-step `done`/`skipped`, `checklist_dismissed`, `started_at`). The handle step only shows while `handle_confirmed` is false. The units step is pre-filled from the device and saved on Continue. Home shows "Finish your profile" (skipped or unfinished steps, Dismiss).
+- **Shared:** `QueryBoundary` (skeletons, "still loading" after 10 s, error with Retry) for the loading/error half of the screen standard.
+
+### Stage 4 notes (profile)
+- `/profile` shows photo (initials fallback), name, verified badge, `@handle`, level, bio and favourite gear; `/settings/profile` edits them (live handle check with suggestions, bio counter, level, up to five free-text gear items with a category; M3 replaces them with the catalogue picker).
+- **Photos:** `src/lib/avatar/`. On the device: decode with EXIF rotation, centre-crop square, 512×512 canvas, WebP (checked by the blob's real type), JPEG fallback (Safari), quality steps until ≤ 1 MB. Stored at `avatars/{user_id}/avatar.webp|jpg` (upsert; the other format is removed), shown from the public bucket URL with `?v=<updated_at>`. Remove deletes the file(s) and clears the path. The bucket is public (anyone with the URL can see the photo; the policy only restricts writes to the owner's folder).
+- Playwright uploads a generated PNG on desktop (WebP) and iPhone (WebKit; JPEG or WebP), checks the stored object and that another user's folder is refused.
+
+### Stage 5 notes (account and admin)
+- **`GET /api/export`** (`src/lib/export/buildExport.ts`): `{ schema: 1, exported_at, account, profile, settings, gear, recipes: [{…, versions}], brews, saved, notifications }`. Runs as the signed-in user (RLS applies) and also filters by the user's id, so other people's public rows are never included. Pages through results (1000 per request). Unit-tested with a fake client, e2e-tested.
+- **`POST /api/account/delete`** (route handler): same-origin only (Origin must match Host), user from the session, `{ password, confirm }` where the phrase is `DELETE` compared trimmed and case-insensitively. Order: verify the password with a separate non-persisting client → delete `avatars/{id}/` files → `auth.admin.deleteUser` → clear the session cookies. Nothing is deleted if any earlier step fails. The form lives on its own page, `/settings/account/delete` (the keyboard can't cover it), and its button is never disabled: problems show in the error summary on submit.
+- **Change password:** `updateUser({ password, current_password })`. Staging answers a wrong current password with `current_password_invalid` (400), same password with `same_password` (422). Found with a throwaway user (the code I first assumed, `reauthentication_not_valid`, is also mapped).
+- **`/admin/invites`:** `requireAdmin()` (404 for everyone else), add / list / remove unused / copy invite message. Aaron's staging account was made admin with `supabase/scripts/make-admin.sql`.
+- **Disabled-until-valid audit:** only the delete confirmation and the onboarding handle step did this; both now validate on submit. Remaining disabled states are the resend cooldown and in-flight pending buttons.
+
+### Stage 6 notes (fixes after the phone check, review)
+- **Focus ring:** one ring per field. The global `:focus-visible` outline also landed on the bare input inside the shell; `Field.module.css` now removes it for `input`/`textarea` inside `.control` only (buttons, links, chips and steppers keep the global ring). A computed-style test covers every field on `/dev/components` in both themes.
+- **Sheet and keyboard:** the shared `Sheet` follows `window.visualViewport` (Safari ignores `interactive-widget`), scrolls its content and scrolls the focused field into view. The iPhone test shrinks the viewport as a stand-in for the keyboard and fails without the fix. Verify on a real phone.
+- **Navigation:** Profile is the current page on `/profile`, `/settings/*` and `/admin/*`; the rail's Brew is an outlined button so a filled block can't look like "current".
+- **Commit scopes:** `tokens`, `settings` and `account` added to `commitlint.config.mjs`.
+- **Flaky WebKit:** the iPhone project sometimes crashes ("Target page, context or browser has been closed", or the worker runs out of memory), in a different test each time; every affected spec passes alone. Run iPhone with `--workers=1`, and do not run two projects together.
+- **CI:** the account, settings and profile specs need the staging secret key and skip in CI (decided earlier); the local run before each push is the check. Local results at the last push are in the PR description.
+
+### Reviewer (M2)
+- **No blockers.** Fixed: optimistic settings update now merges `onboarding` (two quick changes can't drop a step); the same-origin check moved to `src/lib/account/deleteAccount.ts` with unit tests (missing, malformed, mismatched, look-alike hosts); the avatar listing on delete asks for up to 1000 files.
+- **Open, for you:** (1) confirm "Require current password" is on in **production** too (staging enforces it: a wrong current password returns `current_password_invalid`); (2) the e2e delete test checks profile, settings, status and the avatar file only; the full cascade (recipes, versions, brews, forks) is proven by pgTAP `06_accounts.sql` and `npm run verify:account-delete`, not in CI; (3) a failed `deleteUser` after the avatar files were removed leaves `profiles.avatar_path` pointing at missing files (the initials fallback shows; retrying the delete works); (4) `handle_suggestions` is open to `anon` and loops up to 23 times, so add a rate limit later; (5) the `min`/`max` of unit fields are rounded for display, so they can be off by half a display step.
+
+### What M3 must use
+`useUnits()`, `TemperatureField`, `WeightField`; turn on `ONBOARDING_STEPS.gear` and add `/settings/gear` (the checklist links to it); replace favourite-gear free text with the catalogue picker; `QueryBoundary` and the settings/profile query hooks; `FormErrorSummary` on submit and never a disabled submit button.
+
+### Dashboard settings M2 relies on
+- Authentication → Emails → Templates: **Confirm signup** and **Reset password** from `supabase/templates/` (subjects "Confirm your email for Bloom", "Reset your Bloom password").
+- URL Configuration: Site URL, Redirect URLs including `https://brew-v2-*-aaron1999xs-projects.vercel.app/**` and `http://localhost:3000/**`.
+- "Confirm email" on; "Require current password when setting a new password" on; custom SMTP (Resend) sender `no-reply@brew.atys.dev`.
+- Vercel: optional `NEXT_PUBLIC_SUPPORT_EMAIL` for the suspended banner (Preview and Production).
+
+### Next (M3)
+Gear, recipes, versions (`docs/phase-5-roadmap.md` M3).
+
 ## M3 Gear, recipes, versions
 ## M4 Guided timer and brew log
 ## M5 Offline and PWA
