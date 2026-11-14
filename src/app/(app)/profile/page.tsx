@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Bookmark } from 'lucide-react';
 import { SignOutButton } from '@/components/auth/SignOutButton';
+import { ProfileSummary } from '@/components/profile/ProfileSummary';
 import { TopBar } from '@/components/shell/TopBar';
 import { ButtonLink } from '@/components/ui/ButtonLink/ButtonLink';
 import { EmptyState } from '@/components/ui/EmptyState/EmptyState';
@@ -16,6 +17,7 @@ export default async function ProfilePage() {
     <>
       <TopBar title="Profile" />
       <div className={styles.body}>
+        <ProfileSummary />
         <EmptyState
           icon={Bookmark}
           title="Nothing saved yet."
@@ -26,9 +28,6 @@ export default async function ProfilePage() {
             </ButtonLink>
           }
         />
-        <ButtonLink href="/settings" variant="secondary" size="lg">
-          Settings
-        </ButtonLink>
         <SignOutButton />
         <div className={styles.versionRow}>
           <VersionBadge />

@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { HandleField } from '@/components/auth/HandleField';
 import { QueryBoundary } from '@/components/feedback/QueryBoundary';
+import { AvatarUploader } from '@/components/profile/AvatarUploader';
 import { UnitsFields } from '@/components/settings/UnitsFields';
 import { Button } from '@/components/ui/Button/Button';
 import { RadioGroup } from '@/components/ui/RadioGroup/RadioGroup';
@@ -115,6 +116,7 @@ function Flow({ settings, profile }: { settings: Settings; profile: ProfileMe })
           ) : null}
           {current === 'profile' ? (
             <ProfileStep
+              profile={profile}
               current={profile.experience_level}
               onDone={() => finish('profile', 'done')}
               onSkip={() => finish('profile', 'skipped')}
@@ -216,10 +218,12 @@ function UnitsStep({
 }
 
 function ProfileStep({
+  profile,
   current,
   onDone,
   onSkip,
 }: {
+  profile: ProfileMe;
   current: ExperienceLevel | null;
   onDone: () => void;
   onSkip: () => void;
@@ -240,6 +244,7 @@ function ProfileStep({
 
   return (
     <div className={styles.step}>
+      <AvatarUploader profile={profile} />
       <RadioGroup
         label="How would you describe your brewing?"
         value={level ?? ''}

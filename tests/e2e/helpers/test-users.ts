@@ -121,8 +121,27 @@ export class TestUsers {
     }
   }
 
+  /** A client signed in as this user with the publishable key, so row-level security applies. */
+  async clientFor(user: Pick<TestUser, 'email' | 'password'>): Promise<SupabaseClient> {
+    const client = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+      { auth: { autoRefreshToken: false, persistSession: false } },
+    );
+    const { error } = await client.auth.signInWithPassword(user);
+    if (error) throw new Error(`signIn: ${error.message}`);
+    return client;
+  }
+
   async cleanup() {
-    for (const id of this.userIds) await this.admin.auth.admin.deleteUser(id);
+    for (const id of this.userIds) {
+      // Supabase refuses to delete a user who still owns Storage files.
+      const { data } = await this.admin.storage.from('avatars').list(id);
+      if (data && data.length > 0) {
+        await this.admin.storage.from('avatars').remove(data.map((f) => `${id}/${f.name}`));
+      }
+      await this.admin.auth.admin.deleteUser(id);
+    }
     if (this.emails.length > 0) {
       await this.admin.from('signup_allowlist').delete().in('email', this.emails);
     }

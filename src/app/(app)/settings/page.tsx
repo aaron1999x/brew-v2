@@ -8,6 +8,7 @@ import styles from '../shell.module.css';
 export const metadata: Metadata = { title: 'Settings' };
 
 const LINKS: readonly SettingsLink[] = [
+  { href: '/settings/profile', label: 'Profile', hint: 'Photo, name, handle and bio' },
   {
     href: '/settings/units',
     label: 'Units and region',

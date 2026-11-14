@@ -87,6 +87,7 @@ test('the version badge is at the bottom of the profile page on phones and in th
   const badge = page.getByRole('link', { name: badgeName });
   // Exactly one badge is visible: the page's on phones, the rail's at 1024 px and wider.
   await expect(badge).toHaveCount(1);
+  await badge.scrollIntoViewIfNeeded(); // the profile summary pushes it below the first screen
   await expect(badge).toBeVisible();
 
   const box = (await badge.boundingBox())!;
