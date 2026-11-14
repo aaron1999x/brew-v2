@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { siteConfig } from '@/config/site';
 import { cx } from '@/lib/cx';
 import { Icon } from '../ui/Icon/Icon';
+import { VersionBadge } from '../ui/VersionBadge/VersionBadge';
 import { isCurrent, navItems } from './navItems';
 import styles from './SideNav.module.css';
 
@@ -36,6 +37,9 @@ export function SideNav() {
           ))}
         </ul>
       </nav>
+      <div className={styles.version}>
+        <VersionBadge />
+      </div>
     </header>
   );
 }

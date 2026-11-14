@@ -3,6 +3,7 @@ import { Bookmark } from 'lucide-react';
 import { TopBar } from '@/components/shell/TopBar';
 import { ButtonLink } from '@/components/ui/ButtonLink/ButtonLink';
 import { EmptyState } from '@/components/ui/EmptyState/EmptyState';
+import { VersionBadge } from '@/components/ui/VersionBadge/VersionBadge';
 import styles from '../shell.module.css';
 
 export const metadata: Metadata = { title: 'Profile' };
@@ -22,6 +23,9 @@ export default function ProfilePage() {
             </ButtonLink>
           }
         />
+        <div className={styles.versionRow}>
+          <VersionBadge />
+        </div>
       </div>
     </>
   );

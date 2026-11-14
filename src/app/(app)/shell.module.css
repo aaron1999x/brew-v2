@@ -28,3 +28,16 @@
     padding-left: var(--size-rail);
   }
 }
+
+/* Version badge at the bottom of the profile page; from 1024 px the left rail shows it instead. */
+.versionRow {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-6);
+}
+
+@media (min-width: 1024px) {
+  .versionRow {
+    display: none;
+  }
+}

@@ -97,3 +97,15 @@
     flex-direction: column;
   }
 }
+
+/* The version badge sits at the bottom of the left rail only; it is hidden in the top bar. */
+.version {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .version {
+    display: block;
+    margin-top: auto;
+  }
+}
