@@ -19,6 +19,10 @@ export const ERROR_MESSAGES = {
   cannot_suspend_self: "You can't suspend your own account.",
   not_authenticated: 'Please log in again.',
   invite_only: 'Sign-ups are invite-only right now.',
+  invite_used: "That person has already signed up, so the invite can't be removed.",
+  email_invalid: 'Enter a valid email address.',
+  handle_taken: 'That handle is taken. Try another.',
+  handle_invalid: 'Use 3–30 lowercase letters, numbers or underscores.',
 } as const;
 
 export type ErrorCode = keyof typeof ERROR_MESSAGES;
@@ -27,6 +31,25 @@ export const MESSAGE_LOGIN_AGAIN = 'Please log in again.';
 export const MESSAGE_NO_PERMISSION = "You don't have permission to do that.";
 export const MESSAGE_NETWORK = "Couldn't reach the server. Check your connection and try again.";
 export const MESSAGE_FALLBACK = 'Something went wrong. Try again.';
+
+/**
+ * Supabase Auth `error.code` values (not message text) → plain messages.
+ * Codes come from @supabase/auth-js ErrorCode.
+ */
+export const AUTH_ERROR_MESSAGES: Record<string, string> = {
+  invalid_credentials: 'Email or password is wrong.',
+  email_not_confirmed: 'Confirm your email first.',
+  over_request_rate_limit: 'Too many attempts. Wait a minute and try again.',
+  over_email_send_rate_limit: 'Too many attempts. Wait a minute and try again.',
+  weak_password: 'Choose a password with at least 8 characters.',
+  same_password: 'Choose a different password from your current one.',
+  reauthentication_not_valid: 'Your current password is wrong.',
+  otp_expired: 'This link has expired or was already used.',
+  flow_state_expired: 'This link has expired or was already used.',
+  flow_state_not_found: 'This link has expired or was already used.',
+};
+export const MESSAGE_LINK_EXPIRED = 'This link has expired or was already used.';
+export const MESSAGE_RATE_LIMITED = 'Too many attempts. Wait a minute and try again.';
 
 const KNOWN_CODES = Object.keys(ERROR_MESSAGES) as ErrorCode[];
 
@@ -95,6 +118,12 @@ export function toUserMessage(error: unknown): string {
 
   const e = asErrorLike(error);
   if (isNetworkError(error)) return MESSAGE_NETWORK;
+  const authCode = str(e?.code);
+  const authMessage = Object.hasOwn(AUTH_ERROR_MESSAGES, authCode)
+    ? AUTH_ERROR_MESSAGES[authCode]
+    : undefined;
+  if (authMessage) return authMessage;
+  if (e?.status === 429) return MESSAGE_RATE_LIMITED;
   if (AUTH_CODES.has(str(e?.code)) || e?.status === 401) return MESSAGE_LOGIN_AGAIN;
   // 42501 = insufficient_privilege: a row-level security policy refused the write
   // (also what a suspended account hits).

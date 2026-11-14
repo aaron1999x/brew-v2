@@ -12,6 +12,8 @@ const publicSchema = z.object({
   NEXT_PUBLIC_SITE_URL: z.url(),
   NEXT_PUBLIC_APP_ENV: z.enum(['local', 'staging', 'production']),
   NEXT_PUBLIC_SENTRY_DSN: optional(z.url()),
+  /** Shown on the "account suspended" banner. Optional: without it the banner has no contact line. */
+  NEXT_PUBLIC_SUPPORT_EMAIL: optional(z.email()),
 });
 
 const serverSchema = z.object({
@@ -51,6 +53,7 @@ export function getPublicEnv(): PublicEnv {
       NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
       NEXT_PUBLIC_APP_ENV: process.env.NEXT_PUBLIC_APP_ENV,
       NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
+      NEXT_PUBLIC_SUPPORT_EMAIL: process.env.NEXT_PUBLIC_SUPPORT_EMAIL,
     },
     'public',
   );
