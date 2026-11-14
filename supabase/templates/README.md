@@ -6,10 +6,10 @@ production at release time).
 
 | File | Dashboard template | Subject (first line of the file, in a comment) |
 |---|---|---|
-| `confirm-signup.html` | **Confirm signup** | Confirm your email for [App] |
-| `reset-password.html` | **Reset password** | Reset your [App] password |
+| `confirm-signup.html` | **Confirm signup** | Confirm your email for Bloom |
+| `reset-password.html` | **Reset password** | Reset your Bloom password |
 
-`[App]` is the placeholder product name (`src/config/site.ts`). Replace it in both files, in the
+`Bloom` is the placeholder product name (`src/config/site.ts`). Replace it in both files, in the
 subjects and in the dashboard once the product has a name.
 
 ## How the links work
