@@ -152,6 +152,7 @@
   --color-bg-overlay: rgba(31, 26, 23, 0.5);
   --color-text-muted: var(--color-neutral-600);
   --color-accent-hover: var(--color-brand-700);
+  --color-accent-on-inset: var(--color-brand-700);
   --color-selection-bg: var(--color-brand-600);
   --color-selection-fg: var(--color-neutral-0);
   --color-slider-track: var(--color-neutral-500);
@@ -198,6 +199,7 @@
   --color-bg-overlay: rgba(0, 0, 0, 0.65);
   --color-text-muted: var(--color-neutral-300);
   --color-accent-hover: var(--color-brand-300);
+  --color-accent-on-inset: var(--color-brand-300);
   --color-selection-bg: var(--color-brand-300);
   --color-selection-fg: var(--color-neutral-950);
   --color-slider-track: var(--color-neutral-500);
@@ -245,6 +247,7 @@
     --color-bg-overlay: rgba(0, 0, 0, 0.65);
     --color-text-muted: var(--color-neutral-300);
     --color-accent-hover: var(--color-brand-300);
+    --color-accent-on-inset: var(--color-brand-300);
     --color-selection-bg: var(--color-brand-300);
     --color-selection-fg: var(--color-neutral-950);
     --color-slider-track: var(--color-neutral-500);
