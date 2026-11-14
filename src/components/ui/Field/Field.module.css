@@ -79,6 +79,19 @@
   cursor: not-allowed;
 }
 
+/*
+ * One ring per field: the shell draws it (above). The bare input inside the shell must not add
+ * the global :focus-visible outline as well. Higher specificity than that global rule; buttons
+ * and links inside a shell (steppers, toggles) keep their own ring.
+ */
+.control input:focus,
+.control input:focus-visible,
+.control textarea:focus,
+.control textarea:focus-visible {
+  outline: none;
+  border: 0;
+}
+
 /* The bare <input>/<textarea> inside a .control. */
 .input {
   flex: 1;
