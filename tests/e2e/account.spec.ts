@@ -112,19 +112,26 @@ test.describe('delete account', () => {
 
     await page.goto('/settings/account');
     await waitForApp(page);
-    await page.getByRole('button', { name: 'Delete account' }).click();
-    const dialog = page.getByRole('alertdialog', { name: 'Delete your account?' });
-    await expect(dialog).toBeVisible();
-    const confirm = dialog.getByRole('button', { name: 'Delete my account' });
-    await expect(confirm).toBeDisabled();
-
-    await dialog.getByLabel('Type DELETE to confirm').fill('DELETE');
-    await dialog.getByLabel('Your password').fill('wrong-password-123');
+    await page.getByRole('link', { name: 'Delete account' }).click();
+    await page.waitForURL('**/settings/account/delete');
+    await waitForApp(page);
+    const form = page.getByRole('form', { name: 'Delete account' });
+    const confirm = form.getByRole('button', { name: 'Delete my account' });
+    // Never disabled: an empty form is answered with the error summary, not a dead button.
+    await expect(confirm).toBeEnabled();
     await confirm.click();
-    await expect(dialog.getByText('Your password is wrong.')).toBeVisible();
+    const summary = page.getByRole('group', { name: /Fix 2 things/ });
+    await expect(summary).toBeFocused();
     expect((await users.admin.auth.admin.getUserById(user.id)).data.user).not.toBeNull();
 
-    await dialog.getByLabel('Your password').fill(user.password);
+    // A phone adds a trailing space and may change the case: still accepted.
+    await form.getByLabel('Type DELETE to confirm').fill('delete ');
+    await form.getByLabel('Your password').fill('wrong-password-123');
+    await confirm.click();
+    await expect(form.getByText('Your password is wrong.').first()).toBeVisible();
+    expect((await users.admin.auth.admin.getUserById(user.id)).data.user).not.toBeNull();
+
+    await form.getByLabel('Your password').fill(user.password);
     await confirm.click();
     await page.waitForURL('**/goodbye');
     await expect(
@@ -165,7 +172,7 @@ test.describe('delete account', () => {
 
     const noPhrase = await page.context().request.post('/api/account/delete', {
       headers: { Origin: new URL(page.url()).origin, 'Content-Type': 'application/json' },
-      data: { password: user.password, confirm: 'delete' },
+      data: { password: user.password, confirm: 'remove' },
     });
     expect(noPhrase.status()).toBe(400);
     expect((await users.admin.auth.admin.getUserById(user.id)).data.user).not.toBeNull();
@@ -244,7 +251,7 @@ for (const scheme of ['light', 'dark'] as const) {
   test.describe(`accessibility, ${scheme} theme`, () => {
     test.use({ colorScheme: scheme });
 
-    test('settings, account, the delete sheet and admin invites have no violations', async ({
+    test('settings, account, the delete page and admin invites have no violations', async ({
       page,
       users,
     }) => {
@@ -261,11 +268,13 @@ for (const scheme of ['light', 'dark'] as const) {
       await expect(page.getByRole('button', { name: 'Download my data' })).toBeVisible();
       await expectNoAxeViolations(page);
 
-      await page.emulateMedia({ reducedMotion: 'reduce' }); // no fade, so axe sees final colours
-      await page.getByRole('button', { name: 'Delete account' }).click();
-      await expect(page.getByRole('alertdialog', { name: 'Delete your account?' })).toBeVisible();
+      await page.goto('/settings/account/delete');
+      await waitForApp(page);
+      await expect(page.getByRole('form', { name: 'Delete account' })).toBeVisible();
       await expectNoAxeViolations(page);
-      await page.keyboard.press('Escape');
+      await page.getByRole('button', { name: 'Delete my account' }).click();
+      await expect(page.getByRole('group', { name: /Fix 2 things/ })).toBeVisible();
+      await expectNoAxeViolations(page);
 
       await page.goto('/admin/invites');
       await waitForApp(page);

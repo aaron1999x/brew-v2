@@ -1,5 +1,13 @@
 export const DELETE_PHRASE = 'DELETE';
 
+/**
+ * Does what was typed count as the confirmation phrase? Ignores case and surrounding spaces, so
+ * "delete " (a phone's auto-capitalise or a trailing space) still works.
+ */
+export function isDeletePhrase(value: unknown): boolean {
+  return typeof value === 'string' && value.trim().toUpperCase() === DELETE_PHRASE;
+}
+
 export type PasswordCheck = 'ok' | 'wrong' | 'rate_limited' | 'error';
 
 export type DeleteDeps = {
@@ -10,11 +18,11 @@ export type DeleteDeps = {
   deleteUser: (userId: string) => Promise<void>;
 };
 
-export type DeleteResult =
-  { ok: true } | { ok: false; status: 400 | 403 | 429 | 500; code: DeleteErrorCode };
-
 export type DeleteErrorCode =
   'invalid_request' | 'wrong_password' | 'rate_limited' | 'delete_failed';
+
+export type DeleteResult =
+  { ok: true } | { ok: false; status: 400 | 403 | 429 | 500; code: DeleteErrorCode };
 
 /**
  * The order matters: the password is checked first, then the files (so the user can be deleted),
@@ -26,7 +34,7 @@ export async function deleteAccount(
   deps: DeleteDeps,
 ): Promise<DeleteResult> {
   const { user, password, confirm } = input;
-  if (confirm !== DELETE_PHRASE || typeof password !== 'string' || password === '' || !user.email) {
+  if (!isDeletePhrase(confirm) || typeof password !== 'string' || password === '' || !user.email) {
     return { ok: false, status: 400, code: 'invalid_request' };
   }
 

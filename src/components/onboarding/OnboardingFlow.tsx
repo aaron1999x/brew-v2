@@ -9,7 +9,11 @@ import { AvatarUploader } from '@/components/profile/AvatarUploader';
 import { UnitsFields } from '@/components/settings/UnitsFields';
 import { Button } from '@/components/ui/Button/Button';
 import { RadioGroup } from '@/components/ui/RadioGroup/RadioGroup';
-import { useHandleStatus } from '@/lib/auth/handle';
+import {
+  FormErrorSummary,
+  type FormError,
+} from '@/components/ui/FormErrorSummary/FormErrorSummary';
+import { HANDLE_MESSAGES, useHandleStatus } from '@/lib/auth/handle';
 import { toUserMessage } from '@/lib/errors/messages';
 import {
   EXPERIENCE_LEVELS,
@@ -147,37 +151,48 @@ function StepButtons({
 
 function HandleStep({ onDone, onSkip }: { onDone: () => void; onSkip: () => void }) {
   const [handle, setHandle] = useState('');
-  const [error, setError] = useState<string | undefined>();
+  const [errors, setErrors] = useState<FormError[]>([]);
   const { status, isChecking } = useHandleStatus(handle);
   const update = useUpdateProfile();
 
+  const fieldId = 'onboarding-handle';
+
+  /** The Continue button is always enabled; what is wrong is said here, on submit. */
   async function submit() {
-    setError(undefined);
+    let message: string | undefined;
+    if (handle === '') message = 'Pick a handle, or skip this step.';
+    else if (isChecking || status === null) message = 'Wait for the handle check to finish.';
+    else if (status !== 'ok') message = HANDLE_MESSAGES[status];
+    if (message) {
+      setErrors([{ fieldId, message }]);
+      return;
+    }
+    setErrors([]);
     try {
       await update.mutateAsync({ handle });
       onDone();
     } catch (e) {
-      setError(toUserMessage(e));
+      setErrors([{ fieldId, message: toUserMessage(e) }]);
     }
   }
 
   return (
     <div className={styles.step}>
       <p className={styles.text}>Your handle is how other brewers will find you.</p>
+      <FormErrorSummary errors={errors} />
       <HandleField
-        id="onboarding-handle"
+        id={fieldId}
         value={handle}
         onChange={setHandle}
         status={status}
         isChecking={isChecking}
-        errorMessage={error}
+        errorMessage={errors[0]?.message}
       />
       <StepButtons
         onSkip={onSkip}
         continueButton={
           <Button
             size="lg"
-            isDisabled={status !== 'ok' || isChecking}
             isPending={update.isPending}
             pendingLabel="Saving…"
             onPress={() => void submit()}

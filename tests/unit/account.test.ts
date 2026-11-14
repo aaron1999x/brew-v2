@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { DELETE_PHRASE, deleteAccount, type DeleteDeps } from '@/lib/account/deleteAccount';
+import {
+  DELETE_PHRASE,
+  deleteAccount,
+  isDeletePhrase,
+  type DeleteDeps,
+} from '@/lib/account/deleteAccount';
 import { buildExport, exportFileName, EXPORT_SCHEMA } from '@/lib/export/buildExport';
 import { inviteMessage } from '@/lib/admin/useInvites';
 import { passwordErrorField } from '@/components/account/ChangePasswordForm';
@@ -16,6 +21,13 @@ function deps(overrides: Partial<DeleteDeps> = {}): DeleteDeps {
 }
 
 describe('deleteAccount', () => {
+  it('accepts the phrase in any case with spaces around it', () => {
+    for (const ok of ['DELETE', 'delete', 'Delete ', ' DELETE\n'])
+      expect(isDeletePhrase(ok)).toBe(true);
+    for (const bad of ['', 'DELET', 'DEL ETE', undefined, 5])
+      expect(isDeletePhrase(bad)).toBe(false);
+  });
+
   it('checks the password, then removes the files, then the user, in that order', async () => {
     const order: string[] = [];
     const d = deps({
@@ -34,7 +46,7 @@ describe('deleteAccount', () => {
   });
 
   it.each([
-    ['the phrase is not DELETE', { password: 'pw', confirm: 'delete' }],
+    ['the phrase is something else', { password: 'pw', confirm: 'remove' }],
     ['the phrase is missing', { password: 'pw', confirm: undefined }],
     ['the password is empty', { password: '', confirm: DELETE_PHRASE }],
     ['the password is not text', { password: 42, confirm: DELETE_PHRASE }],

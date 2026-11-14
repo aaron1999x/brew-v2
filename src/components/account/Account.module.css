@@ -42,3 +42,8 @@
   font-size: var(--type-body-small-size);
   line-height: var(--type-body-small-line-height);
 }
+
+.buttons {
+  display: grid;
+  gap: var(--space-3);
+}

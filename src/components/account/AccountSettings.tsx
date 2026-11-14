@@ -1,5 +1,5 @@
 import { ChangePasswordForm } from './ChangePasswordForm';
-import { DeleteAccount } from './DeleteAccount';
+import { ButtonLink } from '@/components/ui/ButtonLink/ButtonLink';
 import { DownloadData } from './DownloadData';
 import styles from './Account.module.css';
 
@@ -42,7 +42,11 @@ export function AccountSettings({ email }: { email: string }) {
         <p className={styles.note}>
           This removes your account and everything in it. It can&apos;t be undone.
         </p>
-        <DeleteAccount />
+        <div>
+          <ButtonLink href="/settings/account/delete" variant="destructive">
+            Delete account
+          </ButtonLink>
+        </div>
       </section>
     </div>
   );
