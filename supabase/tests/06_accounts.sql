@@ -1,7 +1,7 @@
 -- M2 accounts: handle rules, invites, theme setting, avatar storage policies, account delete cascade.
 begin;
 \ir 00_helpers.sql
-select plan(93);
+select plan(94);
 
 -- Create an auth user with an explicit email and metadata (for trigger tests).
 create function tests.create_user_meta(p_email text, p_meta jsonb)
@@ -292,8 +292,11 @@ select is((select count(*)::int from public.notifications where user_id = :'caro
 -- keys on every cascade update (it does not for rows from earlier transactions, as in a real
 -- account deletion). Defer those checks during the delete, then force them all with
 -- SET CONSTRAINTS ALL IMMEDIATE so every foreign key is still verified. Rolled back with the test.
+-- (recipes_forked_from_version_fk is already deferred by migration 20261114000002; that fix is
+-- what the real committed delete in scripts/verify-account-delete.mjs depends on.)
+-- Run its pending checks for the setup rows first: ALTER TABLE refuses while checks are pending.
+set constraints all immediate;
 alter table public.recipes
-  alter constraint recipes_forked_from_version_fk deferrable,
   alter constraint recipes_forked_from_recipe_id_fkey deferrable,
   alter constraint recipes_forked_from_owner_id_fkey deferrable;
 alter table public.brews
@@ -332,6 +335,15 @@ select ok((select recipe_version_id is null and recipe_id is null
 select tests.as_user(:'bob');
 select throws_ok(format($$update public.brews set recipe_version_id = %L where id = %L$$, :'b_copy_v', :'b_brew'),
   'P0001', 'brew_version_immutable', 'after the delete, the brew still cannot be attached to another version');
+
+-- The deferred foreign key still rejects a version that doesn't exist (checked at commit;
+-- forced here with SET CONSTRAINTS ... IMMEDIATE).
+select tests.as_owner();
+select throws_ok(
+  format($$insert into public.recipes (owner_id, slug, name, method, is_copy, forked_from_version_id)
+           values (%L, 'acc-bad-fork', 'Bad fork', 'pour_over', true, gen_random_uuid());
+           set constraints recipes_forked_from_version_fk immediate$$, :'bob'),
+  '23503', null, 'recipes_forked_from_version_fk still rejects a missing version once checked');
 
 select * from finish();
 rollback;
