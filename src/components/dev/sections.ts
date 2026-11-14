@@ -7,4 +7,5 @@ export const devSections = [
   { id: 'cards', title: 'Cards and lists' },
   { id: 'overlays', title: 'Overlays and toasts' },
   { id: 'feedback', title: 'Feedback states' },
+  { id: 'charts', title: 'Charts' },
 ] as const;

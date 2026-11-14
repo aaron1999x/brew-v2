@@ -111,6 +111,8 @@
   --size-icon-sm: 16px;
   --size-icon-md: 20px;
   --size-icon-lg: 24px;
+  --size-slider-track: 4px;
+  --size-slider-thumb: 24px;
   --size-tab-bar: 64px;
   --size-rail: 232px;
   --z-base: 0;
@@ -148,6 +150,7 @@
   --color-accent-hover: var(--color-roast-700);
   --color-selection-bg: var(--color-roast-600);
   --color-selection-fg: var(--color-neutral-0);
+  --color-slider-track: var(--color-neutral-300);
   --color-status-info: var(--color-teal-600);
   --color-status-success-bg: var(--color-green-100);
   --color-status-success-fg: var(--color-green-900);
@@ -191,6 +194,7 @@
   --color-accent-hover: var(--color-roast-300);
   --color-selection-bg: var(--color-roast-300);
   --color-selection-fg: var(--color-neutral-950);
+  --color-slider-track: var(--color-neutral-600);
   --color-status-info: var(--color-teal-300);
   --color-status-success-bg: var(--color-green-900);
   --color-status-success-fg: var(--color-green-100);
@@ -235,6 +239,7 @@
     --color-accent-hover: var(--color-roast-300);
     --color-selection-bg: var(--color-roast-300);
     --color-selection-fg: var(--color-neutral-950);
+    --color-slider-track: var(--color-neutral-600);
     --color-status-info: var(--color-teal-300);
     --color-status-success-bg: var(--color-green-900);
     --color-status-success-fg: var(--color-green-100);

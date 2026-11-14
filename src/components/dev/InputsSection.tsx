@@ -109,6 +109,10 @@ export function InputsSection() {
             showStepper
             description="With − and + buttons."
           />
+          <div className={styles.pair} data-testid="number-pair">
+            <NumberField label="Coffee" unit="g" defaultValue={18} showStepper />
+            <NumberField label="Water" unit="ml" defaultValue={300} showStepper />
+          </div>
           <NumberField
             label="Water temperature"
             unit="°C"
@@ -141,7 +145,7 @@ export function InputsSection() {
 
       <div className={styles.group}>
         <h3 className={styles.groupTitle}>Slider 0–10</h3>
-        <div className={styles.grid}>
+        <div className={styles.stack}>
           <Slider label="Sweetness" value={score} onChange={setScore} />
           <Slider label="Acidity" defaultValue={3} />
           <Slider label="Body (disabled)" defaultValue={5} isDisabled />

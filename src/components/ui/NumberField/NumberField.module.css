@@ -1,8 +1,14 @@
 .group {
-  padding-inline: var(--space-3);
+  /* Grid items default to min-width: auto, so a long intrinsic input width would push the
+     stepper out of the field. Let the group shrink below its content. */
+  min-width: 0;
+  gap: var(--space-1);
+  padding-inline: var(--space-2);
 }
 
-.number {
+/* An <input>'s intrinsic width (about 20 characters) must not set the field's minimum width. */
+.group .number {
+  width: 0;
   text-align: end;
 }
 
@@ -10,8 +16,8 @@
   display: grid;
   place-items: center;
   flex: none;
-  width: var(--size-target-compact);
-  height: var(--size-target-compact);
+  width: var(--space-8);
+  height: var(--space-8);
   padding: 0;
   border: 0;
   border-radius: var(--radius-full);

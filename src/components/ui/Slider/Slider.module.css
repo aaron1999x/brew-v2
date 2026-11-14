@@ -1,10 +1,11 @@
 .slider {
   display: grid;
-  gap: var(--space-1);
+  gap: 0;
   width: 100%;
   touch-action: none;
 }
 
+/* Label left, value right, both above the track. */
 .header {
   display: flex;
   align-items: baseline;
@@ -19,36 +20,31 @@
 }
 
 .output {
-  font-size: var(--type-h3-size);
-  font-weight: var(--type-h3-weight);
-}
-
-.max {
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
+  line-height: var(--type-label-line-height);
   color: var(--color-text-secondary);
-  font-size: var(--type-body-small-size);
-  font-weight: var(--type-body-weight);
 }
 
+/* The track box is the 44 px touch band; the visible rail is a thin line through its middle. */
 .track {
   position: relative;
   height: var(--size-target-min);
 }
 
-/* 8 px rail drawn in the middle of the 44 px touch area. */
 .rail,
 .fill {
   position: absolute;
   top: 50%;
-  height: var(--space-2);
-  margin-top: calc(var(--space-1) * -1);
+  height: var(--size-slider-track);
   border-radius: var(--radius-full);
+  transform: translateY(-50%);
 }
 
 .rail {
   left: 0;
   right: 0;
-  background: var(--color-bg-inset);
-  border: var(--border-width-hairline) solid var(--color-border-strong);
+  background: var(--color-slider-track);
 }
 
 .fill {
@@ -56,24 +52,28 @@
   background: var(--color-accent-default);
 }
 
-/* The thumb is the full 44 px target; ::after draws the visible 28 px knob. */
+/*
+ * React Aria sets `left: x%` and `translate(-50%, -50%)` on the thumb, so only `top: 50%` is
+ * needed to centre it on the rail. The thumb box is the 44 px touch target; ::after draws the knob.
+ */
 .thumb {
   top: 50%;
   width: var(--size-target-min);
   height: var(--size-target-min);
-  margin-top: calc(var(--size-target-min) / -2);
   border-radius: var(--radius-full);
   cursor: grab;
+  outline: none;
 }
 
 .thumb::after {
   content: '';
   position: absolute;
-  inset: var(--space-2);
-  border: var(--border-width-default) solid var(--color-bg-surface);
+  inset: calc((var(--size-target-min) - var(--size-slider-thumb)) / 2);
+  border: var(--border-width-hairline) solid var(--color-border-strong);
   border-radius: var(--radius-full);
-  background: var(--color-accent-default);
+  background: var(--color-bg-surface);
   box-shadow: var(--shadow-1);
+  transition: transform var(--motion-duration-fast) var(--motion-easing-standard);
 }
 
 .thumb[data-dragging] {
@@ -81,19 +81,39 @@
 }
 
 .thumb[data-dragging]::after {
-  background: var(--color-accent-pressed);
+  transform: scale(1.12);
 }
 
-.thumb[data-focus-visible] {
+.thumb[data-focus-visible]::after {
   outline: var(--border-width-focus) solid var(--color-focus-ring);
-  outline-offset: 0;
+  outline-offset: 2px;
 }
 
-.slider[data-disabled] .fill,
-.thumb[data-disabled]::after {
+.slider[data-disabled] .label,
+.slider[data-disabled] .output {
+  color: var(--color-text-muted);
+}
+
+.slider[data-disabled] .fill {
   background: var(--color-text-muted);
 }
 
-.slider[data-disabled] {
-  color: var(--color-text-muted);
+.slider[data-disabled] .thumb {
+  cursor: not-allowed;
+}
+
+.slider[data-disabled] .thumb::after {
+  background: var(--color-bg-inset);
+  border-color: var(--color-text-muted);
+  box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .thumb::after {
+    transition: none;
+  }
+
+  .thumb[data-dragging]::after {
+    transform: none;
+  }
 }

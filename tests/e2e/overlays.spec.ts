@@ -100,7 +100,7 @@ test('the form error summary takes focus and its links focus the field', async (
 });
 
 test('skeletons are busy, announce once, and offer Retry after the wait', async ({ page }) => {
-  const region = page.locator('[aria-busy="true"]');
+  const region = page.locator('#feedback [aria-busy="true"]');
   await expect(region).toBeVisible();
   await expect(region.getByRole('status').filter({ hasText: 'Loading recipes' })).toBeAttached();
   await expect(page.getByText('Still loading…')).toBeVisible({ timeout: 6000 });

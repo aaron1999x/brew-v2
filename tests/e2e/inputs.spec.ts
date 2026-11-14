@@ -36,7 +36,7 @@ test('the time input understands what was typed and normalises on blur', async (
 test('the slider reads "7.5 out of 10" and moves in half steps with the arrow keys', async ({
   page,
 }) => {
-  const slider = page.getByRole('slider', { name: 'Sweetness' });
+  const slider = page.locator('#inputs').getByRole('slider', { name: 'Sweetness' });
   await expect(slider).toHaveAttribute('aria-valuetext', '7.5 out of 10');
   await slider.focus();
   await page.keyboard.press('ArrowRight');

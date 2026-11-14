@@ -1,8 +1,10 @@
 'use client';
 
 import { Coffee, Star, Timer } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import { useSyncExternalStore } from 'react';
 import { Icon } from '@/components/ui/Icon/Icon';
+import { LoadingRegion, SkeletonCard } from '@/components/ui/Skeleton/Skeleton';
 import { VisuallyHidden } from '@/components/ui/VisuallyHidden/VisuallyHidden';
 import { ActionsSection } from './ActionsSection';
 import { CardsSection } from './CardsSection';
@@ -26,6 +28,16 @@ const swatches = [
   ['status-info-bg', '--color-status-info-bg'],
   ['changed-bg', '--color-changed-bg'],
 ] as const;
+
+// Recharts is large, so the charts load only when this page asks for them.
+const ChartsSection = dynamic(() => import('./ChartsSection').then((m) => m.ChartsSection), {
+  ssr: false,
+  loading: () => (
+    <LoadingRegion label="charts">
+      <SkeletonCard />
+    </LoadingRegion>
+  ),
+});
 
 const noSubscription = () => () => {};
 
@@ -110,6 +122,8 @@ export function DevComponents() {
               <OverlaysSection />
             ) : s.id === 'feedback' ? (
               <FeedbackSection />
+            ) : s.id === 'charts' ? (
+              <ChartsSection />
             ) : (
               <p className={styles.note}>Coming in a later stage.</p>
             )}

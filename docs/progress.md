@@ -85,6 +85,15 @@ UI kit and app shell (`docs/phase-5-roadmap.md` M1), starting from the placehold
 - Stage 7: PR #1 opened, CI green, independent review done, hand-over notes.
 
 ## M1 UI kit and app shell
+
+Status: **in progress** (draft PR #6). Stage 6 (tests and hand-over) will turn this into the full M1 summary.
+
+### Notes so far
+- **Slider and radar look reuse the prototype's pattern** (`prototype-handoff.md` §4, "Sensory sliders + radar": 8 attributes, 0–10 in 0.5 steps, live radar). The slider is rebuilt on React Aria with tokens: label left and value right above a thin track, round surface-coloured thumb centred on the rail with a 44 px touch target drawn by the thumb box. React Aria already translates the thumb by -50% / -50%, so the thumb only needs `top: 50%`; an extra negative margin put it above the track.
+- **Charts were pulled forward into M1's dev page.** Recharts v3 (pinned 3.10.1) is added now, loaded with `next/dynamic` only on `/dev/components`. `src/components/charts/` has a `ChartContainer` modelled on shadcn/ui's (figure, responsive plot, HTML legend, tooltip card) in CSS Modules with our tokens. Charts built: sensory radar (live with sliders, and a 3-brew comparison told apart by colour, line style and marker), pour curve with swirl/wait markers and a target drawdown band, TDS vs extraction scatter with a target box. Each chart is one image to assistive technology (`aria-label`) plus a "Show data table" toggle; animation follows `prefers-reduced-motion`.
+- **Slider track contrast:** the unfilled track (`--color-slider-track`) is deliberately subtle (as asked), below the 3:1 non-text contrast in `designer-brief.md` §8. The thumb (hairline strong border) and accent fill carry the control; the design pass should decide whether the track must reach 3:1.
+- **Toasts:** Sonner can't mark one toast assertive, so toasts are our own cards (`role="alert"` for errors, `role="status"` otherwise) with our own pause-on-hover/focus timer. Sonner is still used only for the toast region (`<Toaster>`), stacking and `toast.custom`/`dismiss`.
+- **Design-pass touch list (so far):** dark `--color-accent-hover` equals the default accent (no visible hover change); dark `--color-accent-pressed` is too dark to carry `--color-text-on-accent` text (3.0:1), so the shell's current-page style uses an underline instead; `--color-slider-track` contrast (above); stepper/tab-bar/side-nav spacing; link-style buttons (`ButtonLink`) have no hover state.
 ## M2 Accounts, onboarding, profile, settings
 ## M3 Gear, recipes, versions
 ## M4 Guided timer and brew log

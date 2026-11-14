@@ -25,6 +25,10 @@ export type SliderProps = {
 
 const format = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 });
 
+/**
+ * Label on the left and value on the right above a thin track. React Aria positions the thumb
+ * (it translates it by -50% / -50% from `left: x%`, so the thumb only needs `top: 50%`).
+ */
 export function Slider({
   label,
   value,
@@ -60,17 +64,12 @@ export function Slider({
       maxValue={maxValue}
       step={step}
       isDisabled={isDisabled}
-      formatOptions={{ maximumFractionDigits: 1 }}
+      formatOptions={{ minimumFractionDigits: 1, maximumFractionDigits: 1 }}
     >
       <div className={styles.header}>
         <Label className={styles.label}>{label}</Label>
         <SliderOutput className={styles.output}>
-          {({ state }) => (
-            <>
-              <span className="num">{state.getThumbValueLabel(0)}</span>
-              <span className={styles.max}> / {format.format(maxValue)}</span>
-            </>
-          )}
+          {({ state }) => <span className="num">{state.getThumbValueLabel(0)}</span>}
         </SliderOutput>
       </div>
       <SliderTrack className={styles.track}>

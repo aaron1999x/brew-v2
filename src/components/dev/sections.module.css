@@ -34,3 +34,30 @@
   border: var(--border-width-default) dashed var(--color-border-strong);
   border-radius: var(--radius-full);
 }
+
+/* Two fields side by side, even on a phone. */
+.pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+}
+
+/* Compact vertical stack, used for sliders. */
+.stack {
+  display: grid;
+  gap: var(--space-1);
+  max-width: 32rem;
+}
+
+/* Sliders above the radar on phones, side by side from 768 px. */
+.sensory {
+  display: grid;
+  gap: var(--space-4);
+  align-items: start;
+}
+
+@media (min-width: 768px) {
+  .sensory {
+    grid-template-columns: 1fr 1fr;
+  }
+}
