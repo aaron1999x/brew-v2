@@ -44,6 +44,8 @@ export const AUTH_ERROR_MESSAGES: Record<string, string> = {
   weak_password: 'Choose a password with at least 8 characters.',
   same_password: 'Choose a different password from your current one.',
   reauthentication_not_valid: 'Your current password is wrong.',
+  current_password_invalid: 'Your current password is wrong.',
+  current_password_required: 'Enter your current password.',
   otp_expired: 'This link has expired or was already used.',
   flow_state_expired: 'This link has expired or was already used.',
   flow_state_not_found: 'This link has expired or was already used.',
