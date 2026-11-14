@@ -6,7 +6,7 @@ import { siteConfig } from '@/config/site';
 import { cx } from '@/lib/cx';
 import { Icon } from '../ui/Icon/Icon';
 import { VersionBadge } from '../ui/VersionBadge/VersionBadge';
-import { isCurrent, navItems } from './navItems';
+import { isCurrentItem, navItems } from './navItems';
 import styles from './SideNav.module.css';
 
 /**
@@ -26,7 +26,7 @@ export function SideNav() {
             <li key={item.href}>
               <Link
                 href={item.href}
-                aria-current={isCurrent(pathname, item.href) ? 'page' : undefined}
+                aria-current={isCurrentItem(pathname, item) ? 'page' : undefined}
                 className={cx(styles.link, item.primary && styles.primary)}
                 data-primary-control=""
               >

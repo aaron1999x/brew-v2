@@ -8,7 +8,7 @@ import { toast } from '@/components/ui/Toast/toast';
 import { TextField } from '@/components/ui/TextField/TextField';
 import styles from './sections.module.css';
 
-type Open = null | 'sheet' | 'long' | 'confirm' | 'destructive';
+type Open = null | 'sheet' | 'form' | 'long' | 'confirm' | 'destructive';
 
 export function OverlaysSection() {
   const [open, setOpen] = useState<Open>(null);
@@ -36,6 +36,9 @@ export function OverlaysSection() {
         <div className={styles.row}>
           <Button variant="secondary" onPress={() => setOpen('sheet')}>
             Open sheet
+          </Button>
+          <Button variant="secondary" onPress={() => setOpen('form')}>
+            Open form sheet
           </Button>
           <Button variant="secondary" onPress={() => setOpen('long')}>
             Open long sheet
@@ -96,6 +99,20 @@ export function OverlaysSection() {
                 Cancel
               </Button>
               <Button onPress={close}>Share</Button>
+            </SheetActions>
+          </>
+        )}
+      </Sheet>
+
+      <Sheet isOpen={open === 'form'} onOpenChange={set('form')} title="Sheet with fields">
+        {(close) => (
+          <>
+            <TextField label="First field" />
+            <TextField label="Second field" />
+            <TextField label="Third field" />
+            <TextField label="Last field" />
+            <SheetActions>
+              <Button onPress={close}>Done</Button>
             </SheetActions>
           </>
         )}

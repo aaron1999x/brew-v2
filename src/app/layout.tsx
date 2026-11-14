@@ -1,9 +1,11 @@
 import { SerwistProvider } from '@serwist/turbopack/react';
 import type { Metadata, Viewport } from 'next';
-import type { ReactNode } from 'react';
+import { Suspense, type ReactNode } from 'react';
 import { Toaster } from 'sonner';
+import { FlashToast } from '@/components/feedback/FlashToast';
 import { Providers } from '@/components/providers/Providers';
 import { siteConfig } from '@/config/site';
+import { THEME_BOOT_SCRIPT } from '@/lib/settings/theme';
 import { inter } from './fonts';
 import '@/styles/tokens.css';
 import '@/styles/base.css';
@@ -32,9 +34,17 @@ export const viewport: Viewport = {
   ],
 };
 
+/**
+ * The saved theme comes from a cookie, applied by a tiny script in <head> before first paint. The
+ * server never reads the cookie here, so public pages stay static and cacheable.
+ */
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className={inter.variable}>
+    // suppressHydrationWarning: the boot script sets data-theme before React hydrates.
+    <html lang="en" className={inter.variable} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
+      </head>
       <body>
         <SerwistProvider
           swUrl="/serwist/sw.js"
@@ -46,6 +56,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         </SerwistProvider>
         {/* Toasts stay >= 5 s and pause on hover/focus (docs/phase-4-amendments.md §3). */}
         <Toaster theme="system" position="top-center" duration={6000} closeButton />
+        <Suspense fallback={null}>
+          <FlashToast />
+        </Suspense>
       </body>
     </html>
   );

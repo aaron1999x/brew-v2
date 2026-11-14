@@ -107,3 +107,57 @@ test('skeletons are busy, announce once, and offer Retry after the wait', async 
   await region.getByRole('button', { name: 'Retry' }).click();
   await expect(region).toBeHidden();
 });
+
+test('a sheet follows the visible area when the keyboard opens, so a focused field is never covered', async ({
+  page,
+}, testInfo) => {
+  test.skip(!testInfo.project.name.startsWith('iphone'), 'Phone layout: bottom sheet');
+
+  await page.getByRole('button', { name: 'Open form sheet' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Sheet with fields' });
+  await expect(dialog).toBeVisible();
+
+  // The on-screen keyboard shrinks the visible area; resizing the viewport is the closest a
+  // browser test gets (it fires the same visualViewport resize event).
+  const full = page.viewportSize()!;
+  const visibleHeight = 300;
+  await page.setViewportSize({ width: full.width, height: visibleHeight });
+
+  const last = dialog.getByLabel('Last field');
+  await last.focus();
+
+  const inside = async () =>
+    page.evaluate(() => {
+      const vv = window.visualViewport!;
+      const field = document.activeElement as HTMLElement;
+      const sheet = field.closest('[role="dialog"]')!.closest('[class*="modal"]') as HTMLElement;
+      const f = field.getBoundingClientRect();
+      const s = sheet.getBoundingClientRect();
+      return {
+        viewportHeight: vv.height,
+        fieldTop: f.top,
+        fieldBottom: f.bottom,
+        sheetTop: s.top,
+        sheetBottom: s.bottom,
+      };
+    });
+
+  await expect
+    .poll(async () => {
+      const r = await inside();
+      return r.fieldTop >= 0 && r.fieldBottom <= r.viewportHeight;
+    })
+    .toBe(true);
+  const r = await inside();
+  expect(r.sheetTop).toBeGreaterThanOrEqual(0);
+  expect(r.sheetBottom).toBeLessThanOrEqual(r.viewportHeight + 1);
+
+  // The first field is reachable too: scrolling the sheet brings it back into view.
+  await dialog.getByLabel('First field').focus();
+  await expect
+    .poll(async () => {
+      const q = await inside();
+      return q.fieldTop >= 0 && q.fieldBottom <= q.viewportHeight;
+    })
+    .toBe(true);
+});

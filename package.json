@@ -15,6 +15,7 @@
     "db:push": "node scripts/db-push.mjs",
     "db:types": "node scripts/db-types.mjs",
     "db:test": "node scripts/db-test.mjs",
+    "verify:account-delete": "node scripts/verify-account-delete.mjs",
     "prepare": "husky"
   },
   "dependencies": {

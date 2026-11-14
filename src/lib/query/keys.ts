@@ -22,4 +22,8 @@ export const queryKeys = {
   notices: () => ['notices'] as const,
   gear: () => ['gear'] as const,
   settings: () => ['settings'] as const,
+  profileMe: () => ['profile', 'me'] as const,
+  handleStatus: (handle: string) => ['handle-status', handle] as const,
+  handleSuggestions: (base: string) => ['handle-suggestions', base] as const,
+  invites: () => ['admin', 'invites'] as const,
 };

@@ -1,7 +1,8 @@
 import 'server-only';
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/database';
-import { getPublicEnv, getServerEnv } from '@/lib/env';
+import { getPublicEnv } from '@/lib/env';
+import { getServerEnv } from '@/lib/env.server';
 
 /**
  * Secret-key client. BYPASSES row-level security. Server code only (account deletion, export);

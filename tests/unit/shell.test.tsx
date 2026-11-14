@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { isCurrent, navItems } from '@/components/shell/navItems';
+import { isCurrent, isCurrentItem, navItems } from '@/components/shell/navItems';
 import { NoticesBell, noticesLabel } from '@/components/shell/TopBar';
 
 describe('navItems', () => {
@@ -21,6 +21,16 @@ describe('navItems', () => {
     expect(isCurrent('/recipes/123', '/recipes')).toBe(true);
     expect(isCurrent('/recipes-archive', '/recipes')).toBe(false);
     expect(isCurrent('/home', '/recipes')).toBe(false);
+  });
+
+  it('counts Settings and admin screens as Profile', () => {
+    const profile = navItems.find((i) => i.href === '/profile')!;
+    for (const path of ['/profile', '/settings', '/settings/units', '/admin/invites']) {
+      expect(isCurrentItem(path, profile), path).toBe(true);
+    }
+    expect(isCurrentItem('/settings-old', profile)).toBe(false);
+    const brew = navItems.find((i) => i.href === '/brew')!;
+    expect(isCurrentItem('/settings/units', brew)).toBe(false);
   });
 });
 

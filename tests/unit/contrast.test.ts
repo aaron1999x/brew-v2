@@ -67,6 +67,7 @@ const pairs: ReadonlyArray<readonly [string, string, number, string]> = [
   ['--color-text-on-accent', '--color-accent-default', 4.5, 'primary button label'],
   ['--color-accent-default', '--color-bg-canvas', 4.5, 'ghost button and link text'],
   ['--color-accent-default', '--color-bg-surface', 4.5, 'ghost button and link text'],
+  ['--color-accent-on-inset', '--color-bg-inset', 4.5, 'ghost button hover and current nav link'],
   ['--color-status-danger', '--color-bg-field', 4.5, 'inline error text'],
   ['--color-status-danger', '--color-bg-surface', 4.5, 'inline error text'],
   ['--color-text-on-accent', '--color-status-danger', 4.5, 'destructive button label'],

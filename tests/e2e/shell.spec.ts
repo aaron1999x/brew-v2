@@ -1,5 +1,8 @@
-import { expect, test } from '@playwright/test';
 import { expectNoAxeViolations } from './helpers/axe';
+import { expect, signIn, test } from './helpers/test-users';
+
+// Pages in the signed-in shell need a session, so these specs log in a throwaway test user
+// (they skip with a message when SUPABASE_SECRET_KEY isn't available).
 
 const pages = [
   { path: '/home', heading: 'Home' },
@@ -14,7 +17,11 @@ for (const scheme of ['light', 'dark'] as const) {
     test.use({ colorScheme: scheme });
 
     for (const { path, heading } of pages) {
-      test(`${path} renders in the shell and has no accessibility violations`, async ({ page }) => {
+      test(`${path} renders in the shell and has no accessibility violations`, async ({
+        page,
+        users,
+      }) => {
+        if (path !== '/verified') await signIn(page, users);
         await page.goto(path);
         await expect(page.getByRole('heading', { level: 1, name: heading })).toBeVisible();
         await expect(page.getByRole('main')).toBeVisible();
@@ -37,7 +44,9 @@ for (const scheme of ['light', 'dark'] as const) {
 
 test('the main navigation has the five destinations and marks the current page', async ({
   page,
+  users,
 }) => {
+  await signIn(page, users);
   await page.goto('/recipes');
   const nav = page.getByRole('navigation', { name: 'Main' });
   await expect(nav).toBeVisible();
@@ -55,7 +64,9 @@ test('the main navigation has the five destinations and marks the current page',
 
 test('phones get a bottom tab bar; wide screens get a top bar or left rail', async ({
   page,
+  users,
 }, testInfo) => {
+  await signIn(page, users);
   await page.goto('/home');
   const nav = page.getByRole('navigation', { name: 'Main' });
   const box = (await nav.boundingBox())!;
@@ -71,9 +82,10 @@ test('phones get a bottom tab bar; wide screens get a top bar or left rail', asy
   }
 });
 
-test('the skip link moves focus to the main content', async ({ page }, testInfo) => {
+test('the skip link moves focus to the main content', async ({ page, users }, testInfo) => {
   // Touch devices have no Tab key; this is a keyboard feature.
   test.skip(testInfo.project.name === 'iphone', 'keyboard only');
+  await signIn(page, users);
   await page.goto('/home');
   await page.keyboard.press('Tab');
   const skip = page.getByRole('link', { name: 'Skip to main content' });
@@ -82,12 +94,14 @@ test('the skip link moves focus to the main content', async ({ page }, testInfo)
   await expect(page.locator('#main')).toBeFocused();
 });
 
-test('the notices bell announces its unread count', async ({ page }) => {
+test('the notices bell announces its unread count', async ({ page, users }) => {
+  await signIn(page, users);
   await page.goto('/home');
   await expect(page.getByRole('link', { name: 'Notices' })).toBeVisible();
 });
 
-test('landmarks are labelled and there is one main', async ({ page }) => {
+test('landmarks are labelled and there is one main', async ({ page, users }) => {
+  await signIn(page, users);
   await page.goto('/home');
   await expect(page.getByRole('main')).toHaveCount(1);
   await expect(page.getByRole('navigation', { name: 'Main' })).toHaveCount(1);
@@ -105,4 +119,35 @@ test('the logged-out layout has the slim bar and no tab bar', async ({ page }) =
     await expect(nav.getByRole('link', { name: label })).toBeVisible();
   }
   await expect(nav.getByRole('link', { name: 'Brew' })).toHaveCount(0);
+});
+
+test('Settings and Profile mark Profile as the current page; Brew never looks current by default', async ({
+  page,
+  users,
+}, testInfo) => {
+  await signIn(page, users, 'nav');
+  const nav = page.getByRole('navigation', { name: 'Main' });
+  for (const path of ['/profile', '/settings', '/settings/units', '/settings/account']) {
+    await page.goto(path);
+    await expect(nav.getByRole('link', { name: 'Profile' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    await expect(nav.locator('[aria-current="page"]')).toHaveCount(1);
+    await expect(nav.getByRole('link', { name: 'Brew' })).not.toHaveAttribute('aria-current');
+  }
+
+  if (testInfo.project.name.startsWith('desktop')) {
+    // The rail's Brew is an outlined button: no filled accent block that could read as "current".
+    await page.goto('/settings');
+    const background = (name: string) =>
+      nav.getByRole('link', { name }).evaluate((el) => getComputedStyle(el).backgroundColor);
+    expect(await background('Brew')).toBe('rgba(0, 0, 0, 0)');
+    // The current page (Profile) is the one with the tinted fill.
+    expect(await background('Profile')).not.toBe('rgba(0, 0, 0, 0)');
+    // Brew itself, when current, looks like any other current item.
+    await page.goto('/brew');
+    await expect(nav.getByRole('link', { name: 'Brew' })).toHaveAttribute('aria-current', 'page');
+    expect(await background('Brew')).not.toBe('rgba(0, 0, 0, 0)');
+  }
 });

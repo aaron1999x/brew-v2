@@ -19,7 +19,8 @@
 /* Phone: a bottom sheet that never covers the status bar. */
 .modal {
   width: 100%;
-  max-height: calc(100dvh - var(--space-8));
+  /* Relative to the overlay, which follows the visible area (keyboard open or not). */
+  max-height: calc(100% - var(--space-8));
   display: flex;
   flex-direction: column;
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;

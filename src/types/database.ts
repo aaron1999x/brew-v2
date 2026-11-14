@@ -940,6 +940,7 @@ export type Database = {
           date_format: string;
           onboarding: NonNullable<Json>;
           temp_unit: string;
+          theme: string;
           time_format: string;
           time_zone: string;
           updated_at: string;
@@ -951,6 +952,7 @@ export type Database = {
           date_format?: string;
           onboarding?: NonNullable<Json>;
           temp_unit?: string;
+          theme?: string;
           time_format?: string;
           time_zone?: string;
           updated_at?: string;
@@ -961,6 +963,7 @@ export type Database = {
           date_format?: string;
           onboarding?: NonNullable<Json>;
           temp_unit?: string;
+          theme?: string;
           time_format?: string;
           time_zone?: string;
           updated_at?: string;
@@ -974,6 +977,17 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      admin_add_invite: { Args: { p_email: string }; Returns: undefined };
+      admin_list_invites: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          email: string;
+          invited_at: string;
+          invited_by_handle: string;
+          signed_up_at: string;
+        }[];
+      };
+      admin_remove_invite: { Args: { p_email: string }; Returns: undefined };
       admin_set_role: {
         Args: { p_role: Database['public']['Enums']['app_role']; p_user_id: string };
         Returns: undefined;
@@ -1100,6 +1114,8 @@ export type Database = {
         };
       };
       email_is_verified: { Args: { uid: string }; Returns: boolean };
+      handle_status: { Args: { p_handle: string }; Returns: string };
+      handle_suggestions: { Args: { p_base: string }; Returns: string[] };
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
       is_moderator: { Args: Record<PropertyKey, never>; Returns: boolean };
       is_suspended: { Args: { uid: string }; Returns: boolean };
