@@ -148,6 +148,17 @@ Status: PR `feat(ui): show the component gallery in production`.
 - **Later:** a polished `/design-system` page comes after the design pass (OQ23). OQ23 is not in `docs/decision-log.md` yet (its open questions stop at OQ22); add it there when convenient. The gallery stays as the engineering reference until then.
 
 ## M2 Accounts, onboarding, profile, settings
+
+Status: **in progress** (branch `feat/m2-accounts`).
+
+### Stage 1 notes (database)
+- **Migration `20261114000001_m2_accounts.sql`:** `user_settings.theme` (system/light/dark) and a check that `onboarding` is a JSON object; reserved handles `profile`, `goodbye`, `auth`, `dev`, `changelog`, `status`, `invites`; `handle_status()`, `handle_suggestions()`; `admin_list_invites()`, `admin_add_invite()` (`email_invalid`), `admin_remove_invite()` (`invite_used`: only unused invites can be removed).
+- **Account deletion was broken (fixed).** Deleting a user whose public version another user had brewed or copied failed: Postgres's `on delete set null` on the other user's brew/copy fired `brews_before_write` (`brew_version_immutable`) and `recipes_guard` (`immutable_field`). Reproduced on staging (rolled back). Both guards now allow a change to null only when the referenced version row no longer exists; every other change is still rejected (tested).
+- **`handle_new_user` matched `handle_history` forever,** while `profiles_handle_guard` uses 90 days. Now both use 90 days (same as `handle_status`). It also cuts the display name to 60 characters (a longer one failed the whole sign-up with "Database error saving new user").
+- **`profiles_handle_guard` raises named errors** `handle_invalid` and `handle_taken` (previously a check-constraint or unique-violation error). Note: `handle` is `citext`, so the table's `~` format check is case-insensitive and accepts uppercase; the guard and `handle_status` check the text value, so uppercase is rejected.
+- **Avatars had no SELECT policy.** UPDATE/DELETE with a `WHERE` only reach visible rows, so the Storage API's upsert and remove would have silently done nothing (found by the new pgTAP tests). Added `avatars_owner_select` (own folder only; public URLs don't use it) and an explicit `WITH CHECK` on `avatars_owner_update`.
+- **pgTAP `06_accounts.sql` (93 tests).** The delete-cascade test runs the real `delete from auth.users`. Because the setup rows are inserted in the same transaction, Postgres re-checks their foreign keys on cascade updates (it doesn't for rows from earlier transactions, as in a real deletion), so the test makes five `recipes`/`brews` foreign keys deferrable **inside the rolled-back transaction only**, deletes, then runs `set constraints all immediate` so every check still runs. Without the guard fixes the test fails. Storage delete tests use `set_config('storage.allow_delete_query', 'true', true)` (Supabase's trigger blocks direct deletes otherwise).
+- `supabase/scripts/invite.sql` adds an allowlist email (`psql -v email=…`).
 ## M3 Gear, recipes, versions
 ## M4 Guided timer and brew log
 ## M5 Offline and PWA
