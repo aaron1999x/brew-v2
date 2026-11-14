@@ -127,7 +127,9 @@ test.describe('delete account', () => {
     await dialog.getByLabel('Your password').fill(user.password);
     await confirm.click();
     await page.waitForURL('**/goodbye');
-    await expect(page.getByRole('heading', { name: 'Your account has been deleted' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Your account has been deleted' }),
+    ).toBeVisible();
 
     // Gone: the auth user, the rows and the file.
     const gone = await users.admin.auth.admin.getUserById(user.id);
@@ -274,7 +276,9 @@ for (const scheme of ['light', 'dark'] as const) {
 
     test('goodbye has no violations', async ({ page }) => {
       await page.goto('/goodbye');
-      await expect(page.getByRole('heading', { name: 'Your account has been deleted' })).toBeVisible();
+      await expect(
+        page.getByRole('heading', { name: 'Your account has been deleted' }),
+      ).toBeVisible();
       await expectNoAxeViolations(page);
     });
   });
