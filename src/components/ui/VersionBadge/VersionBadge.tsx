@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { appVersion } from '@/lib/version';
 import { useHasNewVersion } from '@/lib/lastViewedVersion';
+import { VisuallyHidden } from '../VisuallyHidden/VisuallyHidden';
 import styles from './VersionBadge.module.css';
 
 type Props = {
@@ -12,18 +13,15 @@ type Props = {
 
 /**
  * "v0.1.0", linking to /changelog. A dot marks a version newer than the last one viewed there.
- * The visible text is short; the accessible name says what the link is for (and "new" with the dot).
+ * No aria-label: the accessible name is built from the content and starts with the visible
+ * text ("v0.1.0, view changelog", plus ", new" with the dot), as WCAG 2.5.3 (label in name) needs.
  */
 export function VersionBadge({ version = appVersion }: Props) {
   const isNew = useHasNewVersion(version);
   return (
-    <Link
-      href="/changelog"
-      className={styles.badge}
-      aria-label={`Version ${version}, view changelog${isNew ? ', new' : ''}`}
-      data-primary-control=""
-    >
+    <Link href="/changelog" className={styles.badge} data-primary-control="">
       <span className="num">v{version}</span>
+      <VisuallyHidden>{`, view changelog${isNew ? ', new' : ''}`}</VisuallyHidden>
       {isNew ? <span className={styles.dot} aria-hidden="true" data-new="" /> : null}
     </Link>
   );

@@ -3,7 +3,11 @@ import { expect, test, type Page } from '@playwright/test';
 import { expectNoAxeViolations } from './helpers/axe';
 
 const { version } = JSON.parse(readFileSync('package.json', 'utf8')) as { version: string };
-const badgeName = new RegExp(`^Version ${version.replace(/\./g, '\\.')}, view changelog`);
+// Chromium and WebKit both compute "v0.1.0 , view changelog": a space appears between the visible
+// text and the visually hidden suffix, so the comma is matched with an optional space before it.
+const escaped = version.replace(/\./g, '\\.');
+const badgeName = new RegExp(`^v${escaped} ?, view changelog`);
+const badgeNameNew = new RegExp(`^v${escaped} ?, view changelog, new$`);
 
 /** Visits a page, then sets what the user last viewed and reloads, so the first-visit store has already run. */
 async function visitWithLastViewed(page: Page, path: string, lastViewed: string) {
@@ -64,7 +68,9 @@ test('the version badge is in the public footer, with the right name and link', 
   const badge = footer.getByRole('link', { name: badgeName });
   await expect(badge).toBeVisible();
   await expect(badge).toHaveAttribute('href', '/changelog');
-  await expect(badge).toHaveText(`v${version}`);
+  // Visible text is the version; the accessible name starts with it (WCAG 2.5.3 label in name).
+  await expect(badge.locator('.num')).toHaveText(`v${version}`);
+  await expect(badge).not.toHaveAttribute('aria-label', /.*/);
   const box = (await badge.boundingBox())!;
   expect(box.height).toBeGreaterThanOrEqual(43.5);
 });
@@ -115,7 +121,7 @@ test('after a version bump the badge shows a dot and ", new"; visiting /changelo
 }) => {
   await visitWithLastViewed(page, '/profile', '0.0.1');
 
-  const withDot = page.getByRole('link', { name: `Version ${version}, view changelog, new` });
+  const withDot = page.getByRole('link', { name: badgeNameNew });
   await expect(withDot).toBeVisible();
   await expect(withDot.locator('[data-new]')).toBeAttached();
 

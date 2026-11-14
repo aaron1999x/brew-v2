@@ -38,11 +38,15 @@ describe('VersionBadge', () => {
   beforeEach(() => window.localStorage.clear());
   afterEach(() => vi.restoreAllMocks());
 
-  it('links to /changelog with a descriptive accessible name', () => {
+  it('links to /changelog; the accessible name starts with the visible text (WCAG 2.5.3)', () => {
     render(<VersionBadge version="0.1.0" />);
-    const link = screen.getByRole('link', { name: 'Version 0.1.0, view changelog' });
+    const link = screen.getByRole('link', { name: 'v0.1.0, view changelog' });
     expect(link).toHaveAttribute('href', '/changelog');
     expect(link).toHaveTextContent('v0.1.0');
+    // No aria-label: the name comes from the content and starts with the visible text.
+    expect(link).not.toHaveAttribute('aria-label');
+    const visible = link.querySelector('.num')?.textContent ?? '';
+    expect('v0.1.0, view changelog'.startsWith(visible)).toBe(true);
   });
 
   it('shows no dot on the first visit and silently stores the current version', () => {
@@ -54,7 +58,7 @@ describe('VersionBadge', () => {
   it('shows the dot, and ", new" in the name, when the app is newer than the last viewed version', () => {
     writeLastViewed('0.1.0');
     render(<VersionBadge version="0.2.0" />);
-    const link = screen.getByRole('link', { name: 'Version 0.2.0, view changelog, new' });
+    const link = screen.getByRole('link', { name: 'v0.2.0, view changelog, new' });
     expect(link.querySelector('[data-new]')).not.toBeNull();
     // Showing the badge must not mark the version as seen.
     expect(readLastViewed()).toBe('0.1.0');
@@ -65,7 +69,7 @@ describe('VersionBadge', () => {
     render(<VersionBadge version="0.2.0" />);
     expect(screen.getByRole('link', { name: /, new$/ })).toBeInTheDocument();
     act(() => writeLastViewed('0.2.0'));
-    expect(screen.getByRole('link', { name: 'Version 0.2.0, view changelog' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'v0.2.0, view changelog' })).toBeInTheDocument();
   });
 
   it('still renders, without a dot, when storage is blocked', () => {
@@ -76,7 +80,7 @@ describe('VersionBadge', () => {
       throw new Error('blocked');
     });
     render(<VersionBadge version="0.1.0" />);
-    expect(screen.getByRole('link', { name: 'Version 0.1.0, view changelog' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'v0.1.0, view changelog' })).toBeInTheDocument();
   });
 
   it('does not overwrite an older stored version while hydrating', async () => {
@@ -89,10 +93,7 @@ describe('VersionBadge', () => {
       hydrateRoot(container, <VersionBadge version="0.2.0" />);
     });
     expect(readLastViewed()).toBe('0.1.0');
-    expect(container.querySelector('a')).toHaveAttribute(
-      'aria-label',
-      'Version 0.2.0, view changelog, new',
-    );
+    expect(container.querySelector('a')).toHaveTextContent('v0.2.0, view changelog, new');
     container.remove();
   });
 });
