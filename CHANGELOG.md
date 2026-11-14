@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/aaron1999x/brew-v2/compare/v0.2.0...v0.3.0) (2026-11-14)
+
+
+### New features
+
+* **ui:** show the component gallery in production ([#9](https://github.com/aaron1999x/brew-v2/issues/9)) ([da7701f](https://github.com/aaron1999x/brew-v2/commit/da7701f126ce050af461406e49fffdfea0470115))
+
 ## [0.2.0](https://github.com/aaron1999x/brew-v2/compare/v0.1.0...v0.2.0) (2026-11-14)
 
 
