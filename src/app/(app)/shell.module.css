@@ -1,0 +1,30 @@
+.shell {
+  min-height: 100dvh;
+}
+
+.main {
+  max-width: 48rem;
+  margin: 0 auto;
+  /* Room for the fixed tab bar and the iOS home indicator. */
+  padding-bottom: calc(var(--size-tab-bar) + env(safe-area-inset-bottom) + var(--space-6));
+}
+
+.main:focus {
+  outline: none;
+}
+
+.body {
+  padding: var(--space-4);
+}
+
+@media (min-width: 768px) {
+  .main {
+    padding-bottom: var(--space-12);
+  }
+}
+
+@media (min-width: 1024px) {
+  .shell {
+    padding-left: var(--size-rail);
+  }
+}

@@ -1,0 +1,5 @@
+.message {
+  color: var(--color-text-primary);
+  line-height: var(--type-body-line-height);
+  overflow-wrap: anywhere;
+}

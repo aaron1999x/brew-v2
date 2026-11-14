@@ -1,0 +1,12 @@
+.shell {
+  align-items: flex-start;
+  padding-block: var(--space-3);
+}
+
+.area {
+  display: block;
+  min-height: 0;
+  resize: none;
+  field-sizing: content;
+  overflow: hidden;
+}

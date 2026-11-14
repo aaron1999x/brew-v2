@@ -1,0 +1,119 @@
+.slider {
+  display: grid;
+  gap: 0;
+  width: 100%;
+  touch-action: none;
+}
+
+/* Label left, value right, both above the track. */
+.header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.label {
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
+  line-height: var(--type-label-line-height);
+}
+
+.output {
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
+  line-height: var(--type-label-line-height);
+  color: var(--color-text-secondary);
+}
+
+/* The track box is the 44 px touch band; the visible rail is a thin line through its middle. */
+.track {
+  position: relative;
+  height: var(--size-target-min);
+}
+
+.rail,
+.fill {
+  position: absolute;
+  top: 50%;
+  height: var(--size-slider-track);
+  border-radius: var(--radius-full);
+  transform: translateY(-50%);
+}
+
+.rail {
+  left: 0;
+  right: 0;
+  background: var(--color-slider-track);
+}
+
+.fill {
+  left: 0;
+  background: var(--color-accent-default);
+}
+
+/*
+ * React Aria sets `left: x%` and `translate(-50%, -50%)` on the thumb, so only `top: 50%` is
+ * needed to centre it on the rail. The thumb box is the 44 px touch target; ::after draws the knob.
+ */
+.thumb {
+  top: 50%;
+  width: var(--size-target-min);
+  height: var(--size-target-min);
+  border-radius: var(--radius-full);
+  cursor: grab;
+  outline: none;
+}
+
+.thumb::after {
+  content: '';
+  position: absolute;
+  inset: calc((var(--size-target-min) - var(--size-slider-thumb)) / 2);
+  border: var(--border-width-hairline) solid var(--color-border-strong);
+  border-radius: var(--radius-full);
+  background: var(--color-bg-surface);
+  box-shadow: var(--shadow-1);
+  transition: transform var(--motion-duration-fast) var(--motion-easing-standard);
+}
+
+.thumb[data-dragging] {
+  cursor: grabbing;
+}
+
+.thumb[data-dragging]::after {
+  transform: scale(1.12);
+}
+
+.thumb[data-focus-visible]::after {
+  outline: var(--border-width-focus) solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.slider[data-disabled] .label,
+.slider[data-disabled] .output {
+  color: var(--color-text-muted);
+}
+
+.slider[data-disabled] .fill {
+  background: var(--color-text-muted);
+}
+
+.slider[data-disabled] .thumb {
+  cursor: not-allowed;
+}
+
+.slider[data-disabled] .thumb::after {
+  background: var(--color-bg-inset);
+  border-color: var(--color-text-muted);
+  box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .thumb::after {
+    transition: none;
+  }
+
+  .thumb[data-dragging]::after {
+    transform: none;
+  }
+}

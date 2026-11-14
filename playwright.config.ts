@@ -14,9 +14,24 @@ export default defineConfig({
     baseURL: `http://localhost:${PORT}`,
     trace: 'on-first-retry',
   },
+  // The service-worker spec depends on timing (worker install, cache fill, going offline), so it
+  // runs on its own after everything else has finished, one browser at a time, instead of
+  // competing with the parallel suite for CPU. This is isolation, not retries.
   projects: [
-    { name: 'iphone', use: { ...devices['iPhone 15'] } },
-    { name: 'desktop', use: { ...devices['Desktop Chrome'] } },
+    { name: 'iphone', testIgnore: /offline\.spec/, use: { ...devices['iPhone 15'] } },
+    { name: 'desktop', testIgnore: /offline\.spec/, use: { ...devices['Desktop Chrome'] } },
+    {
+      name: 'iphone-offline',
+      testMatch: /offline\.spec/,
+      dependencies: ['iphone', 'desktop'],
+      use: { ...devices['iPhone 15'] },
+    },
+    {
+      name: 'desktop-offline',
+      testMatch: /offline\.spec/,
+      dependencies: ['iphone-offline'],
+      use: { ...devices['Desktop Chrome'] },
+    },
   ],
   webServer: {
     command: `node node_modules/next/dist/bin/next start -p ${PORT}`,

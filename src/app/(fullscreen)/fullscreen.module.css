@@ -1,0 +1,8 @@
+.main {
+  min-height: 100dvh;
+  padding: env(safe-area-inset-top) var(--space-4) env(safe-area-inset-bottom);
+}
+
+.main:focus {
+  outline: none;
+}

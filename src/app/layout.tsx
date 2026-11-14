@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { Toaster } from 'sonner';
 import { Providers } from '@/components/providers/Providers';
 import { siteConfig } from '@/config/site';
+import { inter } from './fonts';
 import '@/styles/tokens.css';
 import '@/styles/base.css';
 import '@/styles/toaster.css';
@@ -33,7 +34,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={inter.variable}>
       <body>
         <SerwistProvider
           swUrl="/serwist/sw.js"

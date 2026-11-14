@@ -10,6 +10,8 @@ type Props = {
   onRetry?: () => void;
   /** Hide the "Go to home" link (e.g. on the offline page, where home wouldn't load either). */
   showHomeLink?: boolean;
+  /** `main` (default) is a whole-screen failure; `section` sits inside a page that keeps working. */
+  as?: 'main' | 'section';
 };
 
 /**
@@ -17,7 +19,8 @@ type Props = {
  * The heading takes focus on mount so screen-reader and keyboard users land on the message.
  * Uses a plain <a>: it must also work from global-error, where the router may be unavailable.
  */
-export function ErrorPanel({ title, message, onRetry, showHomeLink = true }: Props) {
+export function ErrorPanel({ title, message, onRetry, showHomeLink = true, as = 'main' }: Props) {
+  const Tag = as;
   const headingRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
@@ -25,7 +28,7 @@ export function ErrorPanel({ title, message, onRetry, showHomeLink = true }: Pro
   }, []);
 
   return (
-    <main className={styles.panel}>
+    <Tag className={as === 'main' ? styles.panel : styles.inline}>
       <h1 ref={headingRef} tabIndex={-1} className={styles.title}>
         {title}
       </h1>
@@ -45,6 +48,6 @@ export function ErrorPanel({ title, message, onRetry, showHomeLink = true }: Pro
           </>
         ) : null}
       </div>
-    </main>
+    </Tag>
   );
 }

@@ -1,0 +1,149 @@
+.figure {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+  margin: 0;
+  padding: var(--space-4);
+  border: var(--border-width-hairline) solid var(--color-border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-surface);
+}
+
+.title {
+  font-size: var(--type-h3-size);
+  font-weight: var(--type-h3-weight);
+  line-height: var(--type-h3-line-height);
+}
+
+.plot {
+  width: 100%;
+  height: calc(var(--space-16) * 4.5);
+  min-width: 0;
+}
+
+.plotLarge {
+  height: calc(var(--space-16) * 6);
+}
+
+/* Axis ticks, labels and reference labels. */
+.plot text {
+  fill: var(--color-text-secondary);
+  font-family: var(--font-family-numeric);
+  font-size: var(--type-caption-size);
+  font-variant-numeric: tabular-nums;
+}
+
+.plot :global(.recharts-surface) {
+  overflow: visible;
+}
+
+/* Legend */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--type-body-small-size);
+}
+
+/* Tooltip card */
+.tooltip {
+  min-width: calc(var(--space-16) * 2);
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width-hairline) solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-raised);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-2);
+  font-size: var(--type-body-small-size);
+}
+
+.tooltipTitle {
+  margin-bottom: var(--space-1);
+  font-weight: var(--type-label-weight);
+}
+
+.tooltipRows {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tooltipRow {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.tooltipName {
+  color: var(--color-text-secondary);
+}
+
+.tooltipValue {
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--type-label-weight);
+}
+
+/* Data table alternative */
+.details {
+  border-top: var(--border-width-hairline) solid var(--color-border-subtle);
+}
+
+.summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--size-target-min);
+  color: var(--color-accent-default);
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
+  cursor: pointer;
+}
+
+.summary:focus-visible {
+  outline: var(--border-width-focus) solid var(--color-focus-ring);
+  outline-offset: 2px;
+}
+
+.tableWrap {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--type-body-small-size);
+}
+
+.caption {
+  padding-bottom: var(--space-2);
+  color: var(--color-text-secondary);
+  text-align: start;
+}
+
+.table th,
+.table td {
+  padding: var(--space-1) var(--space-3);
+  border-bottom: var(--border-width-hairline) solid var(--color-border-subtle);
+  text-align: start;
+  white-space: nowrap;
+}
+
+.table thead th {
+  color: var(--color-text-secondary);
+  font-weight: var(--type-label-weight);
+}
+
+.table tbody th {
+  font-weight: var(--type-body-weight);
+}

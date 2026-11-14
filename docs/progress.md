@@ -85,6 +85,49 @@ UI kit and app shell (`docs/phase-5-roadmap.md` M1), starting from the placehold
 - Stage 7: PR #1 opened, CI green, independent review done, hand-over notes.
 
 ## M1 UI kit and app shell
+
+Status: **complete, awaiting merge** (PR #6, `feat(ui): UI kit and app shell`).
+
+### Built
+- **Foundations:** semantic tokens (light, forced dark, system dark; parity tested), Inter via `next/font`, `Icon`, `VisuallyHidden`, `cx()`, theme override via `data-theme` (dev page only, nothing persisted), `lint:tokens` also checks inline `style` props in `.tsx`.
+- **Components (`src/components/ui/`, all on React Aria Components, screens never import it):** Button (4 variants, S/M/L, pending), IconButton, ButtonLink, Field parts, TextField, Textarea, Select, NumberField with unit, TimeInput (m:ss), Slider 0–10, Switch, Checkbox, RadioGroup, SegmentedControl (a radio group, chosen for its group label, form value and arrow-key selection), Combobox, FilterChip, TagChips + AddTagField, badges, Avatar, recipe/brew/stat/list/notice cards, Sheet/Dialog, ConfirmDialog, toasts, EmptyState, Skeleton + LoadingRegion, still-loading hook, OfflineBanner, FormErrorSummary, ErrorPanel (extended with a `section` variant).
+- **Shell:** `(app)`, `(public)` and `(fullscreen)` route groups, bottom tab bar with centre Brew, top bar from 768 px and left rail from 1024 px, TopBar with notices bell, logged-out top bar, skip link, labelled landmarks, five placeholder pages with the §8 empty-state copy, dev previews at `/dev/logged-out` and `/dev/fullscreen`.
+- **Dev page:** `/dev/components` (404 in production) with every component in its states, a light/dark/system switch, and lazy-loaded charts.
+- **Tests:** 183 unit tests (time parsing, combobox filtering, avatar initials, contrast of the token pairs components use in both themes, token parity, lint-tokens, component props) and 126 Playwright runs (iPhone/WebKit and desktop/Chromium; 4 keyboard-only runs skip on iPhone): axe zero violations in both themes on `/dev/components`, all placeholder pages and the other layouts; sheet/dialog focus trap and return; combobox, select, slider and segmented-control keyboard flows; tab order; target sizes (primary controls ≥ 44×44, nothing interactive < 24×24); reduced-motion durations on overlays, toasts and charts; shell tab bar/rail, `aria-current` and skip link; one shared field shell.
+
+### Deviations and decisions
+- **Toasts are custom cards** (see Earlier notes below); Sonner stays for the region only.
+- **TimeInput digit rule** (decided with Aaron): 1–2 digits are seconds, 3–4 digits are m:ss, a trailing `s` forces seconds; shows the understood value while typing and the normalised m:ss on blur.
+- **React Aria quirks worked around:** an empty `TagGroup` renders an ARIA attribute axe rejects (plain text shown instead); a controlled `ComboBox` reopened its list after Escape when nothing was selected (the wrapper now resets the text); the slider thumb needs only `top: 50%` because React Aria already translates it.
+- **Offline service-worker spec** (M0) flaked under parallel load. It now waits for `/~offline` itself to be precached and runs in its own Playwright projects (`iphone-offline`, `desktop-offline`) after the parallel suite, one at a time. No retries added.
+- **Test hydration marker:** `/dev/components` sets `data-hydrated` once React is interactive; specs wait for it instead of `networkidle`.
+- **Combobox/Select feel:** both are React Aria popover lists, not the native iOS wheel. If that feels wrong on a phone, a native `<select>` variant is an easy swap.
+- **`/notices`** does not exist yet; the bell links to it and will 404 until a later milestone.
+- **Reviewer (static):** no blockers. Follow-ups left: each dev page repeats its own production gate (a shared gate in a `/dev` layout isn't possible for the route-group pages); the slider fill width and swatch background are the only inline `style` props (a runtime width and a `var()` reference, both allowed by `lint:tokens`).
+
+### What the design pass needs to touch
+- Replace the placeholder values in `src/styles/tokens.css` (keep the names; both dark blocks must stay in sync, `tests/unit/tokens.test.ts` checks it) and re-run `tests/unit/contrast.test.ts`.
+- Swap the Inter wiring in `src/app/fonts.ts` if the designer picks another family; replace the text wordmark in `src/config/site.ts` and the icons in `public/brand/`.
+- Dark `--color-accent-hover` equals the default accent; dark `--color-accent-pressed` is too dark to carry `--color-text-on-accent` text (the shell marks the current page with an underline instead).
+- `ButtonLink` has no hover state (the Button hover styles use React Aria's `data-hovered`).
+- Tab bar, side nav, stepper and card spacing; chart styling toward the shadcn look; sheet and toast motion.
+- Check Select and Combobox on a real phone; consider the native iOS select.
+
+### Stage log
+- Stage 1: tokens, font, icons, `/dev/components` scaffold, inline-style token lint.
+- Stage 2: actions and inputs. Stage 3: chips, badges, avatar, cards. Stage 4: overlays, toasts, feedback states. Stage 5: app shell and placeholder pages.
+- Extra: slider redesign, NumberField fix, Recharts samples; one shared field shell.
+- Stage 6: accessibility, keyboard, target-size and reduced-motion tests; slider track contrast; offline spec isolation; combobox Escape fix; reviewer pass.
+
+### Next (M2)
+Accounts, onboarding, profile, settings (`docs/phase-5-roadmap.md` M2). Still open from M0: branch protection on `main` using the job names `Typecheck, lint, unit tests, build`, `Database tests on a throwaway database`, `Playwright (iPhone and desktop) with axe` and `check`.
+
+### Earlier notes
+- **Slider and radar look reuse the prototype's pattern** (`prototype-handoff.md` §4, "Sensory sliders + radar": 8 attributes, 0–10 in 0.5 steps, live radar). The slider is rebuilt on React Aria with tokens: label left and value right above a thin track, round surface-coloured thumb centred on the rail with a 44 px touch target drawn by the thumb box. React Aria already translates the thumb by -50% / -50%, so the thumb only needs `top: 50%`; an extra negative margin put it above the track.
+- **Charts were pulled forward into M1's dev page.** Recharts v3 (pinned 3.10.1) is added now, loaded with `next/dynamic` only on `/dev/components`. `src/components/charts/` has a `ChartContainer` modelled on shadcn/ui's (figure, responsive plot, HTML legend, tooltip card) in CSS Modules with our tokens. Charts built: sensory radar (live with sliders, and a 3-brew comparison told apart by colour, line style and marker), pour curve with swirl/wait markers and a target drawdown band, TDS vs extraction scatter with a target box. Each chart is one image to assistive technology (`aria-label`) plus a "Show data table" toggle; animation follows `prefers-reduced-motion`.
+- **Slider track contrast:** `--color-slider-track` is the same neutral as the field border (3:1 or better on canvas, surface, raised and field backgrounds, both themes; covered by `tests/unit/contrast.test.ts`). It stays subtle because the track is only 4 px thick.
+- **Toasts:** Sonner can't mark one toast assertive, so toasts are our own cards (`role="alert"` for errors, `role="status"` otherwise) with our own pause-on-hover/focus timer. Sonner is still used only for the toast region (`<Toaster>`), stacking and `toast.custom`/`dismiss`.
+- **One field shell.** TextField, Textarea, Select, NumberField, TimeInput and Combobox share one box (`.control` in `Field.module.css`): `--color-border-field` resting border (3:1), `--color-bg-field` fill, `space-3` padding, `radius-md`, 44 px minimum height, accent border and ring on focus, danger border when invalid, muted fill when disabled or read-only. The earlier bug: single inputs carried `.control` and `.input` on the same element and `.input`'s resets erased the border and padding. Single inputs now sit inside the `.control` wrapper. `tests/unit/contrast.test.ts` checks the text and control-edge pairs (including the resting field border) in light and dark; `tests/e2e/fields.spec.ts` checks all field types render identical border, padding, radius and height.
 ## M2 Accounts, onboarding, profile, settings
 ## M3 Gear, recipes, versions
 ## M4 Guided timer and brew log
