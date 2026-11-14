@@ -1,10 +1,12 @@
 import { SerwistProvider } from '@serwist/turbopack/react';
 import type { Metadata, Viewport } from 'next';
+import { cookies } from 'next/headers';
 import { Suspense, type ReactNode } from 'react';
 import { Toaster } from 'sonner';
 import { FlashToast } from '@/components/feedback/FlashToast';
 import { Providers } from '@/components/providers/Providers';
 import { siteConfig } from '@/config/site';
+import { THEME_COOKIE, isTheme, themeAttribute } from '@/lib/settings/theme';
 import { inter } from './fonts';
 import '@/styles/tokens.css';
 import '@/styles/base.css';
@@ -33,9 +35,15 @@ export const viewport: Viewport = {
   ],
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+/**
+ * The saved theme is read from a cookie so the very first response already carries `data-theme`
+ * (no flash). Visitors have no cookie and follow the system. This makes every page dynamic.
+ */
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const cookieTheme = (await cookies()).get(THEME_COOKIE)?.value;
+  const theme = isTheme(cookieTheme) ? themeAttribute(cookieTheme) : undefined;
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="en" className={inter.variable} data-theme={theme}>
       <body>
         <SerwistProvider
           swUrl="/serwist/sw.js"

@@ -133,7 +133,7 @@ test.describe('confirming an email link', () => {
     await waitForApp(page);
     await page.getByRole('button', { name: 'Confirm email' }).click();
     await expect(page).toHaveURL(/\/welcome$/);
-    await expect(page.getByRole('heading', { level: 1, name: 'Welcome' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Units and region' })).toBeVisible();
     expect(await users.isConfirmed(user.id)).toBe(true);
   });
 

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { ThemeSync } from '@/components/settings/ThemeSync';
 import { BottomTabBar } from '@/components/shell/BottomTabBar';
 import { SideNav } from '@/components/shell/SideNav';
 import { SkipLink } from '@/components/shell/SkipLink';
@@ -12,6 +13,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
   return (
     <div className={styles.shell}>
       <SkipLink />
+      <ThemeSync />
       <SideNav />
       <main id="main" tabIndex={-1} className={styles.main}>
         {status?.suspended_at ? <SuspendedBanner /> : null}

@@ -26,6 +26,9 @@ export default async function ProfilePage() {
             </ButtonLink>
           }
         />
+        <ButtonLink href="/settings" variant="secondary" size="lg">
+          Settings
+        </ButtonLink>
         <SignOutButton />
         <div className={styles.versionRow}>
           <VersionBadge />

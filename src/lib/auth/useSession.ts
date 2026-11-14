@@ -28,3 +28,15 @@ export function useSession(): { user: User | null; isLoading: boolean } {
 
   return state;
 }
+
+/**
+ * The signed-in user's id, read from the stored session at the moment of a save. Mutations use
+ * this instead of `useSession()`, whose state starts empty in every component that calls it and
+ * so can still be "no user" when a save fires right after mount.
+ */
+export async function currentUserId(): Promise<string> {
+  const { data } = await createClient().auth.getSession();
+  const id = data.session?.user.id;
+  if (!id) throw new Error('not_authenticated');
+  return id;
+}
