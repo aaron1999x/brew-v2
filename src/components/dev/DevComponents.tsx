@@ -4,6 +4,7 @@ import { Coffee, Star, Timer } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useSyncExternalStore } from 'react';
 import { Icon } from '@/components/ui/Icon/Icon';
+import { Notice } from '@/components/ui/Notice/Notice';
 import { LoadingRegion, SkeletonCard } from '@/components/ui/Skeleton/Skeleton';
 import { VisuallyHidden } from '@/components/ui/VisuallyHidden/VisuallyHidden';
 import { ActionsSection } from './ActionsSection';
@@ -51,6 +52,7 @@ export function DevComponents() {
   );
   return (
     <div className={styles.page} data-hydrated={hydrated}>
+      <Notice>Component gallery — placeholder design and sample data.</Notice>
       <header className={styles.header}>
         <h1 className={styles.title}>Components</h1>
         <ThemeSwitch />
