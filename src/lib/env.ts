@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /** Empty strings (blank lines in .env files) count as "not set". */
-const optional = <T extends z.ZodType>(schema: T) =>
+export const optional = <T extends z.ZodType>(schema: T) =>
   z.preprocess((v) => (v === '' ? undefined : v), schema.optional());
 
 const publicSchema = z.object({
@@ -16,15 +16,9 @@ const publicSchema = z.object({
   NEXT_PUBLIC_SUPPORT_EMAIL: optional(z.email()),
 });
 
-const serverSchema = z.object({
-  SUPABASE_SECRET_KEY: z.string().startsWith('sb_secret_', 'must be a secret key (sb_secret_…)'),
-  SENTRY_AUTH_TOKEN: optional(z.string()),
-});
-
 export type PublicEnv = z.infer<typeof publicSchema>;
-export type ServerEnv = z.infer<typeof serverSchema>;
 
-function parse<T extends z.ZodType>(
+export function parse<T extends z.ZodType>(
   schema: T,
   raw: Record<string, unknown>,
   label: string,
@@ -38,7 +32,6 @@ function parse<T extends z.ZodType>(
 }
 
 let publicEnv: PublicEnv | undefined;
-let serverEnv: ServerEnv | undefined;
 
 /**
  * Public env, safe in the browser. Each variable is read by its literal name so Next.js can inline
@@ -60,24 +53,7 @@ export function getPublicEnv(): PublicEnv {
   return publicEnv;
 }
 
-/** Server-only env (secret key). Throws if called in the browser. */
-export function getServerEnv(): ServerEnv {
-  if (typeof window !== 'undefined') {
-    throw new Error('getServerEnv() must not be called in the browser.');
-  }
-  serverEnv ??= parse(
-    serverSchema,
-    {
-      SUPABASE_SECRET_KEY: process.env.SUPABASE_SECRET_KEY,
-      SENTRY_AUTH_TOKEN: process.env.SENTRY_AUTH_TOKEN,
-    },
-    'server',
-  );
-  return serverEnv;
-}
-
 /** Test helper: forget cached values. */
 export function resetEnvCacheForTests(): void {
   publicEnv = undefined;
-  serverEnv = undefined;
 }
