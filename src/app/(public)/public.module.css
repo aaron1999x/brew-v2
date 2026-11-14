@@ -11,3 +11,10 @@
 .main:focus {
   outline: none;
 }
+
+.footer {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-4) var(--space-4) calc(var(--space-4) + env(safe-area-inset-bottom));
+  border-top: var(--border-width-hairline) solid var(--color-border-subtle);
+}

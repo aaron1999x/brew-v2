@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { PublicTopBar } from '@/components/shell/PublicTopBar';
 import { SkipLink } from '@/components/shell/SkipLink';
+import { VersionBadge } from '@/components/ui/VersionBadge/VersionBadge';
 import styles from './public.module.css';
 
 /** Logged-out shell: a slim top bar and no tab bar. */
@@ -12,6 +13,9 @@ export default function PublicLayout({ children }: { children: ReactNode }) {
       <main id="main" tabIndex={-1} className={styles.main}>
         {children}
       </main>
+      <footer className={styles.footer}>
+        <VersionBadge />
+      </footer>
     </div>
   );
 }
