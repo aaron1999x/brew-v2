@@ -70,7 +70,7 @@ test.describe('units and region', () => {
 });
 
 test.describe('appearance', () => {
-  test('the theme is saved, set in a cookie and rendered on the first response', async ({
+  test('the theme is saved, set in a cookie and applied before first paint', async ({
     page,
     users,
   }) => {
@@ -85,10 +85,13 @@ test.describe('appearance', () => {
     const cookies = await page.context().cookies();
     expect(cookies.find((c) => c.name === 'theme')?.value).toBe('dark');
 
-    // The server already knows: the raw HTML (no JavaScript) carries the attribute.
-    const response = await page.context().request.get('/home');
-    expect(await response.text()).toMatch(/<html[^>]*data-theme="dark"/);
-
+    // No flash: a script in <head> applies the cookie before first paint, on every page.
+    const html = await (await page.context().request.get('/home')).text();
+    expect(html).toContain('document.documentElement.setAttribute');
+    await page.goto('/login', { waitUntil: 'domcontentloaded' });
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
+    await page.goto('/settings/appearance');
+    await waitForApp(page);
     await page.reload();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
 

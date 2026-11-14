@@ -120,3 +120,34 @@ test('the logged-out layout has the slim bar and no tab bar', async ({ page }) =
   }
   await expect(nav.getByRole('link', { name: 'Brew' })).toHaveCount(0);
 });
+
+test('Settings and Profile mark Profile as the current page; Brew never looks current by default', async ({
+  page,
+  users,
+}, testInfo) => {
+  await signIn(page, users, 'nav');
+  const nav = page.getByRole('navigation', { name: 'Main' });
+  for (const path of ['/profile', '/settings', '/settings/units', '/settings/account']) {
+    await page.goto(path);
+    await expect(nav.getByRole('link', { name: 'Profile' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    await expect(nav.locator('[aria-current="page"]')).toHaveCount(1);
+    await expect(nav.getByRole('link', { name: 'Brew' })).not.toHaveAttribute('aria-current');
+  }
+
+  if (testInfo.project.name.startsWith('desktop')) {
+    // The rail's Brew is an outlined button: no filled accent block that could read as "current".
+    await page.goto('/settings');
+    const background = (name: string) =>
+      nav.getByRole('link', { name }).evaluate((el) => getComputedStyle(el).backgroundColor);
+    expect(await background('Brew')).toBe('rgba(0, 0, 0, 0)');
+    // The current page (Profile) is the one with the tinted fill.
+    expect(await background('Profile')).not.toBe('rgba(0, 0, 0, 0)');
+    // Brew itself, when current, looks like any other current item.
+    await page.goto('/brew');
+    await expect(nav.getByRole('link', { name: 'Brew' })).toHaveAttribute('aria-current', 'page');
+    expect(await background('Brew')).not.toBe('rgba(0, 0, 0, 0)');
+  }
+});

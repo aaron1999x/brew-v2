@@ -22,3 +22,10 @@ export function applyTheme(theme: Theme): void {
   const secure = window.location.protocol === 'https:' ? '; Secure' : '';
   document.cookie = `${THEME_COOKIE}=${theme}; Path=/; Max-Age=${ONE_YEAR}; SameSite=Lax${secure}`;
 }
+
+/**
+ * Runs in <head> before the page paints: copies the saved theme from the cookie onto <html>, so
+ * every page (including static, cacheable public ones) shows the right theme with no flash and
+ * without the server having to read cookies. Keep it tiny and dependency-free.
+ */
+export const THEME_BOOT_SCRIPT = `(function(){try{var m=document.cookie.match(/(?:^|; )${THEME_COOKIE}=(light|dark)/);if(m)document.documentElement.setAttribute('data-theme',m[1])}catch(e){}})();`;

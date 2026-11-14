@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cx } from '@/lib/cx';
 import { Icon } from '../ui/Icon/Icon';
-import { isCurrent, navItems } from './navItems';
+import { isCurrentItem, navItems } from './navItems';
 import styles from './BottomTabBar.module.css';
 
 /** Phone navigation: five tabs, the centre one (Brew) larger. Hidden from 768 px, where SideNav takes over. */
@@ -17,7 +17,7 @@ export function BottomTabBar() {
           <li key={item.href} className={styles.cell}>
             <Link
               href={item.href}
-              aria-current={isCurrent(pathname, item.href) ? 'page' : undefined}
+              aria-current={isCurrentItem(pathname, item) ? 'page' : undefined}
               className={cx(styles.tab, item.primary && styles.primary)}
               data-primary-control=""
             >
