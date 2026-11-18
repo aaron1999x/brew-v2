@@ -14,7 +14,7 @@ import { Icon } from '../Icon/Icon';
 import { VisuallyHidden } from '../VisuallyHidden/VisuallyHidden';
 import styles from './NumberField.module.css';
 
-export type Unit = 'g' | 'oz' | 'ml' | '°C' | '°F' | 's';
+export type Unit = 'g' | 'oz' | 'ml' | '°C' | '°F' | 's' | 'g/s' | 'oz/s';
 
 const unitNames: Record<Unit, string> = {
   g: 'grams',
@@ -23,6 +23,8 @@ const unitNames: Record<Unit, string> = {
   '°C': 'degrees Celsius',
   '°F': 'degrees Fahrenheit',
   s: 'seconds',
+  'g/s': 'grams per second',
+  'oz/s': 'ounces per second',
 };
 
 export type NumberFieldProps = Omit<AriaNumberFieldProps, 'className' | 'style' | 'children'> &

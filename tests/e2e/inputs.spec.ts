@@ -103,3 +103,39 @@ test('a recipe card is a single link that covers the card', async ({ page }) => 
   expect(linkBox.position).toBe('absolute');
   expect(cardBox.height).toBeGreaterThan(44);
 });
+
+test('the duration field reads 12:00:00, takes h:mm:ss and refuses more than 48 hours', async ({
+  page,
+}) => {
+  const steep = page.getByLabel('Steep time', { exact: true });
+  await steep.scrollIntoViewIfNeeded();
+  await expect(steep).toHaveValue('12:00:00');
+
+  await steep.clear();
+  await steep.pressSequentially('1:30:00');
+  await steep.blur();
+  await expect(steep).toHaveValue('1:30:00');
+  await expect(page.getByTestId('stored-time-rate')).toContainText('Stored: 5400 s');
+
+  await steep.clear();
+  await steep.pressSequentially('49:00:00');
+  await steep.blur();
+  await expect(steep).toHaveAttribute('aria-invalid', 'true');
+  await expect(page.getByText('Enter a time up to 48:00:00').first()).toBeVisible();
+
+  // The over-long example in the gallery starts out invalid and says why.
+  const tooLong = page.getByLabel('Steep (over 48 hours)', { exact: true });
+  await expect(tooLong).toHaveValue('50:00:00');
+});
+
+test('the pour rate field follows the unit switch and keeps the stored g/s', async ({ page }) => {
+  const rate = page.getByLabel('Pour rate', { exact: true });
+  await rate.scrollIntoViewIfNeeded();
+  await expect(rate).toHaveValue('3.5');
+  await page
+    .getByRole('radiogroup', { name: 'Show units as' })
+    .locator('label', { hasText: '°F and oz' })
+    .click();
+  await expect(rate).toHaveValue('0.123');
+  await expect(page.getByTestId('stored-time-rate')).toContainText('3.5 g/s');
+});

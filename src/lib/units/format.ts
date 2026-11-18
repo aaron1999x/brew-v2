@@ -1,4 +1,11 @@
-import { TEMP_DECIMALS, WEIGHT_DECIMALS, tempToDisplay, weightToDisplay } from './convert';
+import {
+  RATE_DECIMALS,
+  TEMP_DECIMALS,
+  WEIGHT_DECIMALS,
+  rateToDisplay,
+  tempToDisplay,
+  weightToDisplay,
+} from './convert';
 import type { DateFormat, TempUnit, TimeFormat, UnitSettings, WeightUnit } from './types';
 
 const number = (decimals: number) =>
@@ -12,6 +19,20 @@ const WEIGHT_FMT: Record<WeightUnit, Intl.NumberFormat> = {
 
 export const TEMP_LABEL: Record<TempUnit, '°C' | '°F'> = { c: '°C', f: '°F' };
 export const WEIGHT_LABEL: Record<WeightUnit, 'g' | 'oz'> = { g: 'g', oz: 'oz' };
+export const RATE_LABEL: Record<WeightUnit, 'g/s' | 'oz/s'> = { g: 'g/s', oz: 'oz/s' };
+
+/** The longest step time or duration a recipe can hold: 48 hours, in seconds. */
+export const DURATION_MAX_S = 172_800;
+
+const RATE_FMT: Record<WeightUnit, Intl.NumberFormat> = {
+  g: number(RATE_DECIMALS.g),
+  oz: number(RATE_DECIMALS.oz),
+};
+
+/** "3.5 g/s" / "0.123 oz/s" from a stored g/s value. */
+export function formatRate(gramsPerSecond: number, unit: WeightUnit): string {
+  return `${RATE_FMT[unit].format(rateToDisplay(gramsPerSecond, unit))} ${RATE_LABEL[unit]}`;
+}
 
 /** "93 °C" / "199.4 °F" from a stored °C value. */
 export function formatTemp(celsius: number, unit: TempUnit): string {
@@ -29,12 +50,30 @@ export function formatDuration(totalSeconds: number): string {
   return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 }
 
-/** m:ss or plain seconds typed by a person, as seconds, or null. "1:30" is 90, "45" is 45. */
+/**
+ * A step time or duration as people read it on a clock: m:ss below an hour ("2:05", "59:59"),
+ * h:mm:ss from one hour ("1:00:00", "12:00:00") so cold-brew steeps stay readable.
+ * ({@link formatDuration} keeps rolling hours into minutes, for places that want "75:00".)
+ */
+export function formatClock(totalSeconds: number): string {
+  const s = Math.max(0, Math.round(totalSeconds));
+  if (s < 3600) return formatDuration(s);
+  const h = Math.floor(s / 3600);
+  const rest = s % 3600;
+  return `${h}:${String(Math.floor(rest / 60)).padStart(2, '0')}:${String(rest % 60).padStart(2, '0')}`;
+}
+
+/**
+ * m:ss, h:mm:ss or plain seconds typed by a person, as seconds, or null.
+ * "1:30" is 90, "45" is 45, "1:02:03" is 3723.
+ */
 export function parseDuration(text: string): number | null {
   const t = text.trim();
   if (/^\d+$/.test(t)) return Number(t);
   const m = /^(\d+):([0-5]?\d)$/.exec(t);
-  return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+  if (m) return Number(m[1]) * 60 + Number(m[2]);
+  const h = /^(\d+):([0-5]\d):([0-5]\d)$/.exec(t);
+  return h ? Number(h[1]) * 3600 + Number(h[2]) * 60 + Number(h[3]) : null;
 }
 
 function toDate(value: Date | string | number): Date {

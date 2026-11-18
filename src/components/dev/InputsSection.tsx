@@ -12,6 +12,8 @@ import { Switch } from '@/components/ui/Switch/Switch';
 import { TextField } from '@/components/ui/TextField/TextField';
 import { Textarea } from '@/components/ui/Textarea/Textarea';
 import { TimeInput } from '@/components/ui/TimeInput/TimeInput';
+import { DurationField } from '@/components/ui/UnitFields/DurationField';
+import { RateField } from '@/components/ui/UnitFields/RateField';
 import { TemperatureField } from '@/components/ui/UnitFields/TemperatureField';
 import { WeightField } from '@/components/ui/UnitFields/WeightField';
 import styles from './sections.module.css';
@@ -49,6 +51,10 @@ export function InputsSection() {
   const [imperial, setImperial] = useState('metric');
   const [storedTemp, setStoredTemp] = useState<number | null>(93);
   const [storedWeight, setStoredWeight] = useState<number | null>(18);
+  const [storedRate, setStoredRate] = useState<number | null>(3.5);
+  const [steep, setSteep] = useState<number | null>(43_200);
+  const [pause, setPause] = useState<number | null>(null);
+  const [tooLong, setTooLong] = useState<number | null>(180_000);
 
   return (
     <>
@@ -283,6 +289,52 @@ export function InputsSection() {
         </div>
         <p className={styles.result} data-testid="stored-values">
           Stored: {storedTemp ?? '–'} °C · {storedWeight ?? '–'} g
+        </p>
+      </div>
+
+      <div className={styles.group}>
+        <h3 className={styles.groupTitle}>Step time and pour rate fields</h3>
+        <div className={styles.grid}>
+          <DurationField
+            label="Steep time"
+            value={steep}
+            onChange={setSteep}
+            description="m:ss, or h:mm:ss from one hour. Up to 48 hours."
+          />
+          <DurationField label="Pause (empty)" value={pause} onChange={setPause} />
+          <DurationField
+            label="Wait (required)"
+            isRequired
+            value={pause}
+            onChange={setPause}
+            description="Required fields show an asterisk."
+          />
+          <DurationField label="Steep (over 48 hours)" value={tooLong} onChange={setTooLong} />
+          <DurationField label="Steep (disabled)" isDisabled value={43_200} />
+          <DurationField label="Steep (read only)" isReadOnly value={90} />
+          <RateField
+            label="Pour rate"
+            value={storedRate}
+            onChange={setStoredRate}
+            units={{ temp_unit: 'c', weight_unit: imperial === 'metric' ? 'g' : 'oz' }}
+          />
+          <RateField
+            label="Pour rate (error)"
+            isInvalid
+            errorMessage="Enter a rate above 0."
+            value={0}
+            onChange={() => undefined}
+            units={{ temp_unit: 'c', weight_unit: imperial === 'metric' ? 'g' : 'oz' }}
+          />
+          <RateField
+            label="Pour rate (disabled)"
+            isDisabled
+            value={3.5}
+            onChange={() => undefined}
+          />
+        </div>
+        <p className={styles.result} data-testid="stored-time-rate">
+          Stored: {steep ?? '–'} s · {storedRate ?? '–'} g/s
         </p>
       </div>
     </>
