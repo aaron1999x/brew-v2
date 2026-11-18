@@ -227,6 +227,39 @@ Status: **done, in review** (branch `feat/m2-accounts`, PR #11).
 Gear, recipes, versions (`docs/phase-5-roadmap.md` M3).
 
 ## M3 Gear, recipes, versions
+
+### M3 in progress
+Branch `feat/m3-recipes`, draft PR `feat: gear, recipes and versions`. Remove this section at the end of M3.
+
+**Stages:** 1 database ✅ · 2 recipe logic · 3 gear · 4 editor, create, recipe page (**stop for iPhone checks**) · 5 versions and pour curve · 6 My recipes and lifecycle (**stop for iPhone checks**) · 7 tests and hand-over. Stage 1 ran on `/model opus`; Stages 2+ on `/model opusplan`.
+
+**Next:** Stage 2 (`src/lib/recipes/` schema, calc, steps, diff, gear, methods; `DurationField`, `RateField`; unit tests, including one that checks the pgTAP fixture copies match `methods.json`). Wait for Aaron before starting it.
+
+**Decided with Aaron at plan approval (18 Nov 2026):**
+- Add `recipes.edited_at` for "Last edited" and its sort (archive, restore and undo-delete don't move it).
+- Roast date uses React Aria `DateField`; pin `@internationalized/date` to the installed **3.12.4** as a direct dependency when it's first used (Stage 4).
+- Catalogue additions as planned (17 rows, below).
+- Tighten `recipe_versions_update` so versions of a soft-deleted recipe can't be edited directly.
+- Routing: `/@handle/…` is rewritten in `proxy.ts` (`NextResponse.rewrite`) to an internal `/u/[handle]/…` segment; direct `/u/…` visits redirect to the `@` URL. Bare `/@handle` shows `NotAvailable` until M6. Editor routes live in `(fullscreen)` (no tab bar).
+- Next 16 has no router-level navigation blocking (only `Link onNavigate`), so the unsaved-changes guard covers the editor's own exits: Cancel → confirm, a history entry + `popstate` for back/swipe-back, `beforeunload`; the device draft covers iOS reloads.
+- Weights in the recipe payload are rounded to 0.1 g (the columns are `numeric(…,1)`; M2's note says 0.01 g, which applies to settings display only), so the database, the diff and "Nothing has changed" agree.
+
+**Stage 1 (database), migration `20261118000001_m3_gear_recipes.sql`:**
+- Deployed schema vs Phase 4 §4: `create_recipe` is the post-counters-fix version; `create_version` doesn't check `deleted_at` itself (a deleted recipe fails on the insert policy with 42501, not `recipe_not_found`; left as is, the app uses `save_recipe`); `make_slug` counts soft-deleted recipes (delete "V60", create "V60" again → `v60-2`; expected). Staging had 0 recipes, versions and gear items and 72 catalogue rows, so no rows needed fixing for the new checks.
+- `gear_set_default(p_item_id)`: security invoker; `gear_not_found` unless mine; locks the category's rows in id order, clears the old default, sets the new one.
+- `gear_items_sync_favourites()` (security definer) on `gear_items` after update of `catalog_id`/`custom_name`/`category` (only when one changes) and after delete: renames, re-categorises or removes the owner's `favourite_gear` entries with that `item_id`, keeping order. Legacy entries (no `item_id`) and other users' profiles are never touched. Returns at once when the profile row is gone (account-deletion cascade).
+- `steps_shape_ok(jsonb)` (immutable) + `recipe_versions_steps_shape`; also requires integer `duration_s` and an `id` of 1–64 characters (the prompt didn't specify these). `recipe_versions_steps_schema` (`= 1`). Named checks: `recipe_versions_bypass_consistent`, `recipe_versions_drawdown_range`, `recipe_versions_tds_range`, `recipe_versions_ey_range`, `recipes_method_custom_required`.
+- `recipes.edited_at timestamptz not null default now()`: set on insert by the default (so `create_recipe` and `copy_recipe` didn't need changing) and by `save_recipe`.
+- `save_recipe(p_recipe_id, p_name, p_method, p_method_custom, p_base_version_id, p_version, p_as_new_version)` returns the version: locks the recipe (`recipe_not_found` if missing, not mine or deleted), checks the base version belongs to it (`version_not_found`), updates name/method/`edited_at`, then inserts v(latest+1) or updates the base version's whitelisted columns (lock guard → `version_locked`). `p_version` is a full replacement, like `create_recipe`'s payload.
+- **Grants:** Supabase's default privileges grant `anon` execute on new functions directly, so `revoke … from public` alone left `gear_set_default` and `save_recipe` callable by anon (caught by pgTAP). Both revoke from `public, anon` and grant `authenticated`. Do the same for every new member-only function.
+- Catalogue +17 (89 total): Espro P7, AeroPress XL, Hario Mizudashi Cold Brew Pot; Kalita Wave 155 Paper, AeroPress XL Paper Filters, April Paper Filters, Toddy Felt Filters, Melitta #4 Cone Paper; Kingrinder K4, Timemore Sculptor 078S, Timemore C3 ESP, 1Zpresso Q Air; Fellow Stagg EKG Pro, Fellow Corvo EKG, Hario V60 Drip Kettle Air; Timemore Black Mirror Nano, Acaia Pyxis.
+- **Method fixtures** are in `src/lib/recipes/__fixtures__/methods.json` (V60, Switch, AeroPress inverted, French press, cold brew); `supabase/tests/07_gear_recipes.sql` inlines them as `\set fx_<key> '…'` lines.
+- **pgTAP `07_gear_recipes.sql` (126 tests):** catalogue and gear RLS, `gear_set_default`, favourites trigger, `create_recipe`/`save_recipe` as a member (in place, new version, from an older base, name-only on a locked version), locking, other members, soft delete and undo, slug/owner immutability, `make_slug`, all 5 fixtures, bad step shapes, the other checks, and a real `delete from auth.users` for a user with gear, favourites, recipes and several versions (passes without deferring any foreign key).
+- **Dry run first:** before `db:push`, the migration plus each test file ran on staging inside one rolled-back transaction; all 7 files passed.
+- **Error map:** `gear_not_found`, `steps_invalid` added; `CONSTRAINT_MESSAGES` + `toConstraintName()` translate the named checks (23514) and `gear_one_default_per_category` (23505) by constraint name; unit-tested.
+- **Applied to staging:** `db:push` (after the commit), `db:types` regenerated, `db:test` 297/297 across 7 files, nothing left behind.
+- Session note: running npm through `powershell.exe` from Bash was refused by the permission system; checks go through the `test-runner` subagent.
+
 ## M4 Guided timer and brew log
 ## M5 Offline and PWA
 ## M6 Public pages and publishing

@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CONSTRAINT_MESSAGES,
   ERROR_MESSAGES,
   MESSAGE_FALLBACK,
   MESSAGE_LOGIN_AGAIN,
   MESSAGE_NETWORK,
   MESSAGE_NO_PERMISSION,
   isUnexpectedError,
+  toConstraintName,
   toErrorCode,
   toUserMessage,
 } from '@/lib/errors/messages';
@@ -78,6 +80,56 @@ describe('toUserMessage', () => {
     expect(toUserMessage(null)).toBe(MESSAGE_FALLBACK);
     expect(toUserMessage(undefined)).toBe(MESSAGE_FALLBACK);
     expect(toUserMessage(42)).toBe(MESSAGE_FALLBACK);
+  });
+
+  it('maps the M3 named errors', () => {
+    expect(toUserMessage({ code: 'P0001', message: 'version_locked' })).toBe(
+      'This version has brews, so your changes will be saved as a new version.',
+    );
+    expect(toUserMessage({ code: 'P0001', message: 'recipe_not_found' })).toBe(
+      "This recipe isn't available any more.",
+    );
+    expect(toUserMessage({ code: 'P0001', message: 'immutable_field' })).toBe(
+      ERROR_MESSAGES.immutable_field,
+    );
+    expect(toUserMessage({ code: 'P0001', message: 'steps_invalid' })).toBe(
+      "Some steps aren't valid. Check the highlighted steps.",
+    );
+    expect(toUserMessage({ code: 'P0001', message: 'gear_not_found' })).toBe(
+      'That gear item no longer exists.',
+    );
+  });
+
+  it('maps every named constraint from a Postgres violation message', () => {
+    for (const [name, message] of Object.entries(CONSTRAINT_MESSAGES)) {
+      const err = {
+        code: name.startsWith('gear_') ? '23505' : '23514',
+        message: name.startsWith('gear_')
+          ? `duplicate key value violates unique constraint "${name}"`
+          : `new row for relation "recipe_versions" violates check constraint "${name}"`,
+        details: 'Failing row contains (…)',
+      };
+      expect(toConstraintName(err), name).toBe(name);
+      expect(toUserMessage(err), name).toBe(message);
+      expect(isUnexpectedError(err), name).toBe(false);
+    }
+    expect(
+      toUserMessage({
+        code: '23514',
+        message:
+          'new row for relation "recipe_versions" violates check constraint "recipe_versions_steps_shape"',
+      }),
+    ).toBe(ERROR_MESSAGES.steps_invalid);
+  });
+
+  it('leaves unknown constraints to the fallback', () => {
+    const err = {
+      code: '23514',
+      message: 'new row for relation "recipes" violates check constraint "recipes_name_check"',
+    };
+    expect(toConstraintName(err)).toBeNull();
+    expect(toUserMessage(err)).toBe(MESSAGE_FALLBACK);
+    expect(toConstraintName({ message: 'violates check constraint "constructor"' })).toBeNull();
   });
 
   it('flags only unknown errors as unexpected (for Sentry)', () => {

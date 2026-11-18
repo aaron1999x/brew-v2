@@ -1,0 +1,102 @@
+{
+  "schema": 1,
+  "note": "M3 method fixtures. Used by unit tests, e2e and (inlined as JSON) supabase/tests/07_gear_recipes.sql; a unit test checks the pgTAP copies match this file.",
+  "fixtures": [
+    {
+      "key": "v60",
+      "name": "V60 everyday",
+      "method": "pour_over",
+      "method_custom": null,
+      "version": {
+        "dose_g": 15,
+        "brew_water_g": 250,
+        "temp_c": 93,
+        "drawdown_min_s": 165,
+        "drawdown_max_s": 195,
+        "gear": { "brewer": { "name": "Hario V60 02" } },
+        "steps": [
+          { "id": "v60-1", "kind": "pour", "at_s": 0, "target_g": 30, "technique": "Bloom" },
+          { "id": "v60-2", "kind": "swirl", "at_s": 10, "duration_s": 5 },
+          { "id": "v60-3", "kind": "pour", "at_s": 45, "target_g": 150 },
+          { "id": "v60-4", "kind": "pour", "at_s": 90, "target_g": 250 }
+        ]
+      }
+    },
+    {
+      "key": "switch",
+      "name": "Switch hybrid",
+      "method": "hybrid",
+      "method_custom": null,
+      "version": {
+        "dose_g": 15,
+        "brew_water_g": 240,
+        "temp_c": 95,
+        "gear": { "brewer": { "name": "Hario Switch 02" } },
+        "steps": [
+          { "id": "sw-1", "kind": "other", "at_s": 0, "label": "Close valve" },
+          { "id": "sw-2", "kind": "pour", "at_s": 0, "target_g": 240 },
+          { "id": "sw-3", "kind": "stir", "at_s": 25, "duration_s": 5 },
+          { "id": "sw-4", "kind": "wait", "at_s": 30, "duration_s": 120 },
+          { "id": "sw-5", "kind": "other", "at_s": 150, "label": "Open valve" }
+        ]
+      }
+    },
+    {
+      "key": "aeropress",
+      "name": "AeroPress inverted",
+      "method": "aeropress",
+      "method_custom": null,
+      "version": {
+        "dose_g": 15,
+        "brew_water_g": 220,
+        "temp_c": 90,
+        "gear": { "brewer": { "name": "AeroPress Original" } },
+        "steps": [
+          { "id": "ap-1", "kind": "pour", "at_s": 0, "target_g": 220, "technique": "Inverted" },
+          { "id": "ap-2", "kind": "stir", "at_s": 15, "duration_s": 10 },
+          { "id": "ap-3", "kind": "wait", "at_s": 25, "duration_s": 90 },
+          { "id": "ap-4", "kind": "other", "at_s": 115, "label": "Flip onto cup" },
+          { "id": "ap-5", "kind": "press", "at_s": 125, "duration_s": 30 }
+        ]
+      }
+    },
+    {
+      "key": "french_press",
+      "name": "French press",
+      "method": "french_press",
+      "method_custom": null,
+      "version": {
+        "dose_g": 30,
+        "brew_water_g": 500,
+        "temp_c": 95,
+        "gear": { "brewer": { "name": "Bodum Chambord French Press" } },
+        "steps": [
+          { "id": "fp-1", "kind": "pour", "at_s": 0, "target_g": 500 },
+          { "id": "fp-2", "kind": "wait", "at_s": 15, "duration_s": 240 },
+          { "id": "fp-3", "kind": "other", "at_s": 255, "label": "Break the crust" },
+          { "id": "fp-4", "kind": "wait", "at_s": 270, "duration_s": 300 },
+          { "id": "fp-5", "kind": "press", "at_s": 570, "duration_s": 20 }
+        ]
+      }
+    },
+    {
+      "key": "cold_brew",
+      "name": "Cold brew",
+      "method": "cold_brew",
+      "method_custom": null,
+      "version": {
+        "dose_g": 60,
+        "brew_water_g": 600,
+        "temp_c": 20,
+        "bypass_g": 300,
+        "bypass_timing": "after",
+        "gear": { "brewer": { "name": "Hario Mizudashi Cold Brew Pot" } },
+        "steps": [
+          { "id": "cb-1", "kind": "pour", "at_s": 0, "target_g": 600 },
+          { "id": "cb-2", "kind": "stir", "at_s": 30, "duration_s": 30 },
+          { "id": "cb-3", "kind": "wait", "at_s": 60, "duration_s": 43200 }
+        ]
+      }
+    }
+  ]
+}
