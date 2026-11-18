@@ -16,7 +16,7 @@ import {
   deviceDefaults,
   formatDate,
   formatDateTime,
-  formatDuration,
+  formatClock,
   formatTemp,
   formatTime,
   formatWeight,
@@ -89,7 +89,13 @@ export function useUpdateSettings({ successMessage }: UpdateOptions = {}) {
   const mutation = useMutation({
     mutationFn: async (patch: SettingsPatch) => {
       const userId = await currentUserId();
-      const { onboarding, ...rest } = patch;
+      const { onboarding: patchOnboarding, ...rest } = patch;
+      // `onMutate` already merged this change into the cache. Send the cache's onboarding (not just
+      // this patch's copy), so two saves in flight at once (the "started" mark and a step finishing)
+      // can't overwrite each other's steps with an older whole object.
+      const onboarding = patchOnboarding
+        ? (queryClient.getQueryData<Settings>(queryKeys.settings())?.onboarding ?? patchOnboarding)
+        : undefined;
       const { error } = await createClient()
         .from('user_settings')
         .update({ ...rest, ...(onboarding ? { onboarding: onboarding as NonNullable<Json> } : {}) })
@@ -140,7 +146,8 @@ export function useUnits() {
       isLoading: query.isLoading,
       temp: (celsius: number) => formatTemp(celsius, units.temp_unit),
       weight: (grams: number) => formatWeight(grams, units.weight_unit),
-      duration: formatDuration,
+      /** Step times, durations, totals and drawdown targets: m:ss, then h:mm:ss from one hour. */
+      duration: formatClock,
       date: (value: Date | string | number) =>
         formatDate(value, units.date_format, units.time_zone),
       time: (value: Date | string | number) =>

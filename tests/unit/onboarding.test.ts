@@ -36,26 +36,43 @@ describe('onboarding shape', () => {
 });
 
 describe('steps and checklist', () => {
-  it('hides the gear step', () => {
-    expect(ONBOARDING_STEPS.gear.enabled).toBe(false);
-    expect(enabledSteps()).toEqual(['handle', 'units', 'profile']);
+  it('has the gear step on, between units and profile, linking to My gear', () => {
+    expect(ONBOARDING_STEPS.gear.enabled).toBe(true);
+    expect(ONBOARDING_STEPS.gear.href).toBe('/settings/gear');
+    expect(enabledSteps()).toEqual(['handle', 'units', 'gear', 'profile']);
   });
 
   it('asks for a handle only while it is unconfirmed', () => {
     expect(welcomeSteps({ handleConfirmed: false, hasExperienceLevel: false })).toEqual([
       'handle',
       'units',
+      'gear',
       'profile',
     ]);
-    expect(welcomeSteps(nothing)).toEqual(['units', 'profile']);
+    expect(welcomeSteps(nothing)).toEqual(['units', 'gear', 'profile']);
   });
 
   it('lists skipped and untouched steps, not finished ones', () => {
     const onboarding = parseOnboarding({ steps: { units: 'skipped' } });
-    expect(pendingSteps(onboarding, nothing)).toEqual(['units', 'profile']);
+    expect(pendingSteps(onboarding, nothing)).toEqual(['units', 'gear', 'profile']);
     expect(pendingSteps(parseOnboarding({ steps: { units: 'done' } }), nothing)).toEqual([
+      'gear',
       'profile',
     ]);
+  });
+
+  it('lists a skipped gear step until there is gear, however it was added', () => {
+    const skipped = parseOnboarding({ steps: { units: 'done', gear: 'skipped', profile: 'done' } });
+    expect(pendingSteps(skipped, nothing)).toEqual(['gear']);
+    expect(pendingSteps(skipped, { ...nothing, hasGear: false })).toEqual(['gear']);
+    expect(pendingSteps(skipped, { ...nothing, hasGear: true })).toEqual([]);
+    expect(showChecklist(skipped, { ...nothing, hasGear: true })).toBe(false);
+  });
+
+  it('counts gear added in the welcome flow as done', () => {
+    expect(isStepDone('gear', { steps: { gear: 'done' } }, nothing)).toBe(true);
+    expect(isStepDone('gear', {}, nothing)).toBe(false);
+    expect(isStepDone('gear', {}, { ...nothing, hasGear: true })).toBe(true);
   });
 
   it('counts facts from the profile as done', () => {
@@ -73,7 +90,7 @@ describe('steps and checklist', () => {
   it('shows the checklist until everything is done or it is dismissed', () => {
     expect(showChecklist({}, nothing)).toBe(true);
     expect(showChecklist({ checklist_dismissed: true }, nothing)).toBe(false);
-    const allDone = parseOnboarding({ steps: { units: 'done', profile: 'done' } });
+    const allDone = parseOnboarding({ steps: { units: 'done', gear: 'done', profile: 'done' } });
     expect(showChecklist(allDone, nothing)).toBe(false);
   });
 });

@@ -21,6 +21,7 @@ export const queryKeys = {
   verified: (method?: string) => ['verified', method ?? 'all'] as const,
   notices: () => ['notices'] as const,
   gear: () => ['gear'] as const,
+  gearCatalog: () => ['gear-catalog'] as const,
   settings: () => ['settings'] as const,
   profileMe: () => ['profile', 'me'] as const,
   handleStatus: (handle: string) => ['handle-status', handle] as const,

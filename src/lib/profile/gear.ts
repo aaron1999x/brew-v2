@@ -1,55 +1,69 @@
-import { z } from 'zod';
+import {
+  GEAR_CATEGORIES,
+  GEAR_CATEGORY_LABELS,
+  gearRealName,
+  type GearCategory,
+  type GearItem,
+} from '@/lib/recipes/gear';
+import {
+  legacyFavouriteSchema,
+  linkedFavouriteSchema,
+  type LegacyFavourite,
+  type LinkedFavourite,
+} from '@/lib/recipes/schema';
 
-export const GEAR_CATEGORIES = [
-  { value: 'brewer', label: 'Brewer' },
-  { value: 'filter', label: 'Filter' },
-  { value: 'grinder', label: 'Grinder' },
-  { value: 'kettle', label: 'Kettle' },
-  { value: 'scale', label: 'Scale' },
-  { value: 'water', label: 'Water' },
-  { value: 'other', label: 'Other' },
-] as const;
-
-export type GearCategory = (typeof GEAR_CATEGORIES)[number]['value'];
+export { GEAR_CATEGORIES };
+export type { GearCategory, LegacyFavourite, LinkedFavourite };
 
 export const MAX_FAVOURITE_GEAR = 5;
-export const MAX_GEAR_NAME = 60;
 
 export function gearCategoryLabel(category: string): string {
-  return GEAR_CATEGORIES.find((c) => c.value === category)?.label ?? 'Other';
+  return GEAR_CATEGORY_LABELS[category as GearCategory] ?? GEAR_CATEGORY_LABELS.other;
 }
 
-const categoryValues = GEAR_CATEGORIES.map((c) => c.value) as [GearCategory, ...GearCategory[]];
+/**
+ * An entry of `profiles.favourite_gear`: linked to one of my gear items (`item_id`, kept in step
+ * by a database trigger when the item is renamed or deleted) or a legacy free-text entry from M2.
+ */
+export type FavouriteGear = LinkedFavourite | LegacyFavourite;
 
-export const favouriteGearSchema = z.object({
-  category: z.enum(categoryValues),
-  name: z.string().trim().min(1).max(MAX_GEAR_NAME),
-});
+export function isLinkedFavourite(entry: FavouriteGear): entry is LinkedFavourite {
+  return 'item_id' in entry && typeof entry.item_id === 'string';
+}
 
-export type FavouriteGear = z.infer<typeof favouriteGearSchema>;
-
-/** Reads the stored `favourite_gear` JSON; entries that don't fit are dropped, at most five kept. */
+/** Reads the stored JSON; entries that don't fit are dropped, at most five kept. */
 export function parseFavouriteGear(value: unknown): FavouriteGear[] {
   if (!Array.isArray(value)) return [];
   const out: FavouriteGear[] = [];
   for (const item of value) {
-    const parsed = favouriteGearSchema.safeParse(item);
-    if (parsed.success) out.push(parsed.data);
+    const linked = linkedFavouriteSchema.safeParse(item);
+    if (linked.success) {
+      out.push(linked.data);
+      continue;
+    }
+    const legacy = legacyFavouriteSchema.safeParse(item);
+    if (legacy.success) out.push(legacy.data);
   }
   return out.slice(0, MAX_FAVOURITE_GEAR);
 }
 
-/** Rows from the edit form → what is stored: empty names are dropped, names trimmed, max five. */
-export function cleanFavouriteGear(
-  rows: readonly { category: string; name: string }[],
+/** The entry saved for a gear item: its real name (catalogue or custom), never its nickname. */
+export function favouriteFromItem(item: GearItem): LinkedFavourite {
+  return { item_id: item.id, category: item.category, name: gearRealName(item) };
+}
+
+/**
+ * What to store: the chosen gear items (in the order chosen) followed by the legacy entries that
+ * are still wanted. Chosen ids that no longer match an item of mine are dropped.
+ */
+export function buildFavouriteGear(
+  chosenIds: readonly string[],
+  items: readonly GearItem[],
+  legacy: readonly LegacyFavourite[],
 ): FavouriteGear[] {
-  return rows
-    .map((r) => ({
-      category: (GEAR_CATEGORIES.some((c) => c.value === r.category)
-        ? r.category
-        : 'other') as GearCategory,
-      name: r.name.trim().slice(0, MAX_GEAR_NAME),
-    }))
-    .filter((r) => r.name !== '')
-    .slice(0, MAX_FAVOURITE_GEAR);
+  const linked = chosenIds
+    .map((id) => items.find((item) => item.id === id))
+    .filter((item): item is GearItem => item !== undefined)
+    .map(favouriteFromItem);
+  return [...linked, ...legacy].slice(0, MAX_FAVOURITE_GEAR);
 }

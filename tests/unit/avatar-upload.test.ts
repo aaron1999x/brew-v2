@@ -9,12 +9,6 @@ import {
   pickAvatarType,
   squareCrop,
 } from '@/lib/avatar/crop';
-import {
-  MAX_FAVOURITE_GEAR,
-  cleanFavouriteGear,
-  gearCategoryLabel,
-  parseFavouriteGear,
-} from '@/lib/profile/gear';
 
 describe('squareCrop', () => {
   it('centres a landscape photo', () => {
@@ -78,43 +72,5 @@ describe('avatar files and URLs', () => {
     expect(isImageFile({ type: 'application/pdf', name: 'a.pdf' })).toBe(false);
     expect(isImageFile({ type: 'text/plain', name: 'a.png' })).toBe(false);
     expect(isImageFile({ type: '', name: 'notes.txt' })).toBe(false);
-  });
-});
-
-describe('favourite gear', () => {
-  it('reads valid entries and drops the rest', () => {
-    expect(
-      parseFavouriteGear([
-        { category: 'grinder', name: 'Comandante C40' },
-        { category: 'nope', name: 'x' },
-        { category: 'kettle', name: '' },
-        'text',
-      ]),
-    ).toEqual([{ category: 'grinder', name: 'Comandante C40' }]);
-    expect(parseFavouriteGear(null)).toEqual([]);
-  });
-
-  it('keeps at most five', () => {
-    const six = Array.from({ length: 6 }, (_, i) => ({ category: 'other', name: `item ${i}` }));
-    expect(parseFavouriteGear(six)).toHaveLength(MAX_FAVOURITE_GEAR);
-    expect(cleanFavouriteGear(six)).toHaveLength(MAX_FAVOURITE_GEAR);
-  });
-
-  it('cleans form rows: trims, drops empty names, falls back to "other"', () => {
-    expect(
-      cleanFavouriteGear([
-        { category: 'grinder', name: '  Timemore C3  ' },
-        { category: 'grinder', name: '   ' },
-        { category: 'mystery', name: 'Thing' },
-      ]),
-    ).toEqual([
-      { category: 'grinder', name: 'Timemore C3' },
-      { category: 'other', name: 'Thing' },
-    ]);
-  });
-
-  it('labels categories', () => {
-    expect(gearCategoryLabel('grinder')).toBe('Grinder');
-    expect(gearCategoryLabel('unknown')).toBe('Other');
   });
 });

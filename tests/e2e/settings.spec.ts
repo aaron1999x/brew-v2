@@ -114,19 +114,23 @@ test.describe('onboarding', () => {
     await page.goto('/welcome');
     await waitForApp(page);
 
-    // The handle is already chosen at sign-up, so: units, profile, start.
+    // The handle is already chosen at sign-up, so: units, gear, profile, start.
     const progress = page.getByTestId('onboarding-progress');
-    await expect(progress).toHaveText('Step 1 of 3');
+    await expect(progress).toHaveText('Step 1 of 4');
     await expect(page.getByRole('heading', { level: 1, name: 'Units and region' })).toBeVisible();
     await page.getByRole('button', { name: 'Skip for now' }).click();
 
-    await expect(progress).toHaveText('Step 2 of 3');
+    await expect(progress).toHaveText('Step 2 of 4');
+    await expect(page.getByRole('heading', { level: 1, name: 'Your gear' })).toBeVisible();
+    await page.getByRole('button', { name: 'Skip for now' }).click();
+
+    await expect(progress).toHaveText('Step 3 of 4');
     await expect(
       page.getByRole('heading', { level: 1, name: 'Photo and experience' }),
     ).toBeVisible();
     await page.getByRole('button', { name: 'Skip for now' }).click();
 
-    await expect(progress).toHaveText('Step 3 of 3');
+    await expect(progress).toHaveText('Step 4 of 4');
     await expect(page.getByRole('heading', { level: 1, name: "You're all set" })).toBeVisible();
     await page.getByRole('button', { name: 'Look around' }).click();
     await page.waitForURL('**/home');
@@ -138,8 +142,10 @@ test.describe('onboarding', () => {
       '/settings/units',
     );
     await expect(card.getByRole('link', { name: /photo and your experience/ })).toBeVisible();
-    // The gear step is hidden until M3.
-    await expect(card.getByText(/gear/i)).toHaveCount(0);
+    await expect(card.getByRole('link', { name: 'Add your gear' })).toHaveAttribute(
+      'href',
+      '/settings/gear',
+    );
 
     await card.getByRole('button', { name: 'Dismiss' }).click();
     await expect(card).toHaveCount(0);
@@ -159,12 +165,35 @@ test.describe('onboarding', () => {
     // Pre-filled from the browser locale (en-US in both projects): °F and oz.
     await expect(page.getByTestId('units-preview')).toContainText('199.4 °F · 0.63 oz');
     await page.getByRole('button', { name: 'Continue' }).click();
-    await expect(page.getByTestId('onboarding-progress')).toHaveText('Step 2 of 3');
+    await expect(page.getByTestId('onboarding-progress')).toHaveText('Step 2 of 4');
 
     await expect.poll(async () => (await settingsRow(users, user.id)).temp_unit).toBe('f');
     const row = await settingsRow(users, user.id);
     expect(row.onboarding).toMatchObject({ steps: { units: 'done' } });
     expect(row.onboarding).toHaveProperty('started_at');
+
+    // Gear: a brewer from the catalogue and a grinder of your own, both saved as defaults.
+    await expect(page.getByRole('heading', { level: 1, name: 'Your gear' })).toBeVisible();
+    await page.getByRole('combobox', { name: 'Brewer' }).pressSequentially('v60 02');
+    await page.getByRole('option', { name: 'Hario V60 02' }).click();
+    await page.getByRole('combobox', { name: 'Grinder' }).pressSequentially('Hand grinder');
+    await page.getByRole('option', { name: /Use “Hand grinder” as a custom item/ }).click();
+    await page.getByRole('button', { name: 'Continue' }).click();
+    await expect(page.getByTestId('onboarding-progress')).toHaveText('Step 3 of 4');
+    const { data: gear } = await users.admin
+      .from('gear_items')
+      .select('category, custom_name, is_default, catalog:gear_catalog(name)')
+      .eq('user_id', user.id)
+      .order('category');
+    expect(gear).toMatchObject([
+      {
+        category: 'brewer',
+        custom_name: null,
+        is_default: true,
+        catalog: { name: 'Hario V60 02' },
+      },
+      { category: 'grinder', custom_name: 'Hand grinder', is_default: true, catalog: null },
+    ]);
 
     // Choose an experience level, then the checklist on Home no longer lists anything.
     await page
@@ -204,6 +233,9 @@ for (const scheme of ['light', 'dark'] as const) {
       await expect(page.getByTestId('units-preview')).toBeVisible();
       await expectNoAxeViolations(page);
       await page.getByRole('button', { name: 'Skip for now' }).click();
+      await expect(page.getByRole('heading', { level: 1, name: 'Your gear' })).toBeVisible();
+      await expectNoAxeViolations(page);
+      await page.getByRole('button', { name: 'Skip for now' }).click();
       await expect(page.getByRole('radiogroup', { name: /describe your brewing/ })).toBeVisible();
       await expectNoAxeViolations(page);
       await page.getByRole('button', { name: 'Skip for now' }).click();
@@ -222,7 +254,10 @@ test('the onboarding steps work by keyboard', async ({ page, users }, testInfo) 
   const skip = page.getByRole('button', { name: 'Skip for now' });
   await skip.focus();
   await page.keyboard.press('Enter');
-  await expect(page.getByTestId('onboarding-progress')).toHaveText('Step 2 of 3');
+  await expect(page.getByTestId('onboarding-progress')).toHaveText('Step 2 of 4');
+  await page.getByRole('button', { name: 'Skip for now' }).focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByTestId('onboarding-progress')).toHaveText('Step 3 of 4');
   await page.getByRole('button', { name: 'Skip for now' }).focus();
   await page.keyboard.press('Enter');
   await expect(page.getByRole('button', { name: 'Look around' })).toBeVisible();

@@ -5,7 +5,7 @@ export type StepId = (typeof STEP_IDS)[number];
 
 /**
  * Onboarding steps in order. `enabled: false` hides a step everywhere (welcome flow and the Home
- * checklist). M3 turns `gear` on when the gear screen exists.
+ * checklist).
  */
 export const ONBOARDING_STEPS: Record<
   StepId,
@@ -27,7 +27,7 @@ export const ONBOARDING_STEPS: Record<
     title: 'Your gear',
     checklistLabel: 'Add your gear',
     href: '/settings/gear',
-    enabled: false,
+    enabled: true,
   },
   profile: {
     title: 'Photo and experience',
@@ -74,12 +74,18 @@ export function enabledSteps(): StepId[] {
 }
 
 /** Facts from the profile that finish a step even when onboarding never recorded it. */
-export type ProfileFacts = { handleConfirmed: boolean; hasExperienceLevel: boolean };
+export type ProfileFacts = {
+  handleConfirmed: boolean;
+  hasExperienceLevel: boolean;
+  /** Has at least one gear item (added in onboarding or later in Settings). */
+  hasGear?: boolean;
+};
 
 export function isStepDone(id: StepId, onboarding: Onboarding, facts: ProfileFacts): boolean {
   if (onboarding.steps?.[id] === 'done') return true;
   if (id === 'handle') return facts.handleConfirmed;
   if (id === 'profile') return facts.hasExperienceLevel;
+  if (id === 'gear') return facts.hasGear === true;
   return false;
 }
 

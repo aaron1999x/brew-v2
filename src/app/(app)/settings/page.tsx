@@ -10,6 +10,11 @@ export const metadata: Metadata = { title: 'Settings' };
 const LINKS: readonly SettingsLink[] = [
   { href: '/settings/profile', label: 'Profile', hint: 'Photo, name, handle and bio' },
   {
+    href: '/settings/gear',
+    label: 'My gear',
+    hint: 'Brewers, grinders and defaults for new recipes',
+  },
+  {
     href: '/settings/units',
     label: 'Units and region',
     hint: 'Temperature, weight, dates and time',

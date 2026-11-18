@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button/Button';
+import { useGear } from '@/lib/gear/hooks';
 import { useProfileMe } from '@/lib/profile/useProfileMe';
 import {
   ONBOARDING_STEPS,
@@ -20,12 +21,15 @@ import styles from './Onboarding.module.css';
 export function FinishProfileCard() {
   const settings = useSettings();
   const profile = useProfileMe();
+  const gear = useGear();
   const update = useUpdateSettings();
 
-  if (!settings.data || !profile.data) return null;
+  // Wait for the gear list too: a person who added gear in Settings shouldn't see "Add your gear".
+  if (!settings.data || !profile.data || !gear.data) return null;
   const facts = {
     handleConfirmed: profile.data.handle_confirmed,
     hasExperienceLevel: profile.data.experience_level !== null,
+    hasGear: gear.data.length > 0,
   };
   if (!showChecklist(settings.data.onboarding, facts)) return null;
   const pending = pendingSteps(settings.data.onboarding, facts);

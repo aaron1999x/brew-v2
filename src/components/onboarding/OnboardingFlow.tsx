@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { useEffect, useRef, useState } from 'react';
 import { HandleField } from '@/components/auth/HandleField';
 import { QueryBoundary } from '@/components/feedback/QueryBoundary';
+import { GearPicker } from '@/components/gear/GearPicker';
 import { AvatarUploader } from '@/components/profile/AvatarUploader';
 import { UnitsFields } from '@/components/settings/UnitsFields';
 import { Button } from '@/components/ui/Button/Button';
@@ -15,6 +16,9 @@ import {
 } from '@/components/ui/FormErrorSummary/FormErrorSummary';
 import { HANDLE_MESSAGES, useHandleStatus } from '@/lib/auth/handle';
 import { toUserMessage } from '@/lib/errors/messages';
+import { buildGearInput, missingPickMessage, type GearPick } from '@/lib/gear/form';
+import { useAddGear, useGearCatalog } from '@/lib/gear/hooks';
+import type { GearCategory } from '@/lib/recipes/gear';
 import {
   EXPERIENCE_LEVELS,
   useProfileMe,
@@ -34,7 +38,7 @@ import styles from './Onboarding.module.css';
 
 type FlowStep = StepId | 'start';
 
-/** /welcome: one step per screen, every step skippable. Gear is hidden by `ONBOARDING_STEPS`. */
+/** /welcome: one step per screen, every step skippable. Steps and their order: `ONBOARDING_STEPS`. */
 export function OnboardingFlow() {
   const settings = useSettings();
   const profile = useProfileMe();
@@ -116,6 +120,12 @@ function Flow({ settings, profile }: { settings: Settings; profile: ProfileMe })
                 setIndex((i) => i + 1);
               }}
               onSkip={() => finish('units', 'skipped')}
+            />
+          ) : null}
+          {current === 'gear' ? (
+            <GearStep
+              onDone={() => finish('gear', 'done')}
+              onSkip={() => finish('gear', 'skipped')}
             />
           ) : null}
           {current === 'profile' ? (
@@ -224,6 +234,89 @@ function UnitsStep({
         onSkip={onSkip}
         continueButton={
           <Button size="lg" onPress={() => onDone(units)}>
+            Continue
+          </Button>
+        }
+      />
+    </div>
+  );
+}
+
+const GEAR_STEP_FIELDS: readonly { category: GearCategory; label: string; id: string }[] = [
+  { category: 'brewer', label: 'Brewer', id: 'onboarding-brewer' },
+  { category: 'grinder', label: 'Grinder', id: 'onboarding-grinder' },
+];
+
+/**
+ * Brewer and grinder pickers (catalogue search or your own name). Continue saves what was chosen
+ * as the default for each category; choosing nothing counts as skipping the step.
+ */
+function GearStep({ onDone, onSkip }: { onDone: () => void; onSkip: () => void }) {
+  const catalog = useGearCatalog();
+  const add = useAddGear();
+  const [picks, setPicks] = useState<Partial<Record<GearCategory, GearPick | null>>>({});
+  const [typed, setTyped] = useState<Partial<Record<GearCategory, string>>>({});
+  const [errors, setErrors] = useState<FormError[]>([]);
+
+  const fieldError = (id: string) => errors.find((e) => e.fieldId === id)?.message;
+
+  async function submit() {
+    const found: FormError[] = [];
+    const toSave: { category: GearCategory; pick: GearPick }[] = [];
+    for (const field of GEAR_STEP_FIELDS) {
+      const pick = picks[field.category] ?? null;
+      const text = typed[field.category] ?? '';
+      if (pick) toSave.push({ category: field.category, pick });
+      else if (text.trim()) found.push({ fieldId: field.id, message: missingPickMessage(text) });
+    }
+    setErrors(found);
+    if (found.length > 0) return;
+    if (toSave.length === 0) {
+      onSkip();
+      return;
+    }
+    try {
+      for (const { category, pick } of toSave) {
+        const result = buildGearInput({ category, pick, typed: '', nickname: '', notes: '' });
+        if (!result.ok) continue;
+        await add.mutateAsync({ ...result.input, is_default: true });
+      }
+      onDone();
+    } catch {
+      // The toast says what went wrong; stay here with the choices still made.
+    }
+  }
+
+  return (
+    <div className={styles.step}>
+      <p className={styles.text}>
+        Add your brewer and grinder so new recipes fill in automatically.
+      </p>
+      <FormErrorSummary errors={errors} />
+      {GEAR_STEP_FIELDS.map((field) => (
+        <GearPicker
+          key={field.category}
+          id={field.id}
+          label={field.label}
+          category={field.category}
+          catalog={catalog.data ?? []}
+          isLoading={catalog.isPending}
+          value={picks[field.category] ?? null}
+          onChange={(pick) => setPicks((p) => ({ ...p, [field.category]: pick }))}
+          onTextChange={(text) => setTyped((t) => ({ ...t, [field.category]: text }))}
+          errorMessage={fieldError(field.id)}
+        />
+      ))}
+      <p className={styles.text}>Add more gear later in Settings.</p>
+      <StepButtons
+        onSkip={onSkip}
+        continueButton={
+          <Button
+            size="lg"
+            isPending={add.isPending}
+            pendingLabel="Saving…"
+            onPress={() => void submit()}
+          >
             Continue
           </Button>
         }

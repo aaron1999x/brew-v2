@@ -50,6 +50,12 @@ export type ComboboxProps = Omit<
     isLoading?: boolean;
     onSelect?: (selection: ComboboxSelection) => void;
     defaultSelectedId?: string;
+    /** Text to start with when nothing from the list is selected (an earlier free-text entry). */
+    defaultText?: string;
+    /** Called with whatever is in the input as the person types (and when a pick fills it). */
+    onTextChange?: (text: string) => void;
+    /** Wording of the free-text option. Defaults to "Use what I typed: <text>". */
+    customOptionLabel?: (typed: string) => string;
   };
 
 export function Combobox({
@@ -62,11 +68,16 @@ export function Combobox({
   isLoading = false,
   onSelect,
   defaultSelectedId,
+  defaultText,
+  onTextChange,
+  customOptionLabel,
   ...rest
 }: ComboboxProps) {
   const initial = items.find((i) => i.id === defaultSelectedId);
-  const [inputValue, setInputValue] = useState(initial?.label ?? '');
+  const [inputValue, setInputValue] = useState(initial?.label ?? defaultText ?? '');
   const [selectedKey, setSelectedKey] = useState<Key | null>(initial?.id ?? null);
+  // The text that was chosen through the "use what I typed" row (selectedKey is CUSTOM_ID then).
+  const [customText, setCustomText] = useState('');
 
   const visible = useMemo(() => {
     const matches = filterItems(items, inputValue, (i) => i.label);
@@ -86,9 +97,11 @@ export function Combobox({
       inputValue={inputValue}
       onInputChange={(text) => {
         setInputValue(text);
+        onTextChange?.(text);
         // Typing after a pick means the pick no longer applies.
         // (React Aria also reports the picked label as an input change; that one isn't typing.)
-        const pickedLabel = items.find((i) => i.id === selectedKey)?.label;
+        const pickedLabel =
+          selectedKey === CUSTOM_ID ? customText : items.find((i) => i.id === selectedKey)?.label;
         if (selectedKey != null && text !== pickedLabel) {
           setSelectedKey(null);
           onSelect?.({ kind: 'cleared' });
@@ -104,8 +117,13 @@ export function Combobox({
           return;
         }
         if (key === CUSTOM_ID) {
+          // Count it as a real selection: that is what makes React Aria close the list. (Leaving
+          // the key empty kept the list open over the rest of the form.) Typing again clears it.
           const text = inputValue.trim();
-          setSelectedKey(null);
+          setSelectedKey(CUSTOM_ID);
+          setCustomText(text);
+          setInputValue(text);
+          onTextChange?.(text);
           onSelect?.({ kind: 'custom', text });
           return;
         }
@@ -113,6 +131,7 @@ export function Combobox({
         if (!item) return;
         setSelectedKey(key);
         setInputValue(item.label);
+        onTextChange?.(item.label);
         onSelect?.({ kind: 'item', item });
       }}
       allowsEmptyCollection
@@ -148,9 +167,13 @@ export function Combobox({
               {item.id === CUSTOM_ID ? (
                 <>
                   <Icon icon={Plus} size="sm" />
-                  <span>
-                    Use what I typed: <strong>{item.label}</strong>
-                  </span>
+                  {customOptionLabel ? (
+                    <span>{customOptionLabel(item.label)}</span>
+                  ) : (
+                    <span>
+                      Use what I typed: <strong>{item.label}</strong>
+                    </span>
+                  )}
                 </>
               ) : (
                 item.label
