@@ -39,6 +39,7 @@
         'ui',
         'tokens',
         'settings',
+        'onboarding',
         'account',
         'db',
         'infra',
