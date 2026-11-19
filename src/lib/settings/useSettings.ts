@@ -72,7 +72,14 @@ export function useSettings() {
   });
 }
 
-export type SettingsPatch = Partial<Settings>;
+/**
+ * What to change. `onboarding` is only what to *add*, never the whole object: the database merges it
+ * into what is stored (`merge_onboarding`), so two saves close together, or from two tabs, can't
+ * overwrite each other's steps.
+ */
+export type SettingsPatch = Partial<Omit<Settings, 'onboarding'>> & {
+  onboarding?: Partial<Onboarding>;
+};
 
 type UpdateOptions = {
   /** Toast shown after a successful save. Leave out for quiet saves (onboarding). */
@@ -89,18 +96,18 @@ export function useUpdateSettings({ successMessage }: UpdateOptions = {}) {
   const mutation = useMutation({
     mutationFn: async (patch: SettingsPatch) => {
       const userId = await currentUserId();
-      const { onboarding: patchOnboarding, ...rest } = patch;
-      // `onMutate` already merged this change into the cache. Send the cache's onboarding (not just
-      // this patch's copy), so two saves in flight at once (the "started" mark and a step finishing)
-      // can't overwrite each other's steps with an older whole object.
-      const onboarding = patchOnboarding
-        ? (queryClient.getQueryData<Settings>(queryKeys.settings())?.onboarding ?? patchOnboarding)
-        : undefined;
-      const { error } = await createClient()
-        .from('user_settings')
-        .update({ ...rest, ...(onboarding ? { onboarding: onboarding as NonNullable<Json> } : {}) })
-        .eq('user_id', userId);
-      if (error) throw error;
+      const supabase = createClient();
+      const { onboarding, ...columns } = patch;
+      if (Object.keys(columns).length > 0) {
+        const { error } = await supabase.from('user_settings').update(columns).eq('user_id', userId);
+        if (error) throw error;
+      }
+      // Never a read-modify-write of the whole object from what this tab thinks is stored (the
+      // cache can be stale or refetched half-way): the database adds this patch to what it holds.
+      if (onboarding && Object.keys(onboarding).length > 0) {
+        const { error } = await supabase.rpc('merge_onboarding', { p_patch: onboarding as Json });
+        if (error) throw error;
+      }
     },
     onMutate: async (patch) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.settings() });

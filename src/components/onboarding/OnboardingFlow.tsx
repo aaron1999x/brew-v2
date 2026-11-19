@@ -26,12 +26,7 @@ import {
   type ExperienceLevel,
   type ProfileMe,
 } from '@/lib/profile/useProfileMe';
-import {
-  ONBOARDING_STEPS,
-  mergeOnboarding,
-  welcomeSteps,
-  type StepId,
-} from '@/lib/settings/onboarding';
+import { ONBOARDING_STEPS, welcomeSteps, type StepId } from '@/lib/settings/onboarding';
 import { useSettings, useUpdateSettings, type Settings } from '@/lib/settings/useSettings';
 import { deviceDefaults, type UnitSettings } from '@/lib/units';
 import styles from './Onboarding.module.css';
@@ -77,15 +72,11 @@ function Flow({ settings, profile }: { settings: Settings; profile: ProfileMe })
   useEffect(() => {
     if (marked.current || settings.onboarding.started_at) return;
     marked.current = true;
-    save.mutate({
-      onboarding: mergeOnboarding(settings.onboarding, { started_at: new Date().toISOString() }),
-    });
+    save.mutate({ onboarding: { started_at: new Date().toISOString() } });
   }, [settings.onboarding, save]);
 
   function finish(step: StepId, status: 'done' | 'skipped') {
-    save.mutate({
-      onboarding: mergeOnboarding(settings.onboarding, { steps: { [step]: status } }),
-    });
+    save.mutate({ onboarding: { steps: { [step]: status } } });
     setIndex((i) => i + 1);
   }
 
@@ -113,10 +104,7 @@ function Flow({ settings, profile }: { settings: Settings; profile: ProfileMe })
           {current === 'units' ? (
             <UnitsStep
               onDone={(units) => {
-                save.mutate({
-                  ...units,
-                  onboarding: mergeOnboarding(settings.onboarding, { steps: { units: 'done' } }),
-                });
+                save.mutate({ ...units, onboarding: { steps: { units: 'done' } } });
                 setIndex((i) => i + 1);
               }}
               onSkip={() => finish('units', 'skipped')}

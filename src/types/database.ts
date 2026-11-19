@@ -1130,6 +1130,7 @@ export type Database = {
         Returns: undefined;
       };
       make_slug: { Args: { p_name: string; p_owner: string }; Returns: string };
+      merge_onboarding: { Args: { p_patch: Json }; Returns: Json };
       mod_resolve_report: {
         Args: { p_report_id: string; p_status: Database['public']['Enums']['report_status'] };
         Returns: undefined;

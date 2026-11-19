@@ -167,10 +167,12 @@ test.describe('onboarding', () => {
     await page.getByRole('button', { name: 'Continue' }).click();
     await expect(page.getByTestId('onboarding-progress')).toHaveText('Step 2 of 4');
 
+    // The units and the finished step are two saves (the database merges the step in): wait for
+    // both, then check that the "started" mark and the step each survived the other.
     await expect.poll(async () => (await settingsRow(users, user.id)).temp_unit).toBe('f');
-    const row = await settingsRow(users, user.id);
-    expect(row.onboarding).toMatchObject({ steps: { units: 'done' } });
-    expect(row.onboarding).toHaveProperty('started_at');
+    await expect
+      .poll(async () => (await settingsRow(users, user.id)).onboarding)
+      .toMatchObject({ steps: { units: 'done' }, started_at: expect.any(String) });
 
     // Gear: a brewer from the catalogue and a grinder of your own, both saved as defaults.
     await expect(page.getByRole('heading', { level: 1, name: 'Your gear' })).toBeVisible();
@@ -201,6 +203,13 @@ test.describe('onboarding', () => {
       .locator('label', { hasText: 'Enthusiast' })
       .click();
     await page.getByRole('button', { name: 'Continue' }).click();
+    // Every step saved on its own never loses another: all three are recorded, plus the start.
+    await expect
+      .poll(async () => (await settingsRow(users, user.id)).onboarding)
+      .toMatchObject({
+        started_at: expect.any(String),
+        steps: { units: 'done', gear: 'done', profile: 'done' },
+      });
     // "Create first recipe" opens the recipe editor.
     await page.getByRole('button', { name: 'Create first recipe' }).click();
     await page.waitForURL('**/recipes/new');

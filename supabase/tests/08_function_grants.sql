@@ -46,7 +46,7 @@ select ok(
    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.proname in (
      'create_recipe', 'create_version', 'save_recipe', 'copy_recipe', 'gear_set_default',
-     'make_slug', 'steps_shape_ok', 'email_is_verified')),
+     'make_slug', 'steps_shape_ok', 'email_is_verified', 'merge_onboarding')),
   'members can execute the member-only RPCs and their helpers');
 
 -- Behaviour, not just catalogue: a visitor calling a member RPC is refused outright.

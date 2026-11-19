@@ -4,12 +4,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/Button/Button';
 import { useGear } from '@/lib/gear/hooks';
 import { useProfileMe } from '@/lib/profile/useProfileMe';
-import {
-  ONBOARDING_STEPS,
-  mergeOnboarding,
-  pendingSteps,
-  showChecklist,
-} from '@/lib/settings/onboarding';
+import { ONBOARDING_STEPS, pendingSteps, showChecklist } from '@/lib/settings/onboarding';
 import { useSettings, useUpdateSettings } from '@/lib/settings/useSettings';
 import styles from './Onboarding.module.css';
 
@@ -52,7 +47,7 @@ export function FinishProfileCard() {
         variant="ghost"
         onPress={() =>
           update.mutate({
-            onboarding: mergeOnboarding(settings.data.onboarding, { checklist_dismissed: true }),
+            onboarding: { checklist_dismissed: true },
           })
         }
       >
