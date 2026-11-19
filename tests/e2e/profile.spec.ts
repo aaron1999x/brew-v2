@@ -236,5 +236,43 @@ for (const scheme of ['light', 'dark'] as const) {
       await expect(page.getByRole('group', { name: /Fix 1 thing/ })).toBeVisible();
       await expectNoAxeViolations(page);
     });
+
+    test('edit profile with real gear, a chosen favourite and an older free-text favourite has no violations', async ({
+      page,
+      users,
+    }) => {
+      const user = await signIn(page, users, 'axe-favourites');
+      const { data: gear, error } = await users.admin
+        .from('gear_items')
+        .insert([
+          { user_id: user.id, category: 'grinder', custom_name: 'Hand grinder', nickname: 'Old faithful', is_default: true },
+          { user_id: user.id, category: 'brewer', custom_name: 'Stone dripper', nickname: null, is_default: true },
+        ])
+        .select('id, category');
+      expect(error).toBeNull();
+      const grinder = gear!.find((g) => g.category === 'grinder')!;
+      await users.admin
+        .from('profiles')
+        .update({
+          favourite_gear: [
+            { item_id: grinder.id, category: 'grinder', name: 'Hand grinder' },
+            { category: 'kettle', name: 'Old kettle' },
+          ],
+        })
+        .eq('id', user.id);
+      await page.goto('/settings/profile');
+      await waitForApp(page);
+      const favourites = page.getByRole('group', { name: 'Favourite gear' });
+      await expect(favourites).toBeVisible();
+      await expect(page.getByText('Older favourites')).toBeVisible();
+      await expect(page.getByRole('button', { name: /Add to my gear/ })).toBeVisible();
+      await expect(page.getByRole('button', { name: /Remove/ }).first()).toBeVisible();
+      await expectNoAxeViolations(page);
+
+      // The profile page shows the chosen favourite.
+      await page.goto('/profile');
+      await expect(page.getByText('Grinder: Hand grinder')).toBeVisible();
+      await expectNoAxeViolations(page);
+    });
   });
 }

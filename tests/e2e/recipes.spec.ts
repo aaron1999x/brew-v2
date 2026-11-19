@@ -280,6 +280,25 @@ test.describe('new recipe', () => {
       .eq('user_id', user.id);
     await page.reload();
     await expect(page.locator('main').getByText('Stone V60')).toBeVisible();
+
+    // Deleting it changes nothing either: the version keeps the name it was saved with.
+    const { error: deleteError } = await users.admin
+      .from('gear_items')
+      .delete()
+      .eq('user_id', user.id);
+    expect(deleteError).toBeNull();
+    await page.reload();
+    await expect(page.locator('main').getByText('Stone V60')).toBeVisible();
+    const { data: after } = await users.admin
+      .from('recipe_versions')
+      .select('gear')
+      .eq('id', recipe!.latest_version_id)
+      .single();
+    expect(after!.gear).toEqual(version!.gear);
+    // And the editor opened on it still starts from that saved name, not from my (now empty) gear.
+    await page.goto(`/@${user.handle}/gear-check/edit?v=1`);
+    await waitForApp(page);
+    await expect(page.getByRole('combobox', { name: 'Brewer' })).toHaveValue('Stone V60');
   });
 
   test('gear picker: type, ArrowDown, Enter takes the highlighted row', async ({ page, users }) => {
