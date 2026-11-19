@@ -231,6 +231,11 @@ describe('readCurveAt (the tooltip)', () => {
     expect(readCurveAt(steps, line, 100, 2)).toEqual({ t: 100, g: 90, pourId: null });
   });
 
+  it('does not snap at all with a snap distance of 0 (compare reads both versions at the pointer)', () => {
+    expect(readCurveAt(steps, line, 69, 0)).toEqual({ t: 69, g: 40, pourId: null });
+    expect(readCurveAt(steps, line, 75, 0).pourId).toBeNull();
+  });
+
   it('picks the nearest pour when two are close', () => {
     const close = [pour('a', 10, 30), pour('b', 14, 60)];
     const l = curveLine(close, 60);

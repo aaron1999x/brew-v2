@@ -248,6 +248,11 @@ export function draftSignature(draft: RecipeDraft): string {
 
 export const DEVICE_DRAFT_KEY = 'recipe-draft:new';
 
+/** The unsaved "new recipe" belongs to one person, so two people on one browser never see each other's. */
+export function newRecipeDraftKey(userId: string | null | undefined): string {
+  return `${DEVICE_DRAFT_KEY}:${userId ?? 'me'}`;
+}
+
 /** Saves the draft on this device so an iOS reload doesn't lose it. Never throws. */
 export function saveDeviceDraft(draft: RecipeDraft, key: string = DEVICE_DRAFT_KEY): void {
   try {

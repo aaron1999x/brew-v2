@@ -253,6 +253,49 @@ test.describe('archive, restore, duplicate, delete', () => {
   });
 });
 
+test.describe('offline', () => {
+  test('archive, restore, duplicate and delete say they need a connection and change nothing', async ({
+    page,
+    context,
+    users,
+  }) => {
+    const user = await signIn(page, users, 'offline-actions');
+    await seedThree(users, user);
+    await page.goto('/recipes');
+    await waitForApp(page);
+    await expect(rows(page)).toHaveCount(3);
+
+    await context.setOffline(true);
+    const message = page.getByText('Changing recipes needs a connection');
+
+    await rowMenu(page, 'Morning V60');
+    await page.getByRole('menuitem', { name: 'Archive' }).click();
+    await expect(message.first()).toBeVisible();
+    await expect(rows(page)).toHaveCount(3);
+
+    await rowMenu(page, 'Morning V60');
+    await page.getByRole('menuitem', { name: 'Duplicate' }).click();
+    await expect(rows(page)).toHaveCount(3);
+
+    await rowMenu(page, 'Morning V60');
+    await page.getByRole('menuitem', { name: 'Delete' }).click();
+    await settled(page);
+    await page.getByRole('alertdialog').getByRole('button', { name: 'Delete' }).click();
+    await expect(rows(page)).toHaveCount(3);
+    await expect(page).toHaveURL(/\/recipes$/);
+
+    await context.setOffline(false);
+    // Nothing reached the database.
+    const row = await recipeRow(users, user.id, 'Morning V60');
+    expect(row).toMatchObject({ archived_at: null, deleted_at: null });
+    const { count } = await users.admin
+      .from('recipes')
+      .select('id', { count: 'exact', head: true })
+      .eq('owner_id', user.id);
+    expect(count).toBe(3);
+  });
+});
+
 test.describe('layout and accessibility', () => {
   test('the list fits a 320 px screen', async ({ page, users }) => {
     await page.setViewportSize({ width: 320, height: 800 });

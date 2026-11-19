@@ -50,7 +50,7 @@ export function useCreateRecipe() {
   return useMutation({
     mutationFn: createRecipeRpc,
     onError: (error) => reportUnexpected(error),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['recipes'] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.recipes.all() }),
   });
 }
 
@@ -128,8 +128,8 @@ export function useSaveRecipe() {
     onError: (error) => reportUnexpected(error),
     onSuccess: async () => {
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['recipe'] }),
-        queryClient.invalidateQueries({ queryKey: ['recipes'] }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.recipePages() }),
+        queryClient.invalidateQueries({ queryKey: queryKeys.recipes.all() }),
       ]);
     },
   });

@@ -293,7 +293,9 @@ export function PourCurveChart({ series, drawdown, title = 'Pour curve' }: Props
             const like = p as unknown as { active?: boolean; label?: number | string };
             const hovered = Number(like.label);
             if (!like.active || !Number.isFinite(hovered)) return null;
-            const snapS = model.endS * SNAP_SHARE;
+            // One version snaps to a pour's start. Two don't: each would snap to a different time, and
+            // the title and the rows would disagree, so compare reads both at the hovered time.
+            const snapS = multiple ? 0 : model.endS * SNAP_SHARE;
             const readings = model.lines.map((l) => readCurveAt(l.steps, l.line, hovered, snapS));
             const first = readings[0]!;
             // One version: "1:10 · 90 g". Two: the time, and a row for each.
@@ -308,7 +310,7 @@ export function PourCurveChart({ series, drawdown, title = 'Pour curve' }: Props
             return (
               <ChartTooltip
                 active
-                title={duration(first.pourId ? first.t : hovered)}
+                title={duration(hovered)}
                 payload={readings.map((r, i) => ({
                   name: model.lines[i]!.label,
                   value: formatWeight(toDisplay(r.g)),

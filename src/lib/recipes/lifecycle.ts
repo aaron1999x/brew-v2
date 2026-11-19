@@ -4,6 +4,7 @@ import { useMutation, useQueryClient, type QueryClient } from '@tanstack/react-q
 import { toast } from '@/components/ui/Toast/toast';
 import { toUserMessage } from '@/lib/errors/messages';
 import { reportUnexpected } from '@/lib/errors/report';
+import { queryKeys } from '@/lib/query/keys';
 import { createClient } from '@/lib/supabase/client';
 import { duplicateValues } from './duplicate';
 import { fetchRecipeBySlug, versionByNo, type RecipeRow, type RecipeWithVersion } from './fetch';
@@ -28,17 +29,17 @@ function patchCaches(
   change: { list: (item: RecipeListItem) => RecipeListItem | null; recipe: (r: RecipeRow) => RecipeRow | null },
 ): Snapshot {
   const snapshot: Snapshot = {
-    lists: queryClient.getQueriesData<RecipeListItem[]>({ queryKey: ['recipes', 'mine'] }),
-    recipes: queryClient.getQueriesData<RecipeWithVersion | null>({ queryKey: ['recipe'] }),
+    lists: queryClient.getQueriesData<RecipeListItem[]>({ queryKey: queryKeys.recipes.mine() }),
+    recipes: queryClient.getQueriesData<RecipeWithVersion | null>({ queryKey: queryKeys.recipePages() }),
   };
-  queryClient.setQueriesData<RecipeListItem[]>({ queryKey: ['recipes', 'mine'] }, (items) =>
+  queryClient.setQueriesData<RecipeListItem[]>({ queryKey: queryKeys.recipes.mine() }, (items) =>
     items?.flatMap((item) => {
       if (item.id !== id) return [item];
       const next = change.list(item);
       return next ? [next] : [];
     }),
   );
-  queryClient.setQueriesData<RecipeWithVersion | null>({ queryKey: ['recipe'] }, (data) => {
+  queryClient.setQueriesData<RecipeWithVersion | null>({ queryKey: queryKeys.recipePages() }, (data) => {
     if (!data || data.recipe.id !== id) return data;
     const next = change.recipe(data.recipe);
     return next ? { ...data, recipe: next } : null;
@@ -54,15 +55,15 @@ function restore(queryClient: QueryClient, snapshot: Snapshot | undefined) {
 
 function refresh(queryClient: QueryClient) {
   return Promise.all([
-    queryClient.invalidateQueries({ queryKey: ['recipes'] }),
-    queryClient.invalidateQueries({ queryKey: ['recipe'] }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.recipes.all() }),
+    queryClient.invalidateQueries({ queryKey: queryKeys.recipePages() }),
   ]);
 }
 
 async function cancelRecipeQueries(queryClient: QueryClient) {
   await Promise.all([
-    queryClient.cancelQueries({ queryKey: ['recipes'] }),
-    queryClient.cancelQueries({ queryKey: ['recipe'] }),
+    queryClient.cancelQueries({ queryKey: queryKeys.recipes.all() }),
+    queryClient.cancelQueries({ queryKey: queryKeys.recipePages() }),
   ]);
 }
 
@@ -71,12 +72,17 @@ function failed(error: unknown, retry: () => void) {
   toast.error(toUserMessage(error), { onRetry: retry });
 }
 
+/** Shown instead of acting when there is no connection: these changes need one. */
+export const RECIPE_OFFLINE_MESSAGE = 'Changing recipes needs a connection';
+
 export type ArchiveInput = { id: string; name: string; archived: boolean };
 
 /** Archive (with Undo) or restore. The recipe moves between the Recipes and Archived tabs at once. */
 export function useArchiveRecipe() {
   const queryClient = useQueryClient();
   const mutation = useMutation<void, unknown, ArchiveInput, { snapshot: Snapshot }>({
+    // Without a connection the save must fail (and roll back), not wait quietly with the list changed.
+    networkMode: 'always',
     mutationFn: async ({ id, archived }) => {
       const { error } = await createClient()
         .from('recipes')
@@ -119,6 +125,7 @@ export type DeleteInput = { id: string; name: string; deleted: boolean };
 export function useDeleteRecipe() {
   const queryClient = useQueryClient();
   const mutation = useMutation<void, unknown, DeleteInput, { snapshot: Snapshot }>({
+    networkMode: 'always',
     mutationFn: async ({ id, deleted }) => {
       const { error } = await createClient()
         .from('recipes')
@@ -165,6 +172,7 @@ export type DuplicateInput = {
 export function useDuplicateRecipe() {
   const queryClient = useQueryClient();
   const mutation = useMutation<RecipeRow, unknown, DuplicateInput>({
+    networkMode: 'always',
     mutationFn: async ({ handle, slug, versionNo }) => {
       const found = await fetchRecipeBySlug(createClient(), handle, slug);
       const version = found ? versionByNo(found.versions, versionNo ?? null) : null;
@@ -172,7 +180,7 @@ export function useDuplicateRecipe() {
       return createRecipeRpc(duplicateValues(found.recipe, version));
     },
     onError: (error, input) => failed(error, () => mutation.mutate(input)),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['recipes'] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.recipes.all() }),
   });
   return mutation;
 }

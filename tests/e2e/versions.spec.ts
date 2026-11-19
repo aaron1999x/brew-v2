@@ -157,6 +157,37 @@ test.describe('editing a version', () => {
     await brew.removeBrew();
   });
 
+  test('a version locked while the editor is open turns the save into a new version, not a dead end', async ({
+    page,
+    users,
+  }) => {
+    const user = await signIn(page, users, 'stale-lock');
+    const recipe = await createRecipe(users, user);
+    await page.goto(`/@${user.handle}/${recipe.slug}/edit?v=1`);
+    await waitForApp(page);
+    await page.getByLabel('Grind setting').fill('21 clicks');
+    await expect(page.getByText('Saves your changes to v1.')).toBeVisible();
+
+    // Another tab or device logs a brew: v1 now has brews, but this page doesn't know yet.
+    await seedBrew(users, user.id, recipe.v1Id);
+    await page.getByRole('button', { name: 'Save changes' }).click();
+    await expect(
+      page.getByText('This version now has brews. Save again to save your changes as a new version.'),
+    ).toBeVisible();
+    // The form is as it was, and now plans the next version.
+    await expect(page.getByLabel('Grind setting')).toHaveValue('21 clicks');
+    await expect(page.getByText('Saves as v2, because v1 has brews.')).toBeVisible();
+    await page.getByRole('button', { name: 'Save as v2' }).click();
+
+    await page.waitForURL(`**/@${user.handle}/${recipe.slug}`);
+    await expect(page.getByText('Saved as v2')).toBeVisible();
+    const rows = await versionRows(users, recipe.id);
+    expect(rows.map((r) => [r.version_no, r.grind_setting])).toEqual([
+      [1, '24 clicks'],
+      [2, '21 clicks'],
+    ]);
+  });
+
   test('the database rejects a direct edit of a version with brews', async ({ users, page }) => {
     const user = await signIn(page, users, 'direct-edit');
     const recipe = await createRecipe(users, user);

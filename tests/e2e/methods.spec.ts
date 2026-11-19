@@ -163,7 +163,7 @@ for (const fixture of fixtures) {
       gear: { brewer: { name: v.gear.brewer.name } },
     });
     const withoutIds = (steps: Array<Record<string, unknown>>) =>
-      steps.map(({ id: _id, ...rest }) => rest);
+      steps.map((s) => Object.fromEntries(Object.entries(s).filter(([key]) => key !== 'id')));
     expect(withoutIds(saved!.steps as Array<Record<string, unknown>>)).toEqual(
       withoutIds(v.steps as unknown as Array<Record<string, unknown>>),
     );

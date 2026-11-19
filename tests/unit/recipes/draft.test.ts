@@ -7,6 +7,7 @@ import {
   emptyDraft,
   fieldId,
   loadDeviceDraft,
+  newRecipeDraftKey,
   parseDraft,
   saveDeviceDraft,
   stepFieldId,
@@ -168,5 +169,19 @@ describe('the copy kept on this device', () => {
     expect(loadDeviceDraft()).toBeNull();
     window.localStorage.setItem(DEVICE_DRAFT_KEY, JSON.stringify({ draft: 'x' }));
     expect(loadDeviceDraft()).toBeNull();
+  });
+});
+
+describe('newRecipeDraftKey', () => {
+  it('gives each person their own unsaved new recipe, so two people on one browser never share a draft', () => {
+    expect(newRecipeDraftKey('user-a')).not.toBe(newRecipeDraftKey('user-b'));
+    expect(newRecipeDraftKey('user-a')).toBe(newRecipeDraftKey('user-a'));
+    expect(newRecipeDraftKey(undefined)).toBe(newRecipeDraftKey(null));
+
+    const a = filled({ name: 'A secret' });
+    saveDeviceDraft(a, newRecipeDraftKey('user-a'));
+    expect(loadDeviceDraft(newRecipeDraftKey('user-b'))).toBeNull();
+    expect(loadDeviceDraft(newRecipeDraftKey('user-a'))).toEqual(a);
+    window.localStorage.clear();
   });
 });

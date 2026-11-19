@@ -6,7 +6,13 @@ import { useState } from 'react';
 import { ActionMenu } from '@/components/ui/ActionMenu/ActionMenu';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import { toast } from '@/components/ui/Toast/toast';
-import { useArchiveRecipe, useDeleteRecipe, useDuplicateRecipe } from '@/lib/recipes/lifecycle';
+import { useOnlineStatus } from '@/components/ui/OfflineBanner/OfflineBanner';
+import {
+  RECIPE_OFFLINE_MESSAGE,
+  useArchiveRecipe,
+  useDeleteRecipe,
+  useDuplicateRecipe,
+} from '@/lib/recipes/lifecycle';
 import { recipePath } from '@/lib/recipes/paths';
 
 type Props = Readonly<{
@@ -31,6 +37,13 @@ export function RecipeActions({ id, name, handle, slug, archived, versionNo, onD
   const remove = useDeleteRecipe();
   const duplicate = useDuplicateRecipe();
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const online = useOnlineStatus();
+  // These changes need a connection: say so, and change nothing, rather than showing a change that
+  // isn't saved.
+  const whenOnline = (action: () => void) => () => {
+    if (online) action();
+    else toast.error(RECIPE_OFFLINE_MESSAGE);
+  };
 
   return (
     <>
@@ -41,7 +54,7 @@ export function RecipeActions({ id, name, handle, slug, archived, versionNo, onD
             id: 'duplicate',
             label: 'Duplicate',
             icon: Copy,
-            onAction: () =>
+            onAction: whenOnline(() =>
               duplicate.mutate(
                 { handle, slug, versionNo },
                 {
@@ -51,19 +64,20 @@ export function RecipeActions({ id, name, handle, slug, archived, versionNo, onD
                   },
                 },
               ),
+            ),
           },
           archived
             ? {
                 id: 'restore',
                 label: 'Restore',
                 icon: ArchiveRestore,
-                onAction: () => archive.mutate({ id, name, archived: false }),
+                onAction: whenOnline(() => archive.mutate({ id, name, archived: false })),
               }
             : {
                 id: 'archive',
                 label: 'Archive',
                 icon: Archive,
-                onAction: () => archive.mutate({ id, name, archived: true }),
+                onAction: whenOnline(() => archive.mutate({ id, name, archived: true })),
               },
           {
             id: 'delete',
@@ -83,6 +97,10 @@ export function RecipeActions({ id, name, handle, slug, archived, versionNo, onD
         tone="destructive"
         onConfirm={() => {
           setConfirmingDelete(false);
+          if (!online) {
+            toast.error(RECIPE_OFFLINE_MESSAGE);
+            return;
+          }
           remove.mutate({ id, name, deleted: true });
           onDeleted?.();
         }}

@@ -23,10 +23,11 @@ import { WeightField } from '@/components/ui/UnitFields/WeightField';
 import { useSession } from '@/lib/auth/useSession';
 import { useGear, useGearCatalog } from '@/lib/gear/hooks';
 import { useProfileMe } from '@/lib/profile/useProfileMe';
+import { queryKeys } from '@/lib/query/keys';
 import { formatRatio, recipeNumbers } from '@/lib/recipes/calc';
 import { diffVersions } from '@/lib/recipes/diff';
 import {
-  DEVICE_DRAFT_KEY,
+  newRecipeDraftKey,
   clearDeviceDraft,
   draftFromVersion,
   draftSignature,
@@ -77,6 +78,8 @@ import { useUnsavedGuard } from './useUnsavedGuard';
 import styles from './RecipeEditor.module.css';
 
 const OFFLINE_MESSAGE = 'Creating and editing recipes needs a connection';
+const LOCKED_NOW_MESSAGE =
+  'This version now has brews. Save again to save your changes as a new version.';
 const NOT_SET = 'none';
 
 /** Waits `ms` after the last change before using a value (for screen-reader announcements). */
@@ -205,7 +208,7 @@ function EditorForm({
   // One copy per person, recipe, version and kind of edit, so two recipes never share a draft.
   const draftKey = editing
     ? `recipe-draft:${user?.id ?? 'me'}:${base.recipe.id}:${base.version.id}:${mode}`
-    : DEVICE_DRAFT_KEY;
+    : newRecipeDraftKey(user?.id);
 
   const [initialDraft] = useState<RecipeDraft>(() =>
     editing
@@ -289,6 +292,10 @@ function EditorForm({
     .join(', ');
   const announced = useDebounced(summaryLine, 800);
 
+  // A brew on another tab or device can lock this version while the editor is open. The database
+  // says so on save (`version_locked`); from then on the editor plans a new version instead.
+  const [lockedNow, setLockedNow] = useState(false);
+
   // ---- what saving would do (edit and new version) ----
   const plan = useMemo(() => {
     if (!editing) return null;
@@ -303,12 +310,12 @@ function EditorForm({
       (parsed.values.version.change_note ?? '') !== (base.version.change_note ?? '');
     const action = decideSave({
       mode: mode === 'edit' ? 'edit' : 'new-version',
-      locked: base.version.locked_at !== null,
+      locked: base.version.locked_at !== null || lockedNow,
       diff,
       noteChanged,
     });
     return { diff, action, values: parsed.values };
-  }, [editing, draft, base, mode]);
+  }, [editing, draft, base, mode, lockedNow]);
   const nextNo = (base?.latestNo ?? 0) + 1;
   const saveLabel =
     plan?.action === 'new-version'
@@ -344,7 +351,7 @@ function EditorForm({
         toast.success('Saved as v1');
         const handle =
           profile.data?.handle ??
-          queryClient.getQueryData<{ handle: string }>(['profile', 'me'])?.handle;
+          queryClient.getQueryData<{ handle: string }>(queryKeys.profileMe())?.handle;
         guard.leaveTo(handle ? recipePath(handle, recipe.slug) : '/recipes');
         return;
       }
@@ -372,6 +379,11 @@ function EditorForm({
       );
     } catch (failure) {
       // The form stays as it is, so nothing typed is lost.
+      if (editing && String((failure as { message?: unknown })?.message ?? '').includes('version_locked')) {
+        setLockedNow(true);
+        toast.error(LOCKED_NOW_MESSAGE);
+        return;
+      }
       toast.error(saveErrorMessage(failure));
     }
   }
@@ -406,7 +418,7 @@ function EditorForm({
 
         <div className={styles.body}>
           {!online ? <Notice>{OFFLINE_MESSAGE}. What you have typed is kept.</Notice> : null}
-          {mode === 'edit' && base?.version.locked_at ? (
+          {mode === 'edit' && (base?.version.locked_at || lockedNow) ? (
             <Notice>
               This version has brews, so your changes will be saved as a new version.
             </Notice>
