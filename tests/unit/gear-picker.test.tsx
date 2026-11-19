@@ -56,6 +56,25 @@ describe('GearPicker', () => {
     expect(screen.getByRole('combobox', { name: /Item/ })).toHaveValue('Hario V60 02');
   });
 
+  it('picks the highlighted row from the keyboard: type, ArrowDown, Enter', async () => {
+    const { user, onChange } = setup();
+    const input = screen.getByRole('combobox', { name: /Item/ });
+    await user.type(input, 'v60 02');
+    await user.keyboard('{ArrowDown}{Enter}');
+    expect(onChange).toHaveBeenLastCalledWith({ kind: 'catalog', id: 'v60' });
+    expect(input).toHaveValue('Hario V60 02');
+  });
+
+  it('has no "use what I typed" row while results are still loading, so Enter cannot pick it', async () => {
+    const { user, onChange } = setup({ isLoading: true, catalog: [] });
+    const input = screen.getByRole('combobox', { name: /Item/ });
+    await user.type(input, 'v60 02');
+    const options = await screen.findAllByRole('option');
+    expect(options.map((o) => o.textContent)).toEqual(['Loading…']);
+    await user.keyboard('{ArrowDown}{Enter}');
+    expect(onChange).not.toHaveBeenCalledWith({ kind: 'custom', text: 'v60 02' });
+  });
+
   it('offers the typed text as a custom item, last in the list', async () => {
     const { user, onChange } = setup({ category: 'grinder' });
     await user.type(screen.getByRole('combobox', { name: /Item/ }), 'Hand grinder');

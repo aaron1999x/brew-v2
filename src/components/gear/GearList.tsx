@@ -10,7 +10,7 @@ import { EmptyState } from '@/components/ui/EmptyState/EmptyState';
 import { Icon } from '@/components/ui/Icon/Icon';
 import { toast } from '@/components/ui/Toast/toast';
 import { VisuallyHidden } from '@/components/ui/VisuallyHidden/VisuallyHidden';
-import { useDeleteGear, useGear } from '@/lib/gear/hooks';
+import { useDeleteGear, useGear, useGearCatalog } from '@/lib/gear/hooks';
 import {
   GEAR_CATEGORIES,
   GEAR_CATEGORY_LABELS,
@@ -26,6 +26,8 @@ type SheetState = { open: boolean; item: GearItem | null };
 /** /settings/gear: my gear grouped by category, with add, edit, default and delete. */
 export function GearList() {
   const gear = useGear();
+  // Warm the catalogue, so the Add gear sheet's list is ready the moment it opens.
+  useGearCatalog();
   const del = useDeleteGear();
   const [sheet, setSheet] = useState<SheetState>({ open: false, item: null });
   const [toDelete, setToDelete] = useState<GearItem | null>(null);

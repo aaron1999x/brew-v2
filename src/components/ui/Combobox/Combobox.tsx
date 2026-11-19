@@ -82,11 +82,18 @@ export function Combobox({
   const visible = useMemo(() => {
     const matches = filterItems(items, inputValue, (i) => i.label);
     const typed = inputValue.trim();
-    if (allowsCustomValue && typed && !hasExactMatch(items, typed, (i) => i.label)) {
+    // While results are still arriving the list can't be trusted: no "use what I typed" yet, so
+    // ArrowDown + Enter can't choose it by accident before the real rows show up.
+    if (
+      allowsCustomValue &&
+      !isLoading &&
+      typed &&
+      !hasExactMatch(items, typed, (i) => i.label)
+    ) {
       return [...matches, { id: CUSTOM_ID, label: typed }];
     }
     return matches;
-  }, [items, inputValue, allowsCustomValue]);
+  }, [items, inputValue, allowsCustomValue, isLoading]);
 
   const rows = isLoading ? [{ id: LOADING_ID, label: 'Loading…' }, ...visible] : visible;
 

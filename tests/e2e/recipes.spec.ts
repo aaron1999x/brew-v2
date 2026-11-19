@@ -45,10 +45,12 @@ async function settled(page: Page) {
   await expect(page.locator('[data-entering]')).toHaveCount(0);
 }
 
-/** A number field commits on blur. */
+/** A number field commits on blur; check what it shows, so a missed keystroke fails right here. */
 async function fillNumber(field: Locator, value: string) {
   await field.fill(value);
+  await expect(field).toHaveValue(value);
   await field.blur();
+  await expect(field).toHaveValue(value);
 }
 
 async function chooseMethod(page: Page, label: string) {
@@ -277,6 +279,19 @@ test.describe('new recipe', () => {
       .eq('user_id', user.id);
     await page.reload();
     await expect(page.locator('main').getByText('Stone V60')).toBeVisible();
+  });
+
+  test('gear picker: type, ArrowDown, Enter takes the highlighted row', async ({ page, users }) => {
+    await signIn(page, users, 'recipe-keys');
+    await page.goto('/recipes/new');
+    await waitForApp(page);
+    const brewer = page.getByRole('combobox', { name: 'Brewer' });
+    await brewer.focus();
+    await page.keyboard.type('aeropress');
+    await expect(page.getByRole('option', { name: /AeroPress/ }).first()).toBeVisible();
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Enter');
+    await expect(brewer).toHaveValue(/AeroPress/);
   });
 
   test('every "New recipe" button opens the editor', async ({ page, users }) => {
