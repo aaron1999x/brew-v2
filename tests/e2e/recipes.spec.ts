@@ -1,5 +1,6 @@
 import type { Locator, Page } from '@playwright/test';
 import { expectNoAxeViolations } from './helpers/axe';
+import { expectColumnsFit } from './helpers/layout';
 import {
   expect,
   logIn,
@@ -382,6 +383,58 @@ test.describe('new recipe', () => {
       await page.getByRole('link', { name: 'New recipe' }).first().click();
       await page.waitForURL('**/recipes/new');
     }
+  });
+});
+
+test.describe('two-column field rows fit the screen', () => {
+  for (const width of [390, 320]) {
+    test(`the editor at ${width} px: no field is wider than its column`, async ({ page, users }) => {
+      await page.setViewportSize({ width, height: 800 });
+      await signIn(page, users, 'recipe-fit');
+      await page.goto('/recipes/new');
+      await waitForApp(page);
+      // Steps add fields too (a pour with weight, a wait with a duration, and a long step time).
+      for (const kind of ['Pour', 'Wait', 'Other']) {
+        await page.getByRole('button', { name: kind, exact: true }).click();
+      }
+      // Long values and an error make fields as wide as they get.
+      await page.getByLabel('Name').fill('A recipe with quite a long name indeed');
+      await page.getByRole('button', { name: 'Save recipe' }).click();
+      await expect(page.getByRole('heading', { name: /^Fix \d+ things? to continue$/ })).toBeVisible();
+      await expectColumnsFit(page);
+
+      // Drawdown, shortest and longest, are the two fields that overflowed on an iPhone.
+      const shortest = page.getByLabel('Drawdown, shortest');
+      const longest = page.getByLabel('Drawdown, longest');
+      await shortest.scrollIntoViewIfNeeded();
+      const a = (await shortest.boundingBox())!;
+      const b = (await longest.boundingBox())!;
+      expect(a.x + a.width).toBeLessThanOrEqual(b.x + 0.5);
+      expect(b.x + b.width).toBeLessThanOrEqual(width + 0.5);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+    });
+  }
+
+  test('the recipe page at 320 px fits too (key numbers, steps)', async ({ page, users }) => {
+    await page.setViewportSize({ width: 320, height: 800 });
+    const user = await signIn(page, users, 'page-fit');
+    const { slug } = await createRecipe(users, user);
+    await page.goto(`/@${user.handle}/${slug}`);
+    await expect(page.getByRole('heading', { level: 1, name: 'Private V60' })).toBeVisible();
+    await expectColumnsFit(page);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+  });
+
+  test('the My gear sheet at 320 px fits as well', async ({ page, users }) => {
+    await page.setViewportSize({ width: 320, height: 700 });
+    await signIn(page, users, 'gear-fit');
+    await page.goto('/settings/gear');
+    await waitForApp(page);
+    await page.getByRole('button', { name: 'Add gear' }).first().click();
+    await expect(page.getByRole('dialog', { name: 'Add gear' })).toBeVisible();
+    await settled(page);
+    await expectColumnsFit(page);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
   });
 });
 
