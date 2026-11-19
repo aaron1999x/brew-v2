@@ -61,15 +61,21 @@ export function RecipeGearPicker({
   description,
 }: Props) {
   const mine = useMemo(() => gearPickerOrder(myGear, category), [myGear, category]);
-  const items = useMemo(
-    () => [
-      ...mine.map((item) => ({ id: `${ITEM_PREFIX}${item.id}`, label: gearDisplayName(item) })),
+  const items = useMemo(() => {
+    // A catalogue model I already own is listed once, under My gear.
+    const owned = new Set(myGear.map((i) => i.catalog_id).filter(Boolean));
+    return [
+      ...mine.map((item) => ({
+        id: `${ITEM_PREFIX}${item.id}`,
+        label: gearDisplayName(item),
+        section: 'My gear',
+        badge: item.is_default ? 'Default' : undefined,
+      })),
       ...catalog
-        .filter((c) => c.category === category)
-        .map((c) => ({ id: `${CATALOG_PREFIX}${c.id}`, label: c.name })),
-    ],
-    [mine, catalog, category],
-  );
+        .filter((c) => c.category === category && !owned.has(c.id))
+        .map((c) => ({ id: `${CATALOG_PREFIX}${c.id}`, label: c.name, section: 'Catalogue' })),
+    ];
+  }, [mine, myGear, catalog, category]);
 
   // The latest choice, updated at once: a pick fires a text change and a selection in one event.
   const current = useRef<GearChoice | null>(value);

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { RecipeGearPicker } from '@/components/recipes/editor/RecipeGearPicker';
@@ -52,13 +52,35 @@ function setup(props: Partial<Parameters<typeof RecipeGearPicker>[0]> = {}) {
 }
 
 describe('RecipeGearPicker', () => {
-  it('says it takes your own name, like the other gear pickers', () => {
-    setup();
-    expect(screen.getByRole('combobox', { name: 'Brewer' })).toHaveAttribute(
-      'placeholder',
-      'Search by brand or model, or type your own.',
-    );
-    expect(screen.getByText('Not listed? Type its name to add it as your own.')).toBeInTheDocument();
+  it('lists my gear first and the catalogue after it, each under its own heading', async () => {
+    const { user } = setup();
+    await user.click(screen.getByRole('button', { name: /show brewer/i }));
+    const mine = await screen.findByRole('group', { name: 'My gear' });
+    const cat = screen.getByRole('group', { name: 'Catalogue' });
+    expect(within(mine).getAllByRole('option').map((o) => o.textContent)).toEqual([
+      'April BrewerDefault',
+      'Morning dripper',
+    ]);
+    expect(within(cat).getAllByRole('option').map((o) => o.textContent)).toEqual([
+      'Hario V60 02',
+      'Kalita Wave 185',
+    ]);
+  });
+
+  it('does not list a catalogue model I already own a second time', async () => {
+    const { user } = setup();
+    await user.click(screen.getByRole('button', { name: /show brewer/i }));
+    await screen.findByRole('group', { name: 'Catalogue' });
+    expect(screen.getAllByRole('option', { name: /April Brewer/ })).toHaveLength(1);
+  });
+
+  it('only lists the category it is for', async () => {
+    const { user } = setup({ category: 'grinder', label: 'Grinder' });
+    await user.click(screen.getByRole('button', { name: /show grinder/i }));
+    await screen.findByRole('group', { name: 'My gear' });
+    expect(screen.getByRole('option', { name: 'Hand grinder' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Comandante C40' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: /V60/ })).toBeNull();
   });
 
   it('picks the highlighted row from the keyboard: type, ArrowDown, Enter', async () => {
@@ -71,5 +93,36 @@ describe('RecipeGearPicker', () => {
       catalog: { id: 'wave', name: 'Kalita Wave 185' },
     });
     expect(input).toHaveValue('Kalita Wave 185');
+  });
+
+  it('picks one of my items and keeps its real name for the recipe', async () => {
+    const { user, onChange } = setup();
+    await user.click(screen.getByRole('button', { name: /show brewer/i }));
+    await user.click(await screen.findByRole('option', { name: 'Morning dripper' }));
+    const choice = onChange.mock.calls.at(-1)![0];
+    expect(choice).toMatchObject({ kind: 'item', item: { id: 'mine-custom' } });
+  });
+
+  it('counts a name typed by hand straight away', async () => {
+    const { user, onChange } = setup();
+    await user.type(screen.getByRole('combobox', { name: 'Brewer' }), 'Clever');
+    expect(onChange).toHaveBeenLastCalledWith({ kind: 'text', text: 'Clever' });
+  });
+
+  it('says it takes your own name, like the other gear pickers', () => {
+    setup();
+    expect(screen.getByRole('combobox', { name: 'Brewer' })).toHaveAttribute(
+      'placeholder',
+      'Search by brand or model, or type your own.',
+    );
+    expect(screen.getByText('Not listed? Type its name to add it as your own.')).toBeInTheDocument();
+  });
+
+  it('opens with every row when a default is already filled in', async () => {
+    const { user } = setup({ value: { kind: 'item', item: myGear[0]! } });
+    const input = screen.getByRole('combobox', { name: 'Brewer' });
+    expect(input).toHaveValue('April Brewer');
+    await user.click(screen.getByRole('button', { name: /show brewer/i }));
+    expect(await screen.findAllByRole('option')).toHaveLength(4);
   });
 });

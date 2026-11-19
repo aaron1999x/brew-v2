@@ -4,10 +4,13 @@ import { ChevronDown, Plus } from 'lucide-react';
 import { useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   Button,
+  Collection,
   ComboBox as AriaComboBox,
+  Header,
   Input,
   ListBox,
   ListBoxItem,
+  ListBoxSection,
   Popover,
   type ComboBoxProps as AriaComboBoxProps,
   type Key,
@@ -18,13 +21,24 @@ import { FieldError, FieldHint, FieldLabel, fieldStyles, type FieldChrome } from
 import { Icon } from '../Icon/Icon';
 import styles from './Combobox.module.css';
 
-export type ComboboxItem = { id: string; label: string };
+export type ComboboxItem = {
+  id: string;
+  label: string;
+  /** Rows with the same `section` are listed together under a heading, in order of first appearance. */
+  section?: string;
+  /** A short word after the label, e.g. "Default". Text, never colour alone. */
+  badge?: string;
+};
 
 export type ComboboxSelection =
   { kind: 'item'; item: ComboboxItem } | { kind: 'custom'; text: string } | { kind: 'cleared' };
 
 const CUSTOM_ID = '__custom__';
 const LOADING_ID = '__loading__';
+
+/** A headed group of rows (what the list renders when any item has a `section`). */
+type Group = { id: string; header?: string; rows: ComboboxItem[] };
+type Node = ComboboxItem | Group;
 
 export type ComboboxProps = Omit<
   AriaComboBoxProps<ComboboxItem>,
@@ -60,6 +74,20 @@ export type ComboboxProps = Omit<
     emptyDescription?: ReactNode;
   };
 
+function groupRows(rows: readonly ComboboxItem[]): Group[] {
+  const groups: Group[] = [];
+  for (const row of rows) {
+    const key = row.section ?? '';
+    let group = groups.find((g) => g.id === `section:${key}`);
+    if (!group) {
+      group = { id: `section:${key}`, header: row.section, rows: [] };
+      groups.push(group);
+    }
+    group.rows.push(row);
+  }
+  return groups;
+}
+
 export function Combobox({
   label,
   description,
@@ -87,36 +115,74 @@ export function Combobox({
   const [filtering, setFiltering] = useState(false);
   const justFocused = useRef(false);
 
-  const visible = useMemo(() => {
+  const rows = useMemo(() => {
     const matches = filtering ? filterItems(items, inputValue, (i) => i.label) : [...items];
     const typed = inputValue.trim();
     // While results are still arriving the list can't be trusted: no "use what I typed" yet, so
-    // ArrowDown + Enter can't choose it by accident before the real rows show up.
-    if (
-      filtering &&
-      allowsCustomValue &&
-      !isLoading &&
-      typed &&
-      !hasExactMatch(items, typed, (i) => i.label)
-    ) {
+    // Enter can't choose it by accident.
+    if (filtering && allowsCustomValue && !isLoading && typed && !hasExactMatch(items, typed, (i) => i.label)) {
       return [...matches, { id: CUSTOM_ID, label: typed }];
     }
     return matches;
   }, [items, inputValue, allowsCustomValue, isLoading, filtering]);
 
-  const rows = isLoading ? [{ id: LOADING_ID, label: 'Loading…' }, ...visible] : visible;
-  const hint = inputValue.trim() === '' && emptyDescription ? emptyDescription : description;
+  const grouped = items.some((i) => i.section);
+  const nodes: Node[] = useMemo(() => {
+    const loading = isLoading ? [{ id: LOADING_ID, label: 'Loading…' }] : [];
+    if (!grouped) return [...loading, ...rows];
+    const real = rows.filter((r) => r.id !== CUSTOM_ID);
+    const custom = rows.filter((r) => r.id === CUSTOM_ID);
+    return [
+      ...(loading.length ? [{ id: 'group:loading', rows: loading } as Group] : []),
+      ...groupRows(real),
+      ...(custom.length ? [{ id: 'group:custom', rows: custom } as Group] : []),
+    ];
+  }, [rows, grouped, isLoading]);
+
+  const showEmptyHint = inputValue.trim() === '' && emptyDescription;
+  const hint = showEmptyHint ? emptyDescription : description;
+
+  function renderItem(item: ComboboxItem) {
+    return (
+      <ListBoxItem
+        key={item.id}
+        id={item.id}
+        textValue={item.label}
+        isDisabled={item.id === LOADING_ID}
+        className={styles.item}
+      >
+        {item.id === CUSTOM_ID ? (
+          <>
+            <Icon icon={Plus} size="sm" />
+            {customOptionLabel ? (
+              <span>{customOptionLabel(item.label)}</span>
+            ) : (
+              <span>
+                Use what I typed: <strong>{item.label}</strong>
+              </span>
+            )}
+          </>
+        ) : (
+          <>
+            <span className={styles.itemLabel}>{item.label}</span>
+            {item.badge ? <span className={styles.badge}>{item.badge}</span> : null}
+          </>
+        )}
+      </ListBoxItem>
+    );
+  }
 
   return (
     <AriaComboBox
       {...rest}
-      items={rows}
+      items={nodes as unknown as Iterable<ComboboxItem>}
       inputValue={inputValue}
       onInputChange={(text) => {
         setInputValue(text);
         onTextChange?.(text);
         // React Aria also reports a pick's label as an input change; that one isn't typing.
-        setFiltering(text !== settledText.current);
+        const typing = text !== settledText.current;
+        setFiltering(typing);
         // Typing after a pick means the pick no longer applies.
         const pickedLabel =
           selectedKey === CUSTOM_ID ? customText : items.find((i) => i.id === selectedKey)?.label;
@@ -192,29 +258,20 @@ export function Combobox({
             <p className={styles.empty}>No matches. Keep typing or try another word.</p>
           )}
         >
-          {(item: ComboboxItem) => (
-            <ListBoxItem
-              id={item.id}
-              textValue={item.label}
-              isDisabled={item.id === LOADING_ID}
-              className={styles.item}
-            >
-              {item.id === CUSTOM_ID ? (
-                <>
-                  <Icon icon={Plus} size="sm" />
-                  {customOptionLabel ? (
-                    <span>{customOptionLabel(item.label)}</span>
-                  ) : (
-                    <span>
-                      Use what I typed: <strong>{item.label}</strong>
-                    </span>
-                  )}
-                </>
-              ) : (
-                item.label
-              )}
-            </ListBoxItem>
-          )}
+          {(node: Node) =>
+            'rows' in node ? (
+              <ListBoxSection
+                id={node.id}
+                aria-label={node.header ?? 'Options'}
+                className={styles.section}
+              >
+                {node.header ? <Header className={styles.header}>{node.header}</Header> : null}
+                <Collection items={node.rows}>{renderItem}</Collection>
+              </ListBoxSection>
+            ) : (
+              renderItem(node)
+            )
+          }
         </ListBox>
       </Popover>
     </AriaComboBox>

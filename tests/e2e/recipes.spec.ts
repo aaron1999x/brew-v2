@@ -340,6 +340,41 @@ test.describe('new recipe', () => {
     await expect(page.getByRole('option', { name: 'Stone dripper' })).toHaveCount(0);
   });
 
+  test('gear pickers: My gear and Catalogue sections, my default marked, no duplicates', async ({
+    page,
+    users,
+  }) => {
+    const user = await signIn(page, users, 'recipe-sections');
+    const { data: v60 } = await users.admin
+      .from('gear_catalog')
+      .select('id')
+      .eq('name', 'Hario V60 02')
+      .single();
+    const { error } = await users.admin.from('gear_items').insert([
+      {
+        user_id: user.id,
+        category: 'brewer',
+        catalog_id: v60!.id,
+        nickname: 'Daily V60',
+        is_default: true,
+      },
+      { user_id: user.id, category: 'brewer', custom_name: 'Stone dripper', is_default: false },
+    ]);
+    expect(error).toBeNull();
+
+    await page.goto('/recipes/new');
+    await waitForApp(page);
+    await expect(page.getByRole('combobox', { name: 'Brewer' })).toHaveValue('Daily V60');
+
+    await page.getByRole('button', { name: 'Show brewer' }).click();
+    const mine = page.getByRole('group', { name: 'My gear' });
+    const catalogue = page.getByRole('group', { name: 'Catalogue' });
+    await expect(mine.getByRole('option')).toHaveText(['Daily V60Default', 'Stone dripper']);
+    await expect(catalogue.getByRole('option').first()).toBeVisible();
+    // The model I own isn't listed again from the catalogue.
+    await expect(catalogue.getByRole('option', { name: /Hario V60 02/ })).toHaveCount(0);
+  });
+
   test('every "New recipe" button opens the editor', async ({ page, users }) => {
     await signIn(page, users, 'recipe-links');
     for (const path of ['/recipes', '/home']) {
