@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronLeft } from 'lucide-react';
+import { Archive, ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useRef, type ReactNode } from 'react';
 import { Badge, VersionBadge, VisibilityBadge } from '@/components/ui/Badge/Badge';
@@ -117,6 +117,11 @@ export function RecipeView({
               <VersionBadge version={version.version_no} />
             )}
             <VisibilityBadge visibility={recipe.visibility} />
+            {recipe.archived_at ? (
+              <Badge tone="warning" icon={Archive}>
+                Archived
+              </Badge>
+            ) : null}
           </div>
           <p className={styles.muted}>Last edited {date(recipe.edited_at)}</p>
         </div>

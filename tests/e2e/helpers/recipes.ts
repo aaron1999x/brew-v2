@@ -29,13 +29,14 @@ export async function createRecipe(
   users: TestUsers,
   user: Pick<TestUser, 'email' | 'password'>,
   name = 'Morning V60',
+  options: { method?: string; version?: Record<string, unknown> } = {},
 ) {
   const client = await users.clientFor(user);
   const { data, error } = await client.rpc('create_recipe', {
     p_name: name,
-    p_method: 'pour_over',
+    p_method: options.method ?? 'pour_over',
     p_method_custom: null,
-    p_version: baseVersion(),
+    p_version: baseVersion(options.version),
   });
   expect(error).toBeNull();
   const recipe = data as { id: string; slug: string };

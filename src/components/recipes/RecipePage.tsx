@@ -3,11 +3,13 @@
 import { useRouter } from 'next/navigation';
 import { NotAvailable } from '@/components/feedback/NotAvailable';
 import { QueryBoundary } from '@/components/feedback/QueryBoundary';
+import { Button } from '@/components/ui/Button/Button';
 import { ButtonLink } from '@/components/ui/ButtonLink/ButtonLink';
 import { Select } from '@/components/ui/Select/Select';
 import type { RecipeWithVersion } from '@/lib/recipes/fetch';
 import { versionByNo } from '@/lib/recipes/fetch';
 import { useRecipe } from '@/lib/recipes/hooks';
+import { useArchiveRecipe } from '@/lib/recipes/lifecycle';
 import {
   comparePath,
   editPath,
@@ -16,6 +18,7 @@ import {
   versionOrLatestPath,
   versionsPath,
 } from '@/lib/recipes/paths';
+import { RecipeActions } from './RecipeActions';
 import { RecipeView } from './RecipeView';
 import styles from './RecipePage.module.css';
 
@@ -53,6 +56,8 @@ function OwnerRecipe({
   slug,
   versionNo,
 }: Readonly<{ data: RecipeWithVersion; handle: string; slug: string; versionNo: number | null }>) {
+  const router = useRouter();
+  const archive = useArchiveRecipe();
   const version = versionByNo(data.versions, versionNo);
   if (!version) return <NotAvailable />;
   const latestNo = data.version.version_no;
@@ -94,6 +99,25 @@ function OwnerRecipe({
               Compare
             </ButtonLink>
           ) : null}
+          {data.recipe.archived_at ? (
+            <Button
+              variant="secondary"
+              onPress={() =>
+                archive.mutate({ id: data.recipe.id, name: data.recipe.name, archived: false })
+              }
+            >
+              Restore
+            </Button>
+          ) : null}
+          <RecipeActions
+            id={data.recipe.id}
+            name={data.recipe.name}
+            handle={handle}
+            slug={slug}
+            archived={data.recipe.archived_at !== null}
+            versionNo={version.version_no}
+            onDeleted={() => router.replace('/recipes')}
+          />
         </div>
       }
       notice={

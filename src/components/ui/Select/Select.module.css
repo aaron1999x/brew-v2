@@ -1,4 +1,7 @@
 .trigger {
+  /* A button's minimum width is its content: without this a long value (or a narrow column) pushes
+     the field past its column instead of being cut short with an ellipsis. */
+  min-width: 0;
   justify-content: space-between;
   text-align: start;
   cursor: pointer;
