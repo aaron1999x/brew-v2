@@ -1,7 +1,7 @@
 'use client';
 
 import { ChevronDown, Plus } from 'lucide-react';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   Button,
   ComboBox as AriaComboBox,
@@ -81,13 +81,19 @@ export function Combobox({
   const [selectedKey, setSelectedKey] = useState<Key | null>(initial?.id ?? null);
   // The text that was chosen through the "use what I typed" row (selectedKey is CUSTOM_ID then).
   const [customText, setCustomText] = useState('');
+  // The text that is "settled": the starting value, or what the last pick put in the box. The list
+  // only narrows down once the person changes it; until then it shows everything.
+  const settledText = useRef(inputValue);
+  const [filtering, setFiltering] = useState(false);
+  const justFocused = useRef(false);
 
   const visible = useMemo(() => {
-    const matches = filterItems(items, inputValue, (i) => i.label);
+    const matches = filtering ? filterItems(items, inputValue, (i) => i.label) : [...items];
     const typed = inputValue.trim();
     // While results are still arriving the list can't be trusted: no "use what I typed" yet, so
     // ArrowDown + Enter can't choose it by accident before the real rows show up.
     if (
+      filtering &&
       allowsCustomValue &&
       !isLoading &&
       typed &&
@@ -96,7 +102,7 @@ export function Combobox({
       return [...matches, { id: CUSTOM_ID, label: typed }];
     }
     return matches;
-  }, [items, inputValue, allowsCustomValue, isLoading]);
+  }, [items, inputValue, allowsCustomValue, isLoading, filtering]);
 
   const rows = isLoading ? [{ id: LOADING_ID, label: 'Loading…' }, ...visible] : visible;
   const hint = inputValue.trim() === '' && emptyDescription ? emptyDescription : description;
@@ -109,8 +115,9 @@ export function Combobox({
       onInputChange={(text) => {
         setInputValue(text);
         onTextChange?.(text);
+        // React Aria also reports a pick's label as an input change; that one isn't typing.
+        setFiltering(text !== settledText.current);
         // Typing after a pick means the pick no longer applies.
-        // (React Aria also reports the picked label as an input change; that one isn't typing.)
         const pickedLabel =
           selectedKey === CUSTOM_ID ? customText : items.find((i) => i.id === selectedKey)?.label;
         if (selectedKey != null && text !== pickedLabel) {
@@ -131,6 +138,8 @@ export function Combobox({
           // Count it as a real selection: that is what makes React Aria close the list. (Leaving
           // the key empty kept the list open over the rest of the form.) Typing again clears it.
           const text = inputValue.trim();
+          settledText.current = text;
+          setFiltering(false);
           setSelectedKey(CUSTOM_ID);
           setCustomText(text);
           setInputValue(text);
@@ -140,6 +149,8 @@ export function Combobox({
         }
         const item = items.find((i) => i.id === key);
         if (!item) return;
+        settledText.current = item.label;
+        setFiltering(false);
         setSelectedKey(key);
         setInputValue(item.label);
         onTextChange?.(item.label);
@@ -151,7 +162,20 @@ export function Combobox({
     >
       <FieldLabel required={rest.isRequired}>{label}</FieldLabel>
       <div className={cx(fieldStyles.control, styles.control)} data-primary-control="">
-        <Input placeholder={placeholder} className={fieldStyles.input} />
+        <Input
+          placeholder={placeholder}
+          className={fieldStyles.input}
+          // Typing replaces what is there: the box starts with its text selected.
+          onFocus={(event) => {
+            justFocused.current = true;
+            event.currentTarget.select();
+          }}
+          // The click that gave focus must not drop the selection again on release.
+          onMouseUp={(event) => {
+            if (justFocused.current) event.preventDefault();
+            justFocused.current = false;
+          }}
+        />
         <Button
           className={styles.toggle}
           aria-label={`Show ${typeof label === 'string' ? label.toLowerCase() : 'options'}`}

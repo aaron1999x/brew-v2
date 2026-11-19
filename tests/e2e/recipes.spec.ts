@@ -309,6 +309,37 @@ test.describe('new recipe', () => {
     await expect(hint).toHaveCount(6);
   });
 
+  test('gear picker: opens with the whole list while a default is filled in; typing replaces it', async ({
+    page,
+    users,
+  }) => {
+    const user = await signIn(page, users, 'recipe-open');
+    const { error } = await users.admin.from('gear_items').insert({
+      user_id: user.id,
+      category: 'brewer',
+      custom_name: 'Stone dripper',
+      is_default: true,
+    });
+    expect(error).toBeNull();
+    await page.goto('/recipes/new');
+    await waitForApp(page);
+    const brewer = page.getByRole('combobox', { name: 'Brewer' });
+    await expect(brewer).toHaveValue('Stone dripper');
+
+    await page.getByRole('button', { name: 'Show brewer' }).click();
+    // Not just the one filled-in item: the whole category, once the catalogue has arrived.
+    await expect(page.getByRole('option', { name: /AeroPress/ }).first()).toBeVisible();
+    await expect(page.getByRole('option', { name: 'Stone dripper' })).toBeVisible();
+    await page.keyboard.press('Escape');
+
+    // Focusing selects the text, so typing replaces it and narrows the list.
+    await brewer.focus();
+    await page.keyboard.type('aeropress');
+    await expect(brewer).toHaveValue('aeropress');
+    await expect(page.getByRole('option', { name: /AeroPress/ }).first()).toBeVisible();
+    await expect(page.getByRole('option', { name: 'Stone dripper' })).toHaveCount(0);
+  });
+
   test('every "New recipe" button opens the editor', async ({ page, users }) => {
     await signIn(page, users, 'recipe-links');
     for (const path of ['/recipes', '/home']) {

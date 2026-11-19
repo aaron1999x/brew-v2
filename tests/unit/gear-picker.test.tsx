@@ -152,6 +152,38 @@ describe('GearPicker', () => {
   });
 });
 
+describe('GearPicker open list and focus', () => {
+  it('opens with the whole category when the box holds the current item', async () => {
+    const { user } = setup({ value: { kind: 'catalog', id: 'v60' } });
+    await user.click(screen.getByRole('button', { name: /show item/i }));
+    const options = await screen.findAllByRole('option');
+    expect(options.map((o) => o.textContent)).toEqual(['Hario V60 02', 'Kalita Wave 185']);
+  });
+
+  it('opens with the whole category from the keyboard too, then filters once text changes', async () => {
+    const { user } = setup({ value: { kind: 'catalog', id: 'v60' } });
+    const input = screen.getByRole('combobox', { name: /Item/ });
+    await user.click(input);
+    await user.keyboard('{ArrowDown}');
+    expect(await screen.findAllByRole('option')).toHaveLength(2);
+    // Typing replaces the selected text, and only then does the list narrow down.
+    await user.keyboard('wave');
+    const narrowed = await screen.findAllByRole('option');
+    expect(narrowed.map((o) => o.textContent)).toEqual([
+      'Kalita Wave 185',
+      expect.stringContaining('as a custom item'),
+    ]);
+  });
+
+  it('selects the text when the box gets focus, so typing replaces it', async () => {
+    const { user } = setup({ value: { kind: 'catalog', id: 'v60' } });
+    const input = screen.getByRole('combobox', { name: /Item/ }) as HTMLInputElement;
+    await user.click(input);
+    expect(input.selectionStart).toBe(0);
+    expect(input.selectionEnd).toBe('Hario V60 02'.length);
+  });
+});
+
 describe('GearPicker after a custom pick', () => {
   it('closes the list, so the rest of the form is reachable again', async () => {
     const user = userEvent.setup();
