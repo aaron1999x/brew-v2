@@ -23,6 +23,8 @@ export type TimeInputProps = Omit<
   | 'isInvalid'
 > &
   Omit<FieldChrome, 'errorMessage'> & {
+    /** An error from the form (e.g. a step that starts too early), shown when the text itself is fine. */
+    errorMessage?: string;
     /** Seconds; `null` while empty. */
     value?: number | null;
     onChange?: (seconds: number | null) => void;
@@ -42,6 +44,7 @@ export function TimeInput({
   onChange,
   onBlur,
   maxSeconds,
+  errorMessage,
   ...rest
 }: TimeInputProps) {
   const [text, setText] = useState(value == null ? '' : formatDuration(value));
@@ -71,7 +74,7 @@ export function TimeInput({
       value={text}
       inputMode="numeric"
       // Partial input like "2:" isn't an error while typing; it is once the field loses focus.
-      isInvalid={(!parsed.ok || tooLong) && !editing}
+      isInvalid={((!parsed.ok || tooLong) && !editing) || Boolean(errorMessage)}
       onChange={(next) => {
         setText(next);
         setEditing(true);
@@ -90,7 +93,7 @@ export function TimeInput({
         <Input placeholder="m:ss" autoComplete="off" className={cx(fieldStyles.input, 'num')} />
       </div>
       {hint ? <FieldHint>{hint}</FieldHint> : null}
-      <FieldError>{parsed.ok ? rangeError : parsed.error}</FieldError>
+      <FieldError>{(parsed.ok ? rangeError : parsed.error) || errorMessage}</FieldError>
     </AriaTextField>
   );
 }

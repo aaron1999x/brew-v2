@@ -12,6 +12,7 @@ import { Switch } from '@/components/ui/Switch/Switch';
 import { TextField } from '@/components/ui/TextField/TextField';
 import { Textarea } from '@/components/ui/Textarea/Textarea';
 import { TimeInput } from '@/components/ui/TimeInput/TimeInput';
+import { DateField } from '@/components/ui/DateField/DateField';
 import { DurationField } from '@/components/ui/UnitFields/DurationField';
 import { RateField } from '@/components/ui/UnitFields/RateField';
 import { TemperatureField } from '@/components/ui/UnitFields/TemperatureField';
@@ -54,6 +55,7 @@ export function InputsSection() {
   const [storedRate, setStoredRate] = useState<number | null>(3.5);
   const [steep, setSteep] = useState<number | null>(43_200);
   const [pause, setPause] = useState<number | null>(null);
+  const [roastDate, setRoastDate] = useState<string | null>(null);
   const [tooLong, setTooLong] = useState<number | null>(180_000);
 
   return (
@@ -335,6 +337,30 @@ export function InputsSection() {
         </div>
         <p className={styles.result} data-testid="stored-time-rate">
           Stored: {steep ?? '–'} s · {storedRate ?? '–'} g/s
+        </p>
+      </div>
+
+      <div className={styles.group}>
+        <h3 className={styles.groupTitle}>Calendar date field</h3>
+        <div className={styles.grid}>
+          <DateField
+            label="Roast date"
+            value={roastDate}
+            onChange={setRoastDate}
+            description="Day, month and year. Stored as a plain date."
+          />
+          <DateField label="Roast date (set)" value="2026-11-19" onChange={() => undefined} />
+          <DateField
+            label="Roast date (error)"
+            isInvalid
+            errorMessage="Enter a valid date"
+            value={null}
+            onChange={() => undefined}
+          />
+          <DateField label="Roast date (disabled)" isDisabled value="2026-11-19" onChange={() => undefined} />
+        </div>
+        <p className={styles.result} data-testid="stored-date">
+          Stored: {roastDate ?? '–'}
         </p>
       </div>
     </>

@@ -20,7 +20,7 @@ export default function HomePage() {
           text="Create your first recipe or brew one from Verified."
           action={
             <>
-              <ButtonLink href="/recipes">New recipe</ButtonLink>
+              <ButtonLink href="/recipes/new">New recipe</ButtonLink>
               <ButtonLink href="/verified" variant="secondary">
                 Verified
               </ButtonLink>

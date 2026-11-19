@@ -16,7 +16,7 @@ export default function RecipesPage() {
           icon={BookOpen}
           title="No recipes yet."
           text="Every recipe you create is private until you share it."
-          action={<ButtonLink href="/recipes">New recipe</ButtonLink>}
+          action={<ButtonLink href="/recipes/new">New recipe</ButtonLink>}
         />
       </div>
     </>

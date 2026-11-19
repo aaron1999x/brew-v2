@@ -385,7 +385,7 @@ function StartStep() {
       </h1>
       <p className={styles.text}>Where would you like to start?</p>
       <div className={styles.buttons}>
-        <Button size="lg" onPress={() => router.push('/recipes')}>
+        <Button size="lg" onPress={() => router.push('/recipes/new')}>
           Create first recipe
         </Button>
         <Button variant="secondary" size="lg" onPress={() => router.push('/verified')}>

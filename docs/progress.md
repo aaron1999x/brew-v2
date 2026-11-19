@@ -231,9 +231,9 @@ Gear, recipes, versions (`docs/phase-5-roadmap.md` M3).
 ### M3 in progress
 Branch `feat/m3-recipes`, draft PR `feat: gear, recipes and versions`. Remove this section at the end of M3.
 
-**Stages:** 1 database ✅ · 2 recipe logic ✅ · 3 gear ✅ (see below, awaiting CI) · 4 editor, create, recipe page (**stop for iPhone checks**) · 5 versions and pour curve · 6 My recipes and lifecycle (**stop for iPhone checks**) · 7 tests and hand-over. Stage 1 ran on `/model opus`; Stages 2+ on `/model opusplan`.
+**Stages:** 1 database ✅ · 2 recipe logic ✅ · 3 gear ✅ · 4 editor, create, recipe page ✅ (**stopped for iPhone checks**) · 5 versions and pour curve · 6 My recipes and lifecycle (**stop for iPhone checks**) · 7 tests and hand-over. Stage 1 ran on `/model opus`; Stages 2+ on `/model opusplan`.
 
-**Next:** Stage 4 (the `@handle` routing, `NotAvailable`, the recipe editor, `/recipes/new`, the recipe page). **Stop after Stage 4** with the iPhone checks from the prompt.
+**Next:** Stage 5 (versions: `/edit`, new version, locked notice, version switcher, `/v/N`, compare, pour curve), after Aaron's iPhone checks of Stage 4.
 
 **Decided with Aaron at plan approval (18 Nov 2026):**
 - Add `recipes.edited_at` for "Last edited" and its sort (archive, restore and undo-delete don't move it).
@@ -282,6 +282,19 @@ Branch `feat/m3-recipes`, draft PR `feat: gear, recipes and versions`. Remove th
 - **E2E notes for specs written from here on:** React Aria draws switches and checkboxes with a visually hidden input, so click the label text, not `.check()`. Wait for `[data-entering]` to be gone before axe on a sheet or dialog (colours blend mid-fade, on the slower iPhone run). A bulk `insert` through supabase-js needs every row to set the same columns (missing ones become null). Scope gear row locators to `main`.
 - **Local e2e result for Stage 3** (build, then `gear`, `settings`, `profile`, `inputs`, `fields` specs, staging): iPhone and desktop all passing, no leftover test users.
 - Session note: running npm through `powershell.exe` from Bash was refused by the permission system; checks go through the `test-runner` subagent.
+- **Vitest "failed to find the current suite" is a path-casing problem, not a code problem.** It happens when the working directory is spelled `c:\…` (lowercase). Run from `C:/Users/aaron/Documents/code/brew-v2` and all 643 tests pass. (This is also why the Stage 2 note about Bash was only half right.)
+
+- **Stage 4 (editor, create, recipe page), no database changes:**
+  - **Routing:** `src/lib/recipes/paths.ts`; `proxy.ts` rewrites `/@handle/…` to `/u/<handle>/…` (keeping the session cookies), redirects capital-letter handles (308) and direct `/u/…` visits to the `@` URL. `/@handle` alone is the not-available page until M6. `NotAvailable` (`components/feedback`) is the one page; `not-found.tsx` uses it.
+  - **Data:** `lib/recipes/fetch.ts` (`fetchRecipeBySlug`: null when missing *or* hidden by RLS, throws on real errors), `server.ts` (request-cached for the page and its metadata), `hooks.ts` (`useRecipe`, `useCreateRecipe`). The recipe page is fetched on the server and handed to the client cache with `HydrationBoundary` (first use of hydration; M6 reuses it). Until M6 the page shows only the owner's own recipes; anyone else gets the not-available page.
+  - **Editor** (`components/recipes/editor/`, route `(fullscreen)/recipes/new`): `lib/recipes/draft.ts` holds the form state, builds the payload through `recipeFormSchema`, maps each Zod issue to an editor field id (`recipe-dose-g`, `step-<id>-target_g`) and keeps a copy on the device (`localStorage`, key `recipe-draft:new`). Sections: Basics, Gear (`RecipeGearPicker`: my gear first, then catalogue, then free text; typed text counts at once), Coffee, Numbers (with the calculated strip), Steps (`StepsEditor`/`StepCard`: buttons to add the six kinds, move up/down, delete with undo, "Sort steps by time" when out of order, "Vary temperature by pour", last-pour warning, total time), Targets, Notes. Save is never disabled; after a failed submit the summary shows (sorted top to bottom) and inline errors update live. Offline: a notice, Save explains and keeps everything.
+  - **Leaving:** `useUnsavedGuard` adds one history entry once the form has changes; Cancel and back/swipe-back ask "Discard this recipe?"; `beforeunload` covers closing the tab. After a save the extra entry is popped first, so Back from the recipe page doesn't land on an empty editor.
+  - **Shared component changes:** new `ui/DateField` (React Aria, takes and gives `YYYY-MM-DD`, never through UTC; `@internationalized/date` pinned to 3.12.4; in `/dev/components`). `TimeInput`/`DurationField` accept an `errorMessage` from the form. Pickers and comboboxes read their starting value once, so the editor remounts the form (`key`) after restoring or discarding a draft.
+  - **Recipe page** (`components/recipes/RecipePage.tsx`): header (focused on arrival), method, `v1` and Private badges, key numbers, steps (m:ss / h:mm:ss), coffee, gear (names saved on the version, never nicknames), targets, notes. No Edit, New version or Brew buttons yet.
+  - **Links:** onboarding's "Create first recipe", the Recipes empty state and the "New recipe" buttons on Home and Brew go to `/recipes/new`.
+  - **Tests:** unit `paths`, `draft`, `format-fetch`, `steps-editor`, `date-field` (643 unit tests in all); e2e `recipes.spec.ts` (6-step create, error summary and links, rising-pour error, offline, leave guard and draft restore, gear defaults and snapshot, links, not-available sameness incl. visitor, axe light and dark) plus the onboarding link in `settings.spec.ts`. Local run on staging: recipes, settings, gear, inputs, fields, dev-components on iPhone and desktop.
+  - **Known failures, not from Stage 4:** `gear.spec.ts` "the gear step and My gear are reachable by keyboard" fails on desktop (typing `v60 02`, ArrowDown, Enter leaves the typed text instead of picking the row) on the unmodified Stage 3 code too, 3 of 3 runs. The settings dark-theme axe test failed once under load and passed alone. Look at both before the end of M3.
+  - **Not done on purpose:** `/edit`, new version, version history and compare (Stage 5); My recipes list (Stage 6).
 
 ## M4 Guided timer and brew log
 ## M5 Offline and PWA

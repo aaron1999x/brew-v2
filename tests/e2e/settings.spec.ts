@@ -201,8 +201,11 @@ test.describe('onboarding', () => {
       .locator('label', { hasText: 'Enthusiast' })
       .click();
     await page.getByRole('button', { name: 'Continue' }).click();
-    await page.getByRole('button', { name: 'Look around' }).click();
-    await page.waitForURL('**/home');
+    // "Create first recipe" opens the recipe editor.
+    await page.getByRole('button', { name: 'Create first recipe' }).click();
+    await page.waitForURL('**/recipes/new');
+    await expect(page.getByRole('heading', { level: 1, name: 'New recipe' })).toBeVisible();
+    await page.goto('/home');
     await expect(page.getByRole('heading', { name: 'Finish your profile' })).toHaveCount(0);
   });
 });

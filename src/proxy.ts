@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { isGuestOnlyPath, isProtectedPath, isTokenForward } from '@/lib/auth/routes';
+import { parseAtPath, parseInternalPath, toAtPath, toInternalPath } from '@/lib/recipes/paths';
 import { updateSession } from '@/lib/supabase/session';
 
 // Next.js 16 renamed "middleware" to "proxy". It refreshes the Supabase session and does the
@@ -18,6 +19,28 @@ export async function proxy(request: NextRequest) {
   }
 
   const { response, claims, withSessionCookies } = await updateSession(request);
+
+  // `/@handle/…` is the public URL; the app serves it from the internal `/u/<handle>/…` segment.
+  // Rewrites don't run the proxy again, so a `/u/…` request here is a direct visit: send it to the
+  // `@` URL. A handle with capital letters goes to the lowercase one. These paths aren't gated
+  // here: row-level security decides what a visitor can see.
+  const atPath = parseAtPath(pathname);
+  if (atPath) {
+    if (atPath.handle !== atPath.handle.toLowerCase()) {
+      const target = nextUrl.clone();
+      target.pathname = toAtPath(atPath);
+      return withSessionCookies(NextResponse.redirect(target, 308));
+    }
+    const target = nextUrl.clone();
+    target.pathname = toInternalPath(atPath);
+    return withSessionCookies(NextResponse.rewrite(target));
+  }
+  const internalPath = parseInternalPath(pathname);
+  if (internalPath) {
+    const target = nextUrl.clone();
+    target.pathname = toAtPath(internalPath);
+    return withSessionCookies(NextResponse.redirect(target, 308));
+  }
 
   if (!claims && isProtectedPath(pathname)) {
     const target = nextUrl.clone();
