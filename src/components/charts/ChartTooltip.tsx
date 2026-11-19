@@ -21,22 +21,26 @@ type Props = TooltipLike & {
 
 /** The tooltip card: a title and one row per series. Shown on hover or touch. */
 export function ChartTooltip({ active, payload, label, title }: Props) {
-  if (!active || !payload?.length) return null;
   const heading = title ?? label;
+  const hasHeading = heading != null && heading !== '';
+  // Rows are optional: a tooltip can be just one line, like "1:10 · 90 g".
+  if (!active || (!payload?.length && !hasHeading)) return null;
   return (
     <div className={styles.tooltip}>
-      {heading != null && heading !== '' ? <p className={styles.tooltipTitle}>{heading}</p> : null}
-      <ul className={styles.tooltipRows}>
-        {payload.map((entry, i) => (
-          <li key={`${entry.name}-${i}`} className={styles.tooltipRow}>
-            <span className={styles.tooltipName}>{entry.name}</span>
-            <span className={styles.tooltipValue}>
-              {Array.isArray(entry.value) ? entry.value.join(' – ') : entry.value}
-              {entry.unit ? ` ${entry.unit}` : ''}
-            </span>
-          </li>
-        ))}
-      </ul>
+      {hasHeading ? <p className={styles.tooltipTitle}>{heading}</p> : null}
+      {payload?.length ? (
+        <ul className={styles.tooltipRows}>
+          {payload.map((entry, i) => (
+            <li key={`${entry.name}-${i}`} className={styles.tooltipRow}>
+              <span className={styles.tooltipName}>{entry.name}</span>
+              <span className={styles.tooltipValue}>
+                {Array.isArray(entry.value) ? entry.value.join(' – ') : entry.value}
+                {entry.unit ? ` ${entry.unit}` : ''}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </div>
   );
 }

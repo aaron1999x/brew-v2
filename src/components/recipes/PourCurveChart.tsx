@@ -1,10 +1,11 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useId, useMemo } from 'react';
 import {
+  Area,
   CartesianGrid,
+  ComposedChart,
   Line,
-  LineChart,
   ReferenceArea,
   ReferenceDot,
   Tooltip,
@@ -13,9 +14,19 @@ import {
 } from 'recharts';
 import { ChartContainer } from '@/components/charts/ChartContainer';
 import { ChartLegend, type LegendItem } from '@/components/charts/ChartLegend';
-import { ChartTooltip, type TooltipLike } from '@/components/charts/ChartTooltip';
+import { ChartTooltip } from '@/components/charts/ChartTooltip';
 import { Marker, seriesStyles, type MarkerKind } from '@/components/charts/series';
-import { curveEnd, curveLine, curveMarkers, curveRows, niceMax } from '@/lib/recipes/curve';
+import {
+  curveEnd,
+  curveLine,
+  curveMarkers,
+  curveRows,
+  curveSamples,
+  firstPourStart,
+  readCurveAt,
+  timeTicks,
+  weightTicks,
+} from '@/lib/recipes/curve';
 import { STEP_KIND_LABELS, type StepData, type StepKind } from '@/lib/recipes/steps';
 import { useUnits } from '@/lib/settings/useSettings';
 import { WEIGHT_DECIMALS, WEIGHT_LABEL, weightToDisplay } from '@/lib/units';
@@ -29,13 +40,13 @@ export type CurveSeries = {
   steps: readonly StepData[];
 };
 
-type Props = {
+type Props = Readonly<{
   /** One series for a recipe page; two to overlay versions on the compare page. */
   series: readonly CurveSeries[];
   /** Target drawdown window in seconds. */
   drawdown?: { from: number; to: number } | null;
   title?: string;
-};
+}>;
 
 /** Each kind of step has its own shape, so the markers read without colour. */
 const MARKER_FOR_KIND: Record<Exclude<StepKind, 'pour'>, MarkerKind> = {
@@ -46,14 +57,19 @@ const MARKER_FOR_KIND: Record<Exclude<StepKind, 'pour'>, MarkerKind> = {
   other: 'circle',
 };
 
+/** How close (as a share of the chart's width) a pointer counts as "at" a pour's start. */
+const SNAP_SHARE = 0.015;
+
 /**
- * Cumulative water (in the person's weight unit) against time (m:ss): a line that rises at each
- * pour, and the other steps marked on it. The picture is one image to assistive technology, with the
- * same data as a table behind "Show data table". Loaded on demand (see LazyPourCurve).
+ * Cumulative water (in the person's weight unit) against time: each pour is a ramp, filled underneath
+ * with a soft gradient, and the other steps are marked on the line. A second version overlays as a
+ * dashed line without a fill. The picture is one image to assistive technology, with the same data
+ * as a table behind "Show data table". Loaded on demand (see LazyPourCurve).
  */
 export function PourCurveChart({ series, drawdown, title = 'Pour curve' }: Props) {
   const { units, duration } = useUnits();
   const reduced = useReducedMotion();
+  const gradientId = `pour-fill-${useId().replaceAll(':', '')}`;
   const unit = units.weight_unit;
   const unitLabel = WEIGHT_LABEL[unit];
   const toDisplay = (g: number) => weightToDisplay(g, unit);
@@ -61,49 +77,56 @@ export function PourCurveChart({ series, drawdown, title = 'Pour curve' }: Props
     `${new Intl.NumberFormat(undefined, { maximumFractionDigits: WEIGHT_DECIMALS[unit] }).format(value)} ${unitLabel}`;
 
   const model = useMemo(() => {
-    const endS = Math.max(
-      ...series.map((s) => curveEnd(s.steps)),
-      drawdown ? drawdown.to : 0,
-    );
+    const endS = Math.max(...series.map((s) => curveEnd(s.steps)), drawdown ? drawdown.to : 0);
     const lines = series.map((s) => ({
       ...s,
-      points: curveLine(s.steps, endS).map((p) => ({ t: p.t, w: toDisplay(p.g) })),
-      markers: curveMarkers(s.steps).map((m) => ({ ...m, w: toDisplay(m.g) })),
+      line: curveLine(s.steps, endS),
+      pourStart: firstPourStart(s.steps),
+      markers: curveMarkers(s.steps, endS).map((m) => ({ ...m, w: weightToDisplay(m.g, unit) })),
       rows: curveRows(s.steps),
     }));
-    const top = Math.max(0, ...lines.flatMap((l) => l.points.map((p) => p.w)));
-    return { endS, lines, yMax: niceMax(top, unit === 'oz' ? 2 : 50) };
-    // `toDisplay` only depends on the unit.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const samples = curveSamples(
+      lines.map((l) => l.line),
+      endS,
+    );
+    // One row per time. Each line is split in two: before its first pour it is only drawn faintly.
+    const data = samples.map((row) => {
+      const point: Record<string, number | null> = { t: row.t };
+      lines.forEach((l, i) => {
+        const w = weightToDisplay(row.g[i]!, unit);
+        const started = l.pourStart !== null && row.t >= l.pourStart;
+        point[`w${i}`] = started ? w : null;
+        point[`pre${i}`] = l.pourStart === null || row.t <= l.pourStart ? w : null;
+      });
+      return point;
+    });
+    const top = Math.max(0, ...data.flatMap((p) => lines.map((_, i) => p[`w${i}`] ?? p[`pre${i}`] ?? 0)));
+    return { endS, lines, data, y: weightTicks(top, unit), xTicks: timeTicks(endS) };
   }, [series, drawdown, unit]);
 
   const multiple = series.length > 1;
-  const kindsPresent = [
-    ...new Set(model.lines.flatMap((l) => l.markers.map((m) => m.kind))),
-  ] as Exclude<StepKind, 'pour'>[];
+  const kindsPresent = [...new Set(model.lines.flatMap((l) => l.markers.map((m) => m.kind)))] as Exclude<
+    StepKind,
+    'pour'
+  >[];
+  const primary = seriesStyles[0]!;
 
   const legendItems: LegendItem[] = [
     ...series.map((s, i) => ({
       label: multiple ? `${s.label}: water poured` : 'Water poured',
-      color: seriesStyles[i]?.color ?? seriesStyles[0]!.color,
+      color: seriesStyles[i]?.color ?? primary.color,
       kind: 'line' as const,
       dash: seriesStyles[i]?.dash,
       marker: multiple ? seriesStyles[i]?.marker : undefined,
     })),
     ...kindsPresent.map((kind) => ({
       label: STEP_KIND_LABELS[kind],
-      color: seriesStyles[0]!.color,
+      color: primary.color,
       kind: 'marker' as const,
       marker: MARKER_FOR_KIND[kind],
     })),
     ...(drawdown
-      ? [
-          {
-            label: 'Target drawdown',
-            color: 'var(--color-chart-target-band)',
-            kind: 'area' as const,
-          },
-        ]
+      ? [{ label: 'Target drawdown', color: 'var(--color-chart-target-band)', kind: 'area' as const }]
       : []),
   ];
 
@@ -118,8 +141,8 @@ export function PourCurveChart({ series, drawdown, title = 'Pour curve' }: Props
 
   const describeEnd = model.lines
     .map((l) => {
-      const last = l.points[l.points.length - 1]!;
-      return `${multiple ? `${l.label} ` : ''}ends at ${formatWeight(last.w)}`;
+      const last = l.line[l.line.length - 1]!;
+      return `${multiple ? `${l.label} ` : ''}ends at ${formatWeight(toDisplay(last.g))}`;
     })
     .join('; ');
 
@@ -139,27 +162,42 @@ export function PourCurveChart({ series, drawdown, title = 'Pour curve' }: Props
       }}
       legend={<ChartLegend items={legendItems} />}
     >
-      <LineChart margin={{ top: 12, right: 16, bottom: 20, left: 0 }} accessibilityLayer={false}>
-        <CartesianGrid stroke="var(--color-chart-grid)" vertical={false} />
+      <ComposedChart
+        data={model.data}
+        margin={{ top: 12, right: 12, bottom: 0, left: 0 }}
+        accessibilityLayer={false}
+      >
+        <defs>
+          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={primary.color} stopOpacity={0.35} />
+            <stop offset="100%" stopColor={primary.color} stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid
+          vertical={false}
+          stroke="var(--color-chart-grid)"
+          strokeOpacity={0.6}
+        />
         <XAxis
           type="number"
           dataKey="t"
           domain={[0, model.endS]}
           allowDataOverflow
-          tickCount={6}
+          ticks={model.xTicks}
+          interval={0}
           tickFormatter={(t: number) => duration(t)}
           tickLine={false}
           axisLine={{ stroke: 'var(--color-border-strong)' }}
-          label={{ value: 'Time', position: 'insideBottom', offset: -12 }}
         />
         <YAxis
           type="number"
-          dataKey="w"
-          domain={[0, model.yMax]}
+          domain={[0, model.y.top]}
+          ticks={model.y.ticks}
+          interval={0}
+          tickFormatter={(v: number) => `${v} ${unitLabel}`}
           tickLine={false}
           axisLine={false}
-          width={44}
-          label={{ value: `Water (${unitLabel})`, angle: -90, position: 'insideLeft', offset: 10 }}
+          width={54}
         />
         {drawdown ? (
           <ReferenceArea
@@ -172,25 +210,57 @@ export function PourCurveChart({ series, drawdown, title = 'Pour curve' }: Props
           />
         ) : null}
         {model.lines.map((line, i) => {
-          const style = seriesStyles[i] ?? seriesStyles[0]!;
+          const style = seriesStyles[i] ?? primary;
           return (
             <Line
-              key={line.id}
-              data={line.points}
-              dataKey="w"
-              name={line.label}
+              key={`pre-${line.id}`}
+              dataKey={`pre${i}`}
+              name={`${line.label} before the first pour`}
               type="linear"
               stroke={style.color}
+              strokeOpacity={0.35}
+              strokeWidth={1.5}
               strokeDasharray={style.dash}
+              dot={false}
+              activeDot={false}
+              isAnimationActive={false}
+              legendType="none"
+            />
+          );
+        })}
+        {model.lines.map((line, i) =>
+          i === 0 ? (
+            <Area
+              key={line.id}
+              dataKey="w0"
+              name={line.label}
+              type="linear"
+              stroke={primary.color}
+              strokeWidth={2.5}
+              fill={`url(#${gradientId})`}
+              fillOpacity={1}
+              baseValue={0}
+              dot={false}
+              activeDot={false}
+              isAnimationActive={!reduced}
+            />
+          ) : (
+            <Line
+              key={line.id}
+              dataKey={`w${i}`}
+              name={line.label}
+              type="linear"
+              stroke={(seriesStyles[i] ?? primary).color}
+              strokeDasharray={(seriesStyles[i] ?? primary).dash}
               strokeWidth={2.5}
               dot={false}
               activeDot={false}
               isAnimationActive={!reduced}
             />
-          );
-        })}
+          ),
+        )}
         {model.lines.flatMap((line, i) => {
-          const style = seriesStyles[i] ?? seriesStyles[0]!;
+          const style = seriesStyles[i] ?? primary;
           return line.markers.map((m) => (
             <ReferenceDot
               key={`${line.id}-${m.stepId}`}
@@ -206,11 +276,11 @@ export function PourCurveChart({ series, drawdown, title = 'Pour curve' }: Props
                     color={style.color}
                     size={6}
                   />
-                  {!multiple ? (
+                  {multiple ? null : (
                     <text x={(p.cx ?? 0) + 9} y={(p.cy ?? 0) - 9} className={styles.markerLabel}>
                       {m.label}
                     </text>
-                  ) : null}
+                  )}
                 </g>
               )}
             />
@@ -218,23 +288,36 @@ export function PourCurveChart({ series, drawdown, title = 'Pour curve' }: Props
         })}
         <Tooltip
           isAnimationActive={false}
-          cursor={false}
+          cursor={{ stroke: 'var(--color-border-strong)', strokeWidth: 1 }}
           content={(p) => {
-            const like = p as unknown as TooltipLike & { payload?: { payload?: { t: number } }[] };
-            const t = like.payload?.[0]?.payload?.t;
+            const like = p as unknown as { active?: boolean; label?: number | string };
+            const hovered = Number(like.label);
+            if (!like.active || !Number.isFinite(hovered)) return null;
+            const snapS = model.endS * SNAP_SHARE;
+            const readings = model.lines.map((l) => readCurveAt(l.steps, l.line, hovered, snapS));
+            const first = readings[0]!;
+            // One version: "1:10 · 90 g". Two: the time, and a row for each.
+            if (!multiple) {
+              return (
+                <ChartTooltip
+                  active
+                  title={`${duration(first.t)} · ${formatWeight(toDisplay(first.g))}`}
+                />
+              );
+            }
             return (
               <ChartTooltip
-                active={like.active}
-                title={t == null ? undefined : duration(t)}
-                payload={like.payload?.map((entry) => ({
-                  name: (entry as { name?: string }).name,
-                  value: formatWeight(Number((entry as { value?: number }).value ?? 0)),
+                active
+                title={duration(first.pourId ? first.t : hovered)}
+                payload={readings.map((r, i) => ({
+                  name: model.lines[i]!.label,
+                  value: formatWeight(toDisplay(r.g)),
                 }))}
               />
             );
           }}
         />
-      </LineChart>
+      </ComposedChart>
     </ChartContainer>
   );
 }

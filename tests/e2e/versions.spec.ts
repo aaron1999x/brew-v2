@@ -303,6 +303,88 @@ test.describe('the pour curve', () => {
     await expect(table.getByRole('row').nth(3)).toContainText('150 g');
   });
 
+  test('is an area chart with ramps: unit on the y labels, times on x, light horizontal lines only', async ({
+    page,
+    users,
+  }) => {
+    const user = await signIn(page, users, 'curve-style');
+    const recipe = await createRecipe(users, user);
+    await page.goto(`/@${user.handle}/${recipe.slug}`);
+    const curve = page.getByRole('img', { name: /^Pour curve\./ });
+    await expect(curve).toBeVisible();
+
+    // A gradient fill under the line, and no axis titles.
+    await expect(curve.locator('linearGradient')).toHaveCount(1);
+    await expect(curve.locator('.recharts-area-area')).toHaveCount(1);
+    await expect(curve.locator('.recharts-area-area')).toHaveAttribute('fill', /url\(#/);
+    await expect(curve.locator('.recharts-label')).toHaveCount(0);
+
+    // 3 to 5 ticks each way: weights carry the unit, times are m:ss.
+    // (Until the person's settings arrive the chart uses the device's default unit, so wait for grams.)
+    await expect(
+      curve.locator('.recharts-yAxis-tick-labels .recharts-cartesian-axis-tick-value').first(),
+    ).toHaveText(/ g$/);
+    const yTicks = await curve.locator('.recharts-yAxis-tick-labels .recharts-cartesian-axis-tick-value').allTextContents();
+    const xTicks = await curve.locator('.recharts-xAxis-tick-labels .recharts-cartesian-axis-tick-value').allTextContents();
+    expect(yTicks.length).toBeGreaterThanOrEqual(3);
+    expect(yTicks.length).toBeLessThanOrEqual(5);
+    for (const tick of yTicks) expect(tick).toMatch(/^\d+(\.\d+)? g$/);
+    expect(xTicks.length).toBeGreaterThanOrEqual(3);
+    expect(xTicks.length).toBeLessThanOrEqual(5);
+    for (const tick of xTicks) expect(tick).toMatch(/^\d+:\d\d$/);
+
+    // Horizontal lines only, and few.
+    await expect(curve.locator('.recharts-cartesian-grid-vertical line')).toHaveCount(0);
+    const rules = await curve.locator('.recharts-cartesian-grid-horizontal line').count();
+    expect(rules).toBeGreaterThanOrEqual(3);
+    expect(rules).toBeLessThanOrEqual(5);
+  });
+
+  test('the tooltip reads a pour’s target at the pour’s time: "1:10 · 90 g"', async ({ page, users }) => {
+    const user = await signIn(page, users, 'curve-tip');
+    const recipe = await createRecipe(users, user, 'Tooltip check', {
+      version: {
+        drawdown_min_s: null,
+        drawdown_max_s: null,
+        steps: [
+          { id: 'a', kind: 'pour', at_s: 0, target_g: 40 },
+          { id: 'b', kind: 'pour', at_s: 70, target_g: 90 },
+        ],
+      },
+    });
+    await page.goto(`/@${user.handle}/${recipe.slug}`);
+    const curve = page.getByRole('img', { name: /^Pour curve\./ });
+    await expect(curve.locator('.recharts-area-area')).toHaveCount(1);
+    await page.waitForTimeout(800);
+
+    // The chart ends at 1:20 (the second ramp), so 1:10 is 7/8 of the way across the plot area.
+    // Mouse positions are relative to the screen, so bring the chart into view first.
+    await curve.scrollIntoViewIfNeeded();
+    const surface = (await curve.locator('.recharts-surface').boundingBox())!;
+    const left = surface.x + 54;
+    const width = surface.width - 54 - 12;
+    const y = surface.y + surface.height / 2;
+    await page.mouse.move(left + (width * 70) / 80, y);
+    await expect(page.getByText('1:10 · 90 g')).toBeVisible();
+
+    // Away from a pour, on the flat part: the line's own value.
+    await page.mouse.move(left + (width * 30) / 80, y);
+    await expect(page.getByText('0:30 · 40 g')).toBeVisible();
+  });
+
+  test('on compare, the second version is a dashed line without a fill', async ({ page, users }) => {
+    const user = await signIn(page, users, 'curve-compare');
+    const recipe = await createRecipe(users, user);
+    await saveNextVersion(users, user, recipe, baseVersion({ temp_c: 92 }));
+    await page.goto(`/@${user.handle}/${recipe.slug}/compare?a=1&b=2`);
+    const curves = page.getByRole('img', { name: /Pour curves/ });
+    await expect(curves).toBeVisible();
+    await expect(curves.locator('.recharts-area-area')).toHaveCount(1);
+    const dashed = curves.locator('.recharts-line-curve[stroke-dasharray]:not([stroke-opacity])');
+    await expect(dashed.first()).toBeVisible();
+    await expect(curves.locator('.recharts-label')).toHaveCount(0);
+  });
+
   test('shows weights in the person’s unit and keeps stored values metric', async ({
     page,
     users,
@@ -321,19 +403,25 @@ test.describe('the pour curve', () => {
 });
 
 test.describe('layout', () => {
-  test('the version screens fit a 320 px screen: no sideways scroll, no field wider than its column', async ({
+  for (const width of [390, 320]) {
+  test(`the version screens fit a ${width} px screen: no sideways scroll, no field wider than its column`, async ({
     page,
     users,
   }) => {
-    await page.setViewportSize({ width: 320, height: 800 });
-    const user = await signIn(page, users, 'versions-fit');
+    await page.setViewportSize({ width, height: 800 });
+    const user = await signIn(page, users, `versions-fit-${width}`);
     const recipe = await createRecipe(users, user);
     await saveNextVersion(users, user, recipe, baseVersion({ temp_c: 92, change_note: 'cooler' }));
     const base = `/@${user.handle}/${recipe.slug}`;
 
     const fits = async () => {
       await expectColumnsFit(page);
-      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+      // The chart is exactly as wide as its card, never wider.
+      for (const figure of await page.locator('figure').all()) {
+        const box = (await figure.boundingBox())!;
+        expect(box.x + box.width).toBeLessThanOrEqual(width + 0.5);
+      }
     };
 
     await page.goto(base);
@@ -351,6 +439,7 @@ test.describe('layout', () => {
     await page.getByText('See what changed').click();
     await fits();
   });
+  }
 });
 
 for (const scheme of ['light', 'dark'] as const) {
