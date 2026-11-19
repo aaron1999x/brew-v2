@@ -2,7 +2,12 @@
 
 import { useMemo } from 'react';
 import { Combobox } from '@/components/ui/Combobox/Combobox';
-import { customItemLabel, type GearPick } from '@/lib/gear/form';
+import {
+  GEAR_PICKER_EMPTY_HINT,
+  GEAR_PICKER_PLACEHOLDER,
+  customItemLabel,
+  type GearPick,
+} from '@/lib/gear/form';
 import type { CatalogEntry, GearCategory } from '@/lib/recipes/gear';
 
 type Props = {
@@ -52,7 +57,8 @@ export function GearPicker({
       isInvalid={Boolean(errorMessage)}
       items={items}
       isLoading={isLoading}
-      placeholder="Search by brand or model"
+      placeholder={GEAR_PICKER_PLACEHOLDER}
+      emptyDescription={description ?? GEAR_PICKER_EMPTY_HINT}
       allowsCustomValue
       customOptionLabel={customItemLabel}
       defaultSelectedId={value?.kind === 'catalog' ? value.id : undefined}

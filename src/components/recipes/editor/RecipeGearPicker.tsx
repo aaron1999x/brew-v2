@@ -2,7 +2,7 @@
 
 import { useMemo, useRef } from 'react';
 import { Combobox } from '@/components/ui/Combobox/Combobox';
-import { customItemLabel } from '@/lib/gear/form';
+import { GEAR_PICKER_EMPTY_HINT, GEAR_PICKER_PLACEHOLDER, customItemLabel } from '@/lib/gear/form';
 import {
   gearDisplayName,
   gearPickerOrder,
@@ -94,7 +94,8 @@ export function RecipeGearPicker({
       description={description}
       items={items}
       isLoading={isLoading}
-      placeholder="Search, or type your own"
+      placeholder={GEAR_PICKER_PLACEHOLDER}
+      emptyDescription={description ?? GEAR_PICKER_EMPTY_HINT}
       allowsCustomValue
       customOptionLabel={customItemLabel}
       defaultSelectedId={selectedId}

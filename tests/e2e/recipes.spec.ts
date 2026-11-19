@@ -294,6 +294,21 @@ test.describe('new recipe', () => {
     await expect(brewer).toHaveValue(/AeroPress/);
   });
 
+  test('gear picker: an empty box says your own name is welcome', async ({ page, users }) => {
+    await signIn(page, users, 'recipe-hint');
+    await page.goto('/recipes/new');
+    await waitForApp(page);
+    const grinder = page.getByRole('combobox', { name: 'Grinder' });
+    await expect(grinder).toHaveAttribute('placeholder', 'Search by brand or model, or type your own.');
+    const hint = page.getByText('Not listed? Type its name to add it as your own.');
+    await expect(hint.first()).toBeVisible();
+    await grinder.fill('Hand grinder');
+    await expect(grinder).toHaveValue('Hand grinder');
+    await expect(hint).toHaveCount(5);
+    await grinder.fill('');
+    await expect(hint).toHaveCount(6);
+  });
+
   test('every "New recipe" button opens the editor', async ({ page, users }) => {
     await signIn(page, users, 'recipe-links');
     for (const path of ['/recipes', '/home']) {

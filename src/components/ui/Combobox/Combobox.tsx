@@ -1,7 +1,7 @@
 'use client';
 
 import { ChevronDown, Plus } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import {
   Button,
   ComboBox as AriaComboBox,
@@ -56,11 +56,14 @@ export type ComboboxProps = Omit<
     onTextChange?: (text: string) => void;
     /** Wording of the free-text option. Defaults to "Use what I typed: <text>". */
     customOptionLabel?: (typed: string) => string;
+    /** Shown under the field instead of `description` while the input is empty. */
+    emptyDescription?: ReactNode;
   };
 
 export function Combobox({
   label,
   description,
+  emptyDescription,
   errorMessage,
   items,
   placeholder,
@@ -96,6 +99,7 @@ export function Combobox({
   }, [items, inputValue, allowsCustomValue, isLoading]);
 
   const rows = isLoading ? [{ id: LOADING_ID, label: 'Loading…' }, ...visible] : visible;
+  const hint = inputValue.trim() === '' && emptyDescription ? emptyDescription : description;
 
   return (
     <AriaComboBox
@@ -155,7 +159,7 @@ export function Combobox({
           <Icon icon={ChevronDown} size="md" />
         </Button>
       </div>
-      {description ? <FieldHint>{description}</FieldHint> : null}
+      {hint ? <FieldHint>{hint}</FieldHint> : null}
       <FieldError>{errorMessage}</FieldError>
       <Popover className={styles.popover} offset={4}>
         <ListBox

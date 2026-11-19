@@ -75,6 +75,17 @@ describe('GearPicker', () => {
     expect(onChange).not.toHaveBeenCalledWith({ kind: 'custom', text: 'v60 02' });
   });
 
+  it('tells people they can type their own, and says so under the empty box', async () => {
+    const { user } = setup();
+    const input = screen.getByRole('combobox', { name: /Item/ });
+    expect(input).toHaveAttribute('placeholder', 'Search by brand or model, or type your own.');
+    expect(screen.getByText('Not listed? Type its name to add it as your own.')).toBeInTheDocument();
+    await user.type(input, 'k');
+    expect(screen.queryByText('Not listed? Type its name to add it as your own.')).toBeNull();
+    await user.clear(input);
+    expect(screen.getByText('Not listed? Type its name to add it as your own.')).toBeInTheDocument();
+  });
+
   it('offers the typed text as a custom item, last in the list', async () => {
     const { user, onChange } = setup({ category: 'grinder' });
     await user.type(screen.getByRole('combobox', { name: /Item/ }), 'Hand grinder');

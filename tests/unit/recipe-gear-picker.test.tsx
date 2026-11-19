@@ -52,6 +52,15 @@ function setup(props: Partial<Parameters<typeof RecipeGearPicker>[0]> = {}) {
 }
 
 describe('RecipeGearPicker', () => {
+  it('says it takes your own name, like the other gear pickers', () => {
+    setup();
+    expect(screen.getByRole('combobox', { name: 'Brewer' })).toHaveAttribute(
+      'placeholder',
+      'Search by brand or model, or type your own.',
+    );
+    expect(screen.getByText('Not listed? Type its name to add it as your own.')).toBeInTheDocument();
+  });
+
   it('picks the highlighted row from the keyboard: type, ArrowDown, Enter', async () => {
     const { user, onChange } = setup();
     const input = screen.getByRole('combobox', { name: 'Brewer' });

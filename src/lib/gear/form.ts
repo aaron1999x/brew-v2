@@ -13,6 +13,10 @@ export function pickFromItem(item: GearItem | null): GearPick | null {
   return null;
 }
 
+/** What every gear picker says, so custom gear can be found (My gear, onboarding, the recipe editor). */
+export const GEAR_PICKER_PLACEHOLDER = 'Search by brand or model, or type your own.';
+export const GEAR_PICKER_EMPTY_HINT = 'Not listed? Type its name to add it as your own.';
+
 /** Wording of the free-text option at the end of the picker's list. */
 export const customItemLabel = (typed: string): string => `Use “${typed}” as a custom item`;
 
