@@ -175,6 +175,23 @@ describe('GearPicker open list and focus', () => {
     ]);
   });
 
+  it('opens the whole list when the box is tapped or clicked', async () => {
+    const { user } = setup();
+    expect(screen.queryByRole('listbox')).toBeNull();
+    await user.click(screen.getByRole('combobox', { name: /Item/ }));
+    const options = await screen.findAllByRole('option');
+    expect(options.map((o) => o.textContent)).toEqual(['Hario V60 02', 'Kalita Wave 185']);
+  });
+
+  it('does not open when the box only gets focus from Tab; ArrowDown still opens it', async () => {
+    const { user } = setup();
+    await user.tab();
+    expect(screen.getByRole('combobox', { name: /Item/ })).toHaveFocus();
+    expect(screen.queryByRole('listbox')).toBeNull();
+    await user.keyboard('{ArrowDown}');
+    expect(await screen.findAllByRole('option')).toHaveLength(2);
+  });
+
   it('selects the text when the box gets focus, so typing replaces it', async () => {
     const { user } = setup({ value: { kind: 'catalog', id: 'v60' } });
     const input = screen.getByRole('combobox', { name: /Item/ }) as HTMLInputElement;

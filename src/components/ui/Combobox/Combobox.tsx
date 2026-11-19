@@ -1,11 +1,20 @@
 'use client';
 
 import { ChevronDown, Plus } from 'lucide-react';
-import { useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  useContext,
+  useMemo,
+  useRef,
+  useState,
+  type FocusEvent,
+  type MouseEvent,
+  type ReactNode,
+} from 'react';
 import {
   Button,
   Collection,
   ComboBox as AriaComboBox,
+  ComboBoxStateContext,
   Header,
   Input,
   ListBox,
@@ -73,6 +82,33 @@ export type ComboboxProps = Omit<
     /** Shown under the field instead of `description` while the input is empty. */
     emptyDescription?: ReactNode;
   };
+
+/**
+ * The text box. A tap or click opens the list; getting focus from Tab does not (keyboard users
+ * open it with ArrowDown or the chevron, and tabbing through six pickers shouldn't pop six lists).
+ */
+function OpeningInput({
+  placeholder,
+  onFocus,
+  onMouseUp,
+}: {
+  placeholder?: string;
+  onFocus: (event: FocusEvent<HTMLInputElement>) => void;
+  onMouseUp: (event: MouseEvent<HTMLInputElement>) => void;
+}) {
+  const state = useContext(ComboBoxStateContext);
+  return (
+    <Input
+      placeholder={placeholder}
+      className={fieldStyles.input}
+      onFocus={onFocus}
+      onMouseUp={onMouseUp}
+      onClick={() => {
+        if (state && !state.isOpen) state.open(null, 'manual');
+      }}
+    />
+  );
+}
 
 function groupRows(rows: readonly ComboboxItem[]): Group[] {
   const groups: Group[] = [];
@@ -228,9 +264,8 @@ export function Combobox({
     >
       <FieldLabel required={rest.isRequired}>{label}</FieldLabel>
       <div className={cx(fieldStyles.control, styles.control)} data-primary-control="">
-        <Input
+        <OpeningInput
           placeholder={placeholder}
-          className={fieldStyles.input}
           // Typing replaces what is there: the box starts with its text selected.
           onFocus={(event) => {
             justFocused.current = true;

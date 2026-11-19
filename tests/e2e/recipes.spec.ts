@@ -341,6 +341,29 @@ test.describe('new recipe', () => {
     await expect(page.getByRole('option', { name: 'Stone dripper' })).toHaveCount(0);
   });
 
+  test('gear picker: a tap opens the full list; Tab focus does not', async ({ page, users }) => {
+    await signIn(page, users, 'recipe-tap');
+    await page.goto('/recipes/new');
+    await waitForApp(page);
+    const brewer = page.getByRole('combobox', { name: 'Brewer' });
+    const options = page.getByRole('option');
+
+    // Arriving by keyboard leaves the list closed.
+    await page.getByLabel('Name').focus();
+    await page.keyboard.press('Tab'); // method
+    await page.keyboard.press('Tab'); // brewer
+    await expect(brewer).toBeFocused();
+    await expect(options).toHaveCount(0);
+    await page.keyboard.press('ArrowDown');
+    await expect(options.first()).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(options).toHaveCount(0);
+
+    // A tap (or click) on another box opens it.
+    await page.getByRole('combobox', { name: 'Grinder' }).click();
+    await expect(options.first()).toBeVisible();
+  });
+
   test('gear pickers: My gear and Catalogue sections, my default marked, no duplicates', async ({
     page,
     users,
