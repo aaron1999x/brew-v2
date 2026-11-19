@@ -1,0 +1,9 @@
+/* The step name beside a marker. Charts draw in SVG, so the colour and size come from tokens here. */
+.markerLabel {
+  fill: var(--color-text-secondary);
+  font-size: var(--type-caption-size);
+  paint-order: stroke;
+  stroke: var(--color-bg-surface);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}

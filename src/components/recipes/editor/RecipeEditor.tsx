@@ -20,11 +20,15 @@ import { DurationField } from '@/components/ui/UnitFields/DurationField';
 import { TemperatureField } from '@/components/ui/UnitFields/TemperatureField';
 import { VisuallyHidden } from '@/components/ui/VisuallyHidden/VisuallyHidden';
 import { WeightField } from '@/components/ui/UnitFields/WeightField';
+import { useSession } from '@/lib/auth/useSession';
 import { useGear, useGearCatalog } from '@/lib/gear/hooks';
 import { useProfileMe } from '@/lib/profile/useProfileMe';
 import { formatRatio, recipeNumbers } from '@/lib/recipes/calc';
+import { diffVersions } from '@/lib/recipes/diff';
 import {
+  DEVICE_DRAFT_KEY,
   clearDeviceDraft,
+  draftFromVersion,
   draftSignature,
   emptyDraft,
   fieldId,
@@ -34,13 +38,14 @@ import {
   type DraftError,
   type RecipeDraft,
 } from '@/lib/recipes/draft';
+import type { RecipeRow, VersionRow } from '@/lib/recipes/fetch';
 import {
   GEAR_CATEGORY_LABELS,
   RECIPE_GEAR_CATEGORIES,
   type GearChoice,
   type RecipeGearCategory,
 } from '@/lib/recipes/gear';
-import { saveErrorMessage, useCreateRecipe } from '@/lib/recipes/hooks';
+import { saveErrorMessage, useCreateRecipe, useSaveRecipe } from '@/lib/recipes/hooks';
 import {
   BREW_METHODS,
   BYPASS_TIMINGS,
@@ -55,9 +60,17 @@ import {
   type BypassTiming,
   type RoastLevel,
 } from '@/lib/recipes/methods';
-import { recipePath } from '@/lib/recipes/paths';
+import { recipePath, versionOrLatestPath } from '@/lib/recipes/paths';
+import {
+  changeSummary,
+  decideSave,
+  formDiffInput,
+  storedDiffInput,
+  type EditorMode,
+} from '@/lib/recipes/save';
 import { LIMITS } from '@/lib/recipes/schema';
 import { useUnits } from '@/lib/settings/useSettings';
+import { DiffSections } from '../Changes';
 import { RecipeGearPicker } from './RecipeGearPicker';
 import { StepsEditor } from './StepsEditor';
 import { useUnsavedGuard } from './useUnsavedGuard';
@@ -131,13 +144,25 @@ function PlainNumber({ id, label, description, value, decimals = 0, onChange, er
   );
 }
 
+/** The version an edit or a new version starts from (the page fetches it on the server). */
+export type EditorBase = {
+  handle: string;
+  recipe: RecipeRow;
+  version: VersionRow;
+  /** The recipe's newest version number: a new version is the next one after this. */
+  latestNo: number;
+};
+
+type EditorProps = Readonly<{ mode?: EditorMode; base?: EditorBase }>;
+
 /**
- * The recipe editor (create). Sections follow the flow in docs/phase-2-ia-flows.md F4: basics, gear,
- * coffee, numbers, steps, targets and notes. Validates on submit and never disables Save; the error
- * summary takes focus and each entry jumps to its field. A copy is kept on this device, and leaving
- * with unsaved changes asks first.
+ * The recipe editor: a new recipe, an edit of one version, or the next version started from a
+ * version. Sections follow the flow in docs/phase-2-ia-flows.md F4: basics, gear, coffee, numbers,
+ * steps, targets and notes. Validates on submit and never disables Save; the error summary takes
+ * focus and each entry jumps to its field. A copy is kept on this device, and leaving with unsaved
+ * changes asks first.
  */
-export function RecipeEditor() {
+export function RecipeEditor({ mode = 'create', base }: EditorProps) {
   const gear = useGear();
   const waiting = gear.isPending && gear.fetchStatus !== 'paused';
   return (
@@ -147,20 +172,46 @@ export function RecipeEditor() {
       isError={false}
       onRetry={() => void gear.refetch()}
     >
-      <EditorForm myGear={gear.data ?? []} />
+      <EditorForm myGear={gear.data ?? []} mode={mode} base={base} />
     </QueryBoundary>
   );
 }
 
-function EditorForm({ myGear }: { myGear: NonNullable<ReturnType<typeof useGear>['data']> }) {
+const MODE_TITLE: Record<EditorMode, (base?: EditorBase) => string> = {
+  create: () => 'New recipe',
+  edit: (base) => `Edit v${base?.version.version_no ?? ''}`,
+  'new-version': () => 'New version',
+};
+
+function EditorForm({
+  myGear,
+  mode,
+  base,
+}: Readonly<{
+  myGear: NonNullable<ReturnType<typeof useGear>['data']>;
+  mode: EditorMode;
+  base?: EditorBase;
+}>) {
   const queryClient = useQueryClient();
   const online = useOnlineStatus();
   const { weight, duration } = useUnits();
   const catalog = useGearCatalog();
   const profile = useProfileMe();
+  const { user } = useSession();
   const create = useCreateRecipe();
+  const saveRecipe = useSaveRecipe();
+  const editing = mode !== 'create' && base !== undefined;
+  const title = MODE_TITLE[mode](base);
+  // One copy per person, recipe, version and kind of edit, so two recipes never share a draft.
+  const draftKey = editing
+    ? `recipe-draft:${user?.id ?? 'me'}:${base.recipe.id}:${base.version.id}:${mode}`
+    : DEVICE_DRAFT_KEY;
 
-  const [initialDraft] = useState<RecipeDraft>(() => emptyDraft(myGear));
+  const [initialDraft] = useState<RecipeDraft>(() =>
+    editing
+      ? draftFromVersion(base.recipe, base.version, { keepChangeNote: mode === 'edit' })
+      : emptyDraft(myGear),
+  );
   const [initialSignature] = useState(() => draftSignature(initialDraft));
   const [draft, setDraft] = useState<RecipeDraft>(initialDraft);
   const dirty = draftSignature(draft) !== initialSignature;
@@ -174,7 +225,7 @@ function EditorForm({ myGear }: { myGear: NonNullable<ReturnType<typeof useGear>
     // Storage only exists in the browser, so this runs after the first render (and not
     // synchronously, so the page never paints a half-restored form).
     const timer = window.setTimeout(() => {
-      const saved = loadDeviceDraft();
+      const saved = loadDeviceDraft(draftKey);
       if (saved && draftSignature(saved) !== initialSignature) {
         setDraft(saved);
         setRestored(true);
@@ -183,17 +234,21 @@ function EditorForm({ myGear }: { myGear: NonNullable<ReturnType<typeof useGear>
       setReady(true);
     }, 0);
     return () => window.clearTimeout(timer);
-  }, [initialSignature]);
+  }, [initialSignature, draftKey]);
   useEffect(() => {
     if (!ready) return;
     const timer = window.setTimeout(() => {
-      if (dirty) saveDeviceDraft(draft);
-      else clearDeviceDraft();
+      if (dirty) saveDeviceDraft(draft, draftKey);
+      else clearDeviceDraft(draftKey);
     }, 400);
     return () => window.clearTimeout(timer);
-  }, [draft, dirty, ready]);
+  }, [draft, dirty, ready, draftKey]);
 
-  const guard = useUnsavedGuard(dirty, '/recipes');
+  // Leaving without saving goes back to the recipe (or the list, for a new one).
+  const guard = useUnsavedGuard(
+    dirty,
+    editing ? recipePath(base.handle, base.recipe.slug) : '/recipes',
+  );
 
   // ---- errors ----
   const [submitted, setSubmitted] = useState(false);
@@ -234,8 +289,39 @@ function EditorForm({ myGear }: { myGear: NonNullable<ReturnType<typeof useGear>
     .join(', ');
   const announced = useDebounced(summaryLine, 800);
 
+  // ---- what saving would do (edit and new version) ----
+  const plan = useMemo(() => {
+    if (!editing) return null;
+    const parsed = parseDraft(draft);
+    if (!parsed.ok) return null;
+    const diff = diffVersions(
+      storedDiffInput(base.recipe, base.version),
+      formDiffInput(parsed.values),
+    );
+    const noteChanged =
+      mode === 'edit' &&
+      (parsed.values.version.change_note ?? '') !== (base.version.change_note ?? '');
+    const action = decideSave({
+      mode: mode === 'edit' ? 'edit' : 'new-version',
+      locked: base.version.locked_at !== null,
+      diff,
+      noteChanged,
+    });
+    return { diff, action, values: parsed.values };
+  }, [editing, draft, base, mode]);
+  const nextNo = (base?.latestNo ?? 0) + 1;
+  const saveLabel =
+    plan?.action === 'new-version'
+      ? `Save as v${nextNo}`
+      : plan?.action === 'in-place'
+        ? 'Save changes'
+        : mode === 'create'
+          ? 'Save recipe'
+          : 'Save';
+
   // ---- save ----
   const [leaving, setLeaving] = useState(false);
+  const [nothingChanged, setNothingChanged] = useState(false);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -251,14 +337,39 @@ function EditorForm({ myGear }: { myGear: NonNullable<ReturnType<typeof useGear>
     }
     setSummary([]);
     try {
-      const recipe = await create.mutateAsync(parsed.values);
-      clearDeviceDraft();
+      if (!editing) {
+        const recipe = await create.mutateAsync(parsed.values);
+        clearDeviceDraft(draftKey);
+        setLeaving(true);
+        toast.success('Saved as v1');
+        const handle =
+          profile.data?.handle ??
+          queryClient.getQueryData<{ handle: string }>(['profile', 'me'])?.handle;
+        guard.leaveTo(handle ? recipePath(handle, recipe.slug) : '/recipes');
+        return;
+      }
+
+      if (!plan || plan.action === 'nothing') {
+        // Not an error and not a save: nothing differs from the version it started from.
+        setNothingChanged(true);
+        return;
+      }
+      setNothingChanged(false);
+      const asNew = plan.action === 'new-version';
+      const saved = await saveRecipe.mutateAsync({
+        recipeId: base.recipe.id,
+        baseVersionId: base.version.id,
+        values: parsed.values,
+        asNewVersion: asNew,
+      });
+      clearDeviceDraft(draftKey);
       setLeaving(true);
-      toast.success('Saved as v1');
-      const handle =
-        profile.data?.handle ??
-        queryClient.getQueryData<{ handle: string }>(['profile', 'me'])?.handle;
-      guard.leaveTo(handle ? recipePath(handle, recipe.slug) : '/recipes');
+      toast.success(asNew ? `Saved as v${saved.version_no}` : `v${saved.version_no} updated`);
+      // A new version is the latest; an edit in place goes back to the version that was edited.
+      const latest = asNew ? saved.version_no : base.latestNo;
+      guard.leaveTo(
+        versionOrLatestPath(base.handle, base.recipe.slug, saved.version_no, latest),
+      );
     } catch (failure) {
       // The form stays as it is, so nothing typed is lost.
       toast.error(saveErrorMessage(failure));
@@ -270,7 +381,7 @@ function EditorForm({ myGear }: { myGear: NonNullable<ReturnType<typeof useGear>
     { id: NOT_SET, label: 'Not set' },
     ...ROAST_LEVELS.map((r) => ({ id: r, label: ROAST_LEVEL_LABELS[r] })),
   ];
-  const pending = create.isPending || leaving;
+  const pending = create.isPending || saveRecipe.isPending || leaving;
   const choiceFor = (c: RecipeGearCategory): GearChoice | null => draft.gear[c] ?? null;
 
   return (
@@ -280,14 +391,14 @@ function EditorForm({ myGear }: { myGear: NonNullable<ReturnType<typeof useGear>
         id="recipe-form"
         onSubmit={onSubmit}
         noValidate
-        aria-label="New recipe"
+        aria-label={title}
         className={styles.form}
       >
         <header className={styles.bar}>
           <Button variant="ghost" onPress={guard.requestCancel} isDisabled={pending}>
             Cancel
           </Button>
-          <h1 className={styles.title}>New recipe</h1>
+          <h1 className={styles.title}>{title}</h1>
           <Button type="submit" isPending={pending} pendingLabel="Saving…">
             Save
           </Button>
@@ -295,21 +406,28 @@ function EditorForm({ myGear }: { myGear: NonNullable<ReturnType<typeof useGear>
 
         <div className={styles.body}>
           {!online ? <Notice>{OFFLINE_MESSAGE}. What you have typed is kept.</Notice> : null}
+          {mode === 'edit' && base?.version.locked_at ? (
+            <Notice>
+              This version has brews, so your changes will be saved as a new version.
+            </Notice>
+          ) : null}
           {restored ? (
             <div className={styles.restored}>
-              <Notice>Restored your unsaved recipe.</Notice>
+              <Notice>
+                {editing ? 'Restored your unsaved changes.' : 'Restored your unsaved recipe.'}
+              </Notice>
               <Button
                 variant="secondary"
                 onPress={() => {
-                  clearDeviceDraft();
-                  setDraft(emptyDraft(myGear));
+                  clearDeviceDraft(draftKey);
+                  setDraft(initialDraft);
                   setRestored(false);
                   setSubmitted(false);
                   setSummary([]);
                   setFormKey((k) => k + 1);
                 }}
               >
-                Discard it and start again
+                {editing ? 'Discard them and start again' : 'Discard it and start again'}
               </Button>
             </div>
           ) : null}
@@ -668,9 +786,50 @@ function EditorForm({ myGear }: { myGear: NonNullable<ReturnType<typeof useGear>
             </div>
           </Section>
 
+          {editing ? (
+            <Section title="Review and save">
+              <div className={styles.review} data-testid="review">
+                <p className={styles.reviewSummary} data-testid="change-summary" role="status">
+                  {plan ? changeSummary(plan.diff.count) : 'Fill in the required fields to see what changed'}
+                </p>
+                {plan?.action === 'new-version' ? (
+                  <p className={styles.note}>
+                    {mode === 'new-version'
+                      ? `Saves as v${nextNo}, and v${base.version.version_no} stays as it is.`
+                      : `Saves as v${nextNo}, because v${base.version.version_no} has brews.`}
+                  </p>
+                ) : null}
+                {plan?.action === 'in-place' ? (
+                  <p className={styles.note}>Saves your changes to v{base.version.version_no}.</p>
+                ) : null}
+                {plan && plan.diff.count > 0 ? (
+                  <details className={styles.changes}>
+                    <summary className={styles.changesSummary}>See what changed</summary>
+                    <DiffSections diff={plan.diff} />
+                  </details>
+                ) : null}
+              </div>
+              <TextField
+                id={fieldId('change_note')}
+                label="Change note (optional)"
+                placeholder="e.g. finer grind, 92 °C"
+                maxLength={LIMITS.changeNote}
+                value={draft.change_note}
+                onChange={setText('change_note')}
+                isInvalid={Boolean(error('change_note'))}
+                errorMessage={error('change_note')}
+              />
+              {nothingChanged && plan?.action === 'nothing' ? (
+                <p className={styles.nothing} role="status">
+                  Nothing has changed, so there is nothing to save. Change something, or cancel.
+                </p>
+              ) : null}
+            </Section>
+          ) : null}
+
           <div className={styles.footer}>
             <Button type="submit" size="lg" fullWidth isPending={pending} pendingLabel="Saving…">
-              Save recipe
+              {saveLabel}
             </Button>
           </div>
         </div>
@@ -681,13 +840,17 @@ function EditorForm({ myGear }: { myGear: NonNullable<ReturnType<typeof useGear>
         onOpenChange={(open) => {
           if (!open) guard.closePrompt();
         }}
-        title="Discard this recipe?"
-        message="You haven't saved it yet, so what you typed will be lost."
+        title={editing ? 'Discard your changes?' : 'Discard this recipe?'}
+        message={
+          editing
+            ? "You haven't saved them yet, so they will be lost."
+            : "You haven't saved it yet, so what you typed will be lost."
+        }
         confirmLabel="Discard"
         cancelLabel="Keep editing"
         tone="destructive"
         onConfirm={() => {
-          clearDeviceDraft();
+          clearDeviceDraft(draftKey);
           guard.confirmLeave();
         }}
       />

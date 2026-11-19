@@ -47,6 +47,17 @@
   outline: none;
 }
 
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.changeNote {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
 .badges {
   display: flex;
   flex-wrap: wrap;

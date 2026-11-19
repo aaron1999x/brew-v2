@@ -1,7 +1,14 @@
-import { buildGear, defaultGearSelection, type GearItem, type GearSelection } from './gear';
+import type { RecipeRow, VersionRow } from './fetch';
+import {
+  buildGear,
+  defaultGearSelection,
+  selectionFromSnapshot,
+  type GearItem,
+  type GearSelection,
+} from './gear';
 import type { BrewMethod, BypassTiming, RoastLevel } from './methods';
 import { recipeFormSchema, type RecipeFormInput, type RecipeFormValues } from './schema';
-import { clearPourTemperatures, type StepData } from './steps';
+import { clearPourTemperatures, hasPourTemperatures, type StepData } from './steps';
 
 /**
  * What the recipe editor holds while it is being filled in. Text fields are plain strings (empty
@@ -48,6 +55,8 @@ export type RecipeDraft = {
   ey_min: number | null;
   ey_max: number | null;
   notes: string;
+  /** What changed, in a few words (max 200). Saved with the version. */
+  change_note: string;
 };
 
 /** A new recipe: nothing filled in, my default gear in each category. */
@@ -85,6 +94,56 @@ export function emptyDraft(gearItems: readonly GearItem[] = []): RecipeDraft {
     ey_min: null,
     ey_max: null,
     notes: '',
+    change_note: '',
+  };
+}
+
+const text = (value: string | null | undefined): string => value ?? '';
+
+/**
+ * The editor's starting point for a saved version (edit it, or start the next one from it). Gear
+ * comes from the version's own snapshot, never from today's defaults, and steps keep their ids so a
+ * comparison can match them. A new version starts with an empty change note.
+ */
+export function draftFromVersion(
+  recipe: Pick<RecipeRow, 'name' | 'method' | 'method_custom'>,
+  v: VersionRow,
+  options: { keepChangeNote: boolean },
+): RecipeDraft {
+  return {
+    name: recipe.name,
+    method: recipe.method,
+    method_custom: text(recipe.method_custom),
+    gear: selectionFromSnapshot(v.gear),
+    coffee_name: text(v.coffee_name),
+    roaster: text(v.roaster),
+    origin: text(v.origin),
+    process: text(v.process),
+    varietal: text(v.varietal),
+    altitude_m: v.altitude_m,
+    roast_level: v.roast_level,
+    roast_date: v.roast_date,
+    colour_reading: v.colour_reading,
+    colour_scale: text(v.colour_scale),
+    dose_g: v.dose_g,
+    brew_water_g: v.brew_water_g,
+    bypass_g: v.bypass_g > 0 ? v.bypass_g : null,
+    bypass_timing: v.bypass_timing,
+    retention_ratio: v.retention_ratio,
+    temp_c: v.temp_c,
+    grind_setting: text(v.grind_setting),
+    grind_microns: v.grind_microns,
+    water_ppm: v.water_ppm,
+    steps: v.steps.map((step) => ({ ...step })),
+    vary_temp: hasPourTemperatures(v.steps),
+    drawdown_min_s: v.drawdown_min_s,
+    drawdown_max_s: v.drawdown_max_s,
+    tds_min: v.tds_min,
+    tds_max: v.tds_max,
+    ey_min: v.ey_min,
+    ey_max: v.ey_max,
+    notes: text(v.notes),
+    change_note: options.keepChangeNote ? text(v.change_note) : '',
   };
 }
 
@@ -128,6 +187,7 @@ export function draftToFormInput(draft: RecipeDraft): RecipeFormInput {
       steps_schema: 1,
       steps: steps as never,
       notes: draft.notes,
+      change_note: draft.change_note,
     },
   };
 }

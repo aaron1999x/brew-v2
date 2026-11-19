@@ -8,6 +8,42 @@ export function recipePath(handle: string, slug: string): string {
   return `/@${handle}/${slug}`;
 }
 
+/** `/@handle/slug/v/3`: a specific version. */
+export function versionPath(handle: string, slug: string, versionNo: number): string {
+  return `${recipePath(handle, slug)}/v/${versionNo}`;
+}
+
+/** The latest version's URL, or `/v/N` for an older one. */
+export function versionOrLatestPath(
+  handle: string,
+  slug: string,
+  versionNo: number,
+  latestNo: number,
+): string {
+  return versionNo === latestNo ? recipePath(handle, slug) : versionPath(handle, slug, versionNo);
+}
+
+/** `/@handle/slug/edit?v=3` */
+export function editPath(handle: string, slug: string, versionNo: number): string {
+  return `${recipePath(handle, slug)}/edit?v=${versionNo}`;
+}
+
+/** `/@handle/slug/new-version?from=3` */
+export function newVersionPath(handle: string, slug: string, fromNo: number): string {
+  return `${recipePath(handle, slug)}/new-version?from=${fromNo}`;
+}
+
+/** `/@handle/slug/versions` */
+export function versionsPath(handle: string, slug: string): string {
+  return `${recipePath(handle, slug)}/versions`;
+}
+
+/** `/@handle/slug/compare?a=1&b=2` (or without the versions, for the page's defaults). */
+export function comparePath(handle: string, slug: string, a?: number, b?: number): string {
+  const base = `${recipePath(handle, slug)}/compare`;
+  return a != null && b != null ? `${base}?a=${a}&b=${b}` : base;
+}
+
 export type AtPath = { handle: string; rest: string };
 
 /** `/@Handle/a/b` → `{ handle: 'Handle', rest: '/a/b' }`; null when the path isn't an `@` path. */

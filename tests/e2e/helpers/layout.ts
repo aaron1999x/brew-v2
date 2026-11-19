@@ -49,12 +49,21 @@ export async function columnOverflows(page: Page): Promise<string[]> {
         }
       });
     }
+    // Text kept for screen readers only is clipped to nothing; it takes no room on screen.
+    const insideVisuallyHidden = (el: Element) => {
+      for (let node: Element | null = el; node; node = node.parentElement) {
+        const s = getComputedStyle(node);
+        if (s.position === 'absolute' && (s.clip !== 'auto' || s.clipPath !== 'none')) return true;
+      }
+      return false;
+    };
+
     // Whatever the grids missed: anything visible that runs past the right edge of the screen.
     for (const el of document.querySelectorAll<HTMLElement>('main *')) {
       const box = el.getBoundingClientRect();
       const style = getComputedStyle(el);
       if (box.width === 0 || style.visibility === 'hidden' || style.position === 'absolute') continue;
-      if (el.closest('[aria-hidden="true"], [hidden]')) continue;
+      if (el.closest('[aria-hidden="true"], [hidden]') || insideVisuallyHidden(el)) continue;
       if (box.right > screenWidth + 0.5) {
         problems.push(`${describe(el)} (${el.className}): runs ${Math.round(box.right - screenWidth)} px past the screen`);
       }

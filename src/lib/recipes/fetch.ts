@@ -16,8 +16,26 @@ export type RecipeWithVersion = {
   recipe: RecipeRow;
   /** The latest version. */
   version: VersionRow;
+  /** Every version, newest first (the latest is the first). */
+  versions: VersionRow[];
   owner: { id: string; handle: string };
 };
+
+/** One version of a recipe by its number, or null. */
+export function versionByNo(
+  versions: readonly VersionRow[],
+  versionNo: number | null | undefined,
+): VersionRow | null {
+  if (versionNo == null) return versions[0] ?? null;
+  return versions.find((v) => v.version_no === versionNo) ?? null;
+}
+
+/** "3" → 3; anything that isn't a whole version number (0, 2.5, "x", "") → null. */
+export function parseVersionNo(value: string | string[] | null | undefined): number | null {
+  const text = Array.isArray(value) ? value[0] : value;
+  if (!text || !/^[1-9]\d{0,5}$/.test(text)) return null;
+  return Number(text);
+}
 
 export function toVersionRow(row: Tables['recipe_versions']['Row']): VersionRow {
   return {
@@ -56,19 +74,24 @@ export async function fetchRecipeBySlug(
     .is('deleted_at', null)
     .maybeSingle();
   if (recipe.error) throw recipe.error;
-  if (!recipe.data || !recipe.data.latest_version_id) return null;
+  const recipeRow = recipe.data;
+  if (!recipeRow?.latest_version_id) return null;
 
-  const version = await supabase
+  // Every version (a recipe has a handful), newest first. The latest is the one the recipe points to.
+  const rows = await supabase
     .from('recipe_versions')
     .select('*')
-    .eq('id', recipe.data.latest_version_id)
-    .maybeSingle();
-  if (version.error) throw version.error;
-  if (!version.data) return null;
+    .eq('recipe_id', recipeRow.id)
+    .order('version_no', { ascending: false });
+  if (rows.error) throw rows.error;
+  const versions = rows.data.map(toVersionRow);
+  const latest = versions.find((v) => v.id === recipeRow.latest_version_id) ?? versions[0];
+  if (!latest) return null;
 
   return {
-    recipe: recipe.data,
-    version: toVersionRow(version.data),
+    recipe: recipeRow,
+    version: latest,
+    versions,
     owner: { id: profile.data.id, handle: profile.data.handle },
   };
 }
