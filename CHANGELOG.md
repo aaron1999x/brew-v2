@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.1](https://github.com/aaron1999x/brew-v2/compare/v0.6.0...v0.6.1) (2026-11-20)
+
+
+### Fixes
+
+* pour curve sits under the steps in the editor ([#20](https://github.com/aaron1999x/brew-v2/issues/20)) ([6e9b988](https://github.com/aaron1999x/brew-v2/commit/6e9b988e15ef9a6327bf7e5dde897756c7224649))
+
 ## [0.6.0](https://github.com/aaron1999x/brew-v2/compare/v0.5.0...v0.6.0) (2026-11-20)
 
 
