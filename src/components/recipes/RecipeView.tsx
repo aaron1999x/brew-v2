@@ -18,10 +18,19 @@ import { formatRate } from '@/lib/units';
 import { LazyPourCurve } from './LazyPourCurve';
 import styles from './RecipePage.module.css';
 
-function Row({ label, children }: { label: string; children: ReactNode }) {
+function Row({
+  label,
+  children,
+  extra = false,
+}: {
+  label: string;
+  children: ReactNode;
+  /** A key number outside the six core ones; on a wide screen it wraps to a second row. */
+  extra?: boolean;
+}) {
   if (children == null || children === '') return null;
   return (
-    <div className={styles.row}>
+    <div className={extra ? `${styles.row} ${styles.extra}` : styles.row}>
       <dt>{label}</dt>
       <dd>{children}</dd>
     </div>
@@ -100,7 +109,7 @@ export function RecipeView({
       : null;
 
   return (
-    <>
+    <div className={styles.view}>
       <header className={styles.header}>
         <Link href={backHref} aria-label="Back" className={styles.back} data-primary-control="">
           <Icon icon={ChevronLeft} size="md" />
@@ -129,58 +138,68 @@ export function RecipeView({
 
       {switcher}
       {actions}
-      {notice}
-      {version.locked_at ? (
-        <Notice>This version has brews. Changes save as a new version.</Notice>
-      ) : null}
-      {version.change_note ? (
-        <p className={styles.changeNote}>
-          <span className={styles.muted}>Change note: </span>
-          {version.change_note}
-        </p>
-      ) : null}
+      <div className={styles.columns}>
+        <div className={styles.versionInfo}>
+          {notice}
+          {version.locked_at ? (
+            <Notice>This version has brews. Changes save as a new version.</Notice>
+          ) : null}
+          {version.change_note ? (
+            <p className={styles.changeNote}>
+              <span className={styles.muted}>Change note: </span>
+              {version.change_note}
+            </p>
+          ) : null}
+        </div>
 
-      <dl className={styles.key} aria-label="Key numbers">
-        <Row label="Dose">{weight(version.dose_g)}</Row>
-        <Row label="Brew water">{weight(version.brew_water_g)}</Row>
-        <Row label="Ratio">{formatRatio(numbers.ratio)}</Row>
-        <Row label="Temperature">{version.temp_c != null ? temp(version.temp_c) : null}</Row>
-        <Row label="Grind">{grind ? (grinder ? `${grind} (${grinder})` : grind) : null}</Row>
-        <Row label="Bypass">
-          {version.bypass_g > 0
-            ? `${weight(version.bypass_g)}, ${version.bypass_timing === 'before' ? 'before' : 'after'} brewing`
-            : null}
-        </Row>
-        <Row label="Overall ratio">{overall}</Row>
-        <Row label="Expected volume">
-          {numbers.expectedFinalVolumeG != null ? weight(numbers.expectedFinalVolumeG) : null}
-        </Row>
-        <Row label="Total time">
-          {numbers.totalTimeS != null ? duration(numbers.totalTimeS) : null}
-        </Row>
-      </dl>
+        <div className={styles.mainColumn}>
+          <dl className={styles.key} aria-label="Key numbers">
+            <Row label="Dose">{weight(version.dose_g)}</Row>
+            <Row label="Brew water">{weight(version.brew_water_g)}</Row>
+            <Row label="Ratio">{formatRatio(numbers.ratio)}</Row>
+            <Row label="Temperature">{version.temp_c != null ? temp(version.temp_c) : null}</Row>
+            <Row label="Grind">{grind ? (grinder ? `${grind} (${grinder})` : grind) : null}</Row>
+            <Row label="Bypass" extra>
+              {version.bypass_g > 0
+                ? `${weight(version.bypass_g)}, ${version.bypass_timing === 'before' ? 'before' : 'after'} brewing`
+                : null}
+            </Row>
+            <Row label="Overall ratio" extra>
+              {overall}
+            </Row>
+            <Row label="Expected volume" extra>
+              {numbers.expectedFinalVolumeG != null ? weight(numbers.expectedFinalVolumeG) : null}
+            </Row>
+            <Row label="Total time">
+              {numbers.totalTimeS != null ? duration(numbers.totalTimeS) : null}
+            </Row>
+          </dl>
 
-      {version.steps.length > 0 ? (
-        <LazyPourCurve
-          series={[{ id: version.id, label: `v${version.version_no}`, steps: version.steps }]}
-          drawdown={drawdown}
-        />
-      ) : null}
+          {version.steps.length > 0 ? (
+            <LazyPourCurve
+              series={[{ id: version.id, label: `v${version.version_no}`, steps: version.steps }]}
+              drawdown={drawdown}
+            />
+          ) : null}
 
-      <Steps steps={version.steps} />
+          <Steps steps={version.steps} />
+        </div>
 
-      <CoffeeSection version={version} />
+        <div className={styles.sideColumn}>
+          <CoffeeSection version={version} />
 
-      <GearSection version={version} />
+          <GearSection version={version} />
 
-      <TargetsSection version={version} />
+          <TargetsSection version={version} />
 
-      {version.notes ? (
-        <Section title="Notes">
-          <p className={styles.notes}>{version.notes}</p>
-        </Section>
-      ) : null}
-    </>
+          {version.notes ? (
+            <Section title="Notes">
+              <p className={styles.notes}>{version.notes}</p>
+            </Section>
+          ) : null}
+        </div>
+      </div>
+    </div>
   );
 }
 
