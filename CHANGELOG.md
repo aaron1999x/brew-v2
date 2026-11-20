@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.5.0](https://github.com/aaron1999x/brew-v2/compare/v0.4.0...v0.5.0) (2026-11-20)
+
+
+### New features
+
+* gear, recipes and versions ([#14](https://github.com/aaron1999x/brew-v2/issues/14)) ([3dc4b6c](https://github.com/aaron1999x/brew-v2/commit/3dc4b6c9857ec28cab090c6cf41df77772061160))
+
 ## [0.4.0](https://github.com/aaron1999x/brew-v2/compare/v0.3.0...v0.4.0) (2026-11-14)
 
 
