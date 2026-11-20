@@ -9,7 +9,11 @@ export const ERROR_MESSAGES = {
   version_locked: 'This version has brews, so your changes will be saved as a new version.',
   recipe_not_available: "This recipe isn't available any more.",
   recipe_not_found: "This recipe isn't available any more.",
-  version_not_found: "This recipe isn't available any more.",
+  version_not_found: "This recipe version isn't available any more.",
+  brew_not_found: "This brew isn't available any more.",
+  quick_change_invalid: "This change can't be saved. Check grind, temperature, dose and water.",
+  brew_conflict: "This brew couldn't be saved. Try again.",
+  overall_required: 'Give the brew an overall score before saving.',
   handle_reserved: "That handle isn't available. Try another.",
   handle_recently_used: "That handle isn't available. Try another.",
   moderator_only: "You don't have permission to do that.",
@@ -27,10 +31,13 @@ export const ERROR_MESSAGES = {
   steps_invalid: "Some steps aren't valid. Check the highlighted steps.",
 } as const;
 
+const BREW_SCORE_MESSAGE = 'Scores go from 0 to 10 in steps of 0.5.';
+
 /**
  * Named check / unique constraints (Postgres 23514 / 23505) → plain messages. Matched by the
- * constraint name in the error message. Constraints come from migration …_m3_gear_recipes.sql
- * (and the Phase 1 gear default index). The forms validate first, so these are a safety net.
+ * constraint name in the error message. Constraints come from migrations …_m3_gear_recipes.sql and
+ * …_m4_brews.sql (and the Phase 1 gear default index and brews columns). The forms validate first,
+ * so these are a safety net.
  */
 export const CONSTRAINT_MESSAGES: Record<string, string> = {
   recipe_versions_steps_shape: ERROR_MESSAGES.steps_invalid,
@@ -41,6 +48,22 @@ export const CONSTRAINT_MESSAGES: Record<string, string> = {
   recipe_versions_ey_range: "The lowest extraction can't be higher than the highest.",
   recipes_method_custom_required: 'Name the method when you choose Other.',
   gear_one_default_per_category: 'You already have a default for this category. Try again.',
+  brews_flavours_valid: 'Use up to 12 flavour tags of 30 characters or fewer, each added once.',
+  brews_brewed_at_not_future: "The brew time can't be in the future.",
+  brews_tds_pct_check: 'TDS is between 0 and 20%.',
+  brews_beverage_g_check: 'That beverage weight is out of range.',
+  brews_drawdown_s_check: 'Drawdown can be up to 2 hours.',
+  brews_tasted_after_min_check: 'Minutes after brewing: 0 to 240.',
+  brews_notes_check: 'Notes can be up to 5,000 characters.',
+  brews_next_change_check: 'This note can be up to 1,000 characters.',
+  brews_sweetness_check: BREW_SCORE_MESSAGE,
+  brews_acidity_check: BREW_SCORE_MESSAGE,
+  brews_brightness_check: BREW_SCORE_MESSAGE,
+  brews_body_check: BREW_SCORE_MESSAGE,
+  brews_clarity_check: BREW_SCORE_MESSAGE,
+  brews_balance_check: BREW_SCORE_MESSAGE,
+  brews_aftertaste_check: BREW_SCORE_MESSAGE,
+  brews_overall_check: BREW_SCORE_MESSAGE,
 };
 
 /** The constraint named in a check or unique violation, if it's one we translate. */
