@@ -312,6 +312,7 @@ function EditorForm({
   const announced = useDebounced(summaryLine, 800);
 
   // The four numbers show inside the form on a phone and tablet, and in a side panel from 1024 px.
+  // From 1024 px the pour curve also shows under the steps.
   const wide = useMediaQuery('(min-width: 1024px)');
   const panelId = useId();
   const curveSteps = useDeferredValue(draft.steps);
@@ -766,6 +767,13 @@ function EditorForm({
                   context={{ dose_g: draft.dose_g, brew_water_g: draft.brew_water_g }}
                   errors={live}
                 />
+                {wide ? (
+                  hasCurve ? (
+                    <LazyPourCurve series={curveSeries} drawdown={curveDrawdown} />
+                  ) : (
+                    <p className={styles.note}>Add a pour with a target to see the curve.</p>
+                  )
+                ) : null}
               </Section>
 
               <Section title="Targets" layout="targets">
@@ -893,13 +901,6 @@ function EditorForm({
                 Live numbers
               </h2>
               {liveList}
-              {wide ? (
-                hasCurve ? (
-                  <LazyPourCurve series={curveSeries} drawdown={curveDrawdown} />
-                ) : (
-                  <p className={styles.note}>Add a pour with a target to see the curve.</p>
-                )
-              ) : null}
             </section>
           </div>
         </div>

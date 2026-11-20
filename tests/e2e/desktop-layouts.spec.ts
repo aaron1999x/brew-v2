@@ -199,10 +199,13 @@ test.describe('recipe editor', () => {
       expect(await sameRow(coffee, origin)).toBe(true);
       expect(await sameRow(time, target)).toBe(true);
       expect(await sameRow(time, rate)).toBe(true);
-      // The numbers moved into the panel, which has the curve.
+      // The numbers moved into the panel; the curve is under the steps, not in the panel.
       await expect(calculated).toBeHidden();
       await expect(panel).toBeVisible();
-      await expect(panel.getByRole('img', { name: /^Pour curve\./ })).toBeVisible();
+      await expect(panel.getByRole('img', { name: /^Pour curve\./ })).toHaveCount(0);
+      await expect(
+        page.getByRole('region', { name: 'Steps' }).getByRole('img', { name: /^Pour curve\./ }),
+      ).toBeVisible();
       await expect(panel.getByText('Total time')).toBeVisible();
       await expectColumnsFit(page);
     }
@@ -335,9 +338,7 @@ for (const scheme of ['light', 'dark'] as const) {
         await expect(page.getByLabel('Grind setting')).toBeVisible();
         if (width >= 1024) {
           await expect(
-            page
-              .getByRole('region', { name: 'Live numbers' })
-              .getByRole('img', { name: /^Pour curve\./ }),
+            page.getByRole('region', { name: 'Steps' }).getByRole('img', { name: /^Pour curve\./ }),
           ).toBeVisible();
         }
         await expectNoAxeViolations(page);

@@ -8,6 +8,7 @@ import { expect, signIn, test, waitForApp } from './helpers/test-users';
 test.use({ serviceWorkers: 'block' });
 
 const WIDTHS = [1024, 1440] as const;
+const NARROW = [320, 390, 768] as const;
 
 /** A swirl and a wait close together, and a step near the end of the curve called "Drawdown". */
 const CROWDED_STEPS = [
@@ -26,8 +27,34 @@ async function box(locator: Locator) {
 }
 
 /** Every piece of text drawn in the chart is inside the chart's frame, and no two step names touch. */
-async function expectLabelsInside(page: Page, chart: Locator, expectStepNames: boolean) {
+async function expectLabelsInside(
+  page: Page,
+  chart: Locator,
+  expectStepNames: boolean,
+  minNames = 3,
+) {
   await expect(chart).toBeVisible();
+  // Wait for the chart to be laid out and to stop moving (it animates in) before measuring.
+  const snapshot = () =>
+    chart.evaluate((root) => {
+      const texts = [...root.querySelectorAll('svg text')].map((n) => {
+        const r = n.getBoundingClientRect();
+        return `${n.textContent}:${Math.round(r.left)},${Math.round(r.top)},${Math.round(r.width)}`;
+      });
+      const paths = [...root.querySelectorAll('path.recharts-curve')].map((p) =>
+        p.getAttribute('d'),
+      );
+      return `${texts.join('|')}#${paths.join('|')}`;
+    });
+  let previous = '';
+  await expect
+    .poll(async () => {
+      const now = await snapshot();
+      const stable = now === previous && !now.includes(',0|') && now.includes('#M');
+      previous = now;
+      return stable;
+    })
+    .toBe(true);
   const frame = await box(chart);
   const texts = await chart.locator('svg text').evaluateAll((nodes) =>
     nodes.map((n) => {
@@ -53,8 +80,37 @@ async function expectLabelsInside(page: Page, chart: Locator, expectStepNames: b
       frame.y + frame.height + 0.5,
     );
   }
+  // No step name sits on the curve: sample the drawn line and look for points inside a name's box.
+  const onLine = await chart.evaluate((root) => {
+    const hits: string[] = [];
+    const paths = [...root.querySelectorAll<SVGPathElement>('path.recharts-curve')].filter(
+      (p) => p.getAttribute('stroke-opacity') !== '0.35',
+    );
+    for (const label of root.querySelectorAll<SVGTextElement>('[data-marker-labels] text')) {
+      const r = label.getBoundingClientRect();
+      for (const path of paths) {
+        const m = path.getScreenCTM();
+        if (!m) continue;
+        const length = path.getTotalLength();
+        for (let d = 0; d <= length; d += 1) {
+          const pt = path.getPointAtLength(d).matrixTransform(m);
+          if (pt.x > r.left && pt.x < r.right && pt.y > r.top && pt.y < r.bottom) {
+            hits.push(label.textContent ?? '');
+            break;
+          }
+        }
+      }
+    }
+    return { hits, paths: paths.length };
+  }, null);
+  expect(onLine.paths, 'the drawn line was found').toBeGreaterThan(0);
+  expect(
+    onLine.hits,
+    `step names sit on the line (${onLine.paths} paths, chart ${frame.width}px)`,
+  ).toEqual([]);
+
   const names = texts.filter((t) => t.step);
-  if (expectStepNames) expect(names.length).toBeGreaterThanOrEqual(3);
+  if (expectStepNames) expect(names.length).toBeGreaterThanOrEqual(minNames);
   for (let i = 0; i < names.length; i += 1) {
     for (let j = i + 1; j < names.length; j += 1) {
       const a = names[i]!;
@@ -94,10 +150,62 @@ test.describe('pour curve step names', () => {
       await page.goto(`${base}/edit?v=2`);
       await waitForApp(page);
       await expectLabelsInside(page, page.getByRole('img', { name: /^Pour curve\./ }), true);
+      // The curve sits under the steps, as wide as the form column, and not in the side panel.
+      const steps = await box(page.getByRole('region', { name: 'Steps', exact: true }));
+      const curve = await box(page.getByRole('img', { name: /^Pour curve\./ }));
+      const list = await box(page.getByRole('group', { name: /^Step 1/ }).first());
+      expect(curve.y).toBeGreaterThan(list.y + list.height);
+      expect(curve.x + curve.width).toBeLessThanOrEqual(steps.x + steps.width + 1);
+      expect(curve.width).toBeGreaterThan(steps.width - 40);
+      await expect(page.getByRole('region', { name: 'Live numbers' }).getByRole('img')).toHaveCount(
+        0,
+      );
 
       await page.goto(`${base}/compare?a=1&b=2`);
       await expectLabelsInside(page, page.getByRole('img', { name: /Pour curves/ }), false);
     }
+  });
+});
+
+test.describe('pour curve step names, narrow charts', () => {
+  test('stay inside the chart and off the line at 320, 390 and 768 px', async ({ page, users }) => {
+    test.setTimeout(180_000);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const user = await signIn(page, users, 'narrow');
+    const recipe = await createRecipe(users, user, 'Narrow', {
+      version: { steps: CROWDED_STEPS },
+    });
+    const base = `/@${user.handle}/${recipe.slug}`;
+    for (const width of NARROW) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto(base);
+      // A very narrow chart may drop a name rather than cover the line, so no minimum is asked.
+      await expectLabelsInside(page, page.getByRole('img', { name: /^Pour curve\./ }), false, 0);
+    }
+  });
+});
+
+test.describe('editor curve', () => {
+  test('is under the steps from 1024 px, updates as steps change, and is absent below', async ({
+    page,
+    users,
+  }) => {
+    test.setTimeout(180_000);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const user = await signIn(page, users, 'live');
+    const recipe = await createRecipe(users, user, 'Live');
+    await page.goto(`/@${user.handle}/${recipe.slug}/edit?v=1`);
+    await waitForApp(page);
+    const curve = page.getByRole('img', { name: /^Pour curve\./ });
+    await expect(curve).toBeVisible();
+    await expect(curve).toHaveAccessibleName(/ends at 250/);
+    const last = page.getByRole('group', { name: /^Step 4/ });
+    const target = last.getByLabel(/^Scale reads after pouring/);
+    await target.fill('300');
+    await target.blur();
+    await expect(curve).toHaveAccessibleName(/ends at 300/);
+    await page.setViewportSize({ width: 800, height: 900 });
+    await expect(page.getByRole('img', { name: /^Pour curve\./ })).toHaveCount(0);
   });
 });
 
