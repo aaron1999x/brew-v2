@@ -31,7 +31,7 @@ import { STEP_KIND_LABELS, type StepData, type StepKind } from '@/lib/recipes/st
 import { useUnits } from '@/lib/settings/useSettings';
 import { WEIGHT_DECIMALS, WEIGHT_LABEL, weightToDisplay } from '@/lib/units';
 import { useReducedMotion } from '@/lib/ui/useReducedMotion';
-import styles from './PourCurveChart.module.css';
+import { MarkerLabels } from './MarkerLabels';
 
 export type CurveSeries = {
   id: string;
@@ -268,24 +268,24 @@ export function PourCurveChart({ series, drawdown, title = 'Pour curve' }: Props
               y={m.w}
               ifOverflow="visible"
               shape={(p: { cx?: number; cy?: number }) => (
-                <g>
-                  <Marker
-                    kind={MARKER_FOR_KIND[m.kind as Exclude<StepKind, 'pour'>]}
-                    cx={p.cx ?? 0}
-                    cy={p.cy ?? 0}
-                    color={style.color}
-                    size={6}
-                  />
-                  {multiple ? null : (
-                    <text x={(p.cx ?? 0) + 9} y={(p.cy ?? 0) - 9} className={styles.markerLabel}>
-                      {m.label}
-                    </text>
-                  )}
-                </g>
+                <Marker
+                  kind={MARKER_FOR_KIND[m.kind as Exclude<StepKind, 'pour'>]}
+                  cx={p.cx ?? 0}
+                  cy={p.cy ?? 0}
+                  color={style.color}
+                  size={6}
+                />
               )}
             />
           ));
         })}
+        {multiple ? null : (
+          <MarkerLabels
+            items={model.lines.flatMap((l) =>
+              l.markers.map((m) => ({ id: `${l.id}-${m.stepId}`, t: m.t, w: m.w, label: m.label })),
+            )}
+          />
+        )}
         <Tooltip
           isAnimationActive={false}
           cursor={{ stroke: 'var(--color-border-strong)', strokeWidth: 1 }}
