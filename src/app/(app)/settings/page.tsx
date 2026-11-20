@@ -40,7 +40,7 @@ export default async function SettingsPage() {
   return (
     <>
       <TopBar title="Settings" backHref="/profile" />
-      <div className={styles.body}>
+      <div className={styles.bodyForm}>
         <SettingsList links={links} />
         <SignOutButton />
       </div>

@@ -11,7 +11,7 @@ export default async function DeleteAccountPage() {
   return (
     <>
       <TopBar title="Delete account" backHref="/settings/account" />
-      <div className={styles.body}>
+      <div className={styles.bodyForm}>
         <DeleteAccountForm />
       </div>
     </>

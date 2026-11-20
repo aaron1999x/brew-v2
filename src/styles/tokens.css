@@ -119,6 +119,10 @@
   --size-slider-thumb: 24px;
   --size-tab-bar: 64px;
   --size-rail: 232px;
+  /* Content widths: app pages, forms (settings, gear, the editor's form column), long text. */
+  --layout-wide: 75rem;
+  --layout-form: 40rem;
+  --layout-reading: 45rem;
   --z-base: 0;
   --z-sticky: 10;
   --z-nav: 20;

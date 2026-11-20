@@ -11,7 +11,7 @@ export default async function AppearancePage() {
   return (
     <>
       <TopBar title="Appearance" backHref="/settings" />
-      <div className={styles.body}>
+      <div className={styles.bodyForm}>
         <AppearanceForm />
       </div>
     </>
