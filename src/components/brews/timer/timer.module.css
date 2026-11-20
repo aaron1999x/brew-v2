@@ -1,0 +1,366 @@
+/* The brew timer screens: full screen, no tab bar. Large tabular digits, readable at arm's length. */
+
+.screen {
+  display: grid;
+  align-content: start;
+  gap: var(--space-4);
+  max-width: var(--layout-form);
+  min-height: 100dvh;
+  margin-inline: auto;
+  padding-block: var(--space-4);
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--type-h2-size);
+  font-weight: var(--type-h2-weight);
+  line-height: var(--type-h2-line-height);
+  color: var(--color-text-primary);
+}
+
+.toggles {
+  display: grid;
+  gap: var(--space-3);
+}
+
+/* ---- prep ---- */
+
+.numbers {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.number {
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-inset);
+}
+
+.number dt {
+  font-size: var(--type-caption-size);
+  color: var(--color-text-secondary);
+}
+
+.number dd {
+  margin: 0;
+  font-size: var(--type-h3-size);
+  font-weight: var(--type-h3-weight);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary);
+}
+
+.was {
+  display: block;
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-caption-weight);
+  color: var(--color-changed-fg);
+}
+
+.section {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.hint {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-small-size);
+}
+
+.stepList {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.stepItem {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-width-hairline) solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+}
+
+.stepHead {
+  font-weight: var(--type-label-weight);
+  font-variant-numeric: tabular-nums;
+}
+
+.stepDetail {
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-small-size);
+  font-variant-numeric: tabular-nums;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: var(--type-h3-size);
+  font-weight: var(--type-h3-weight);
+  color: var(--color-text-primary);
+}
+
+/* ---- running ---- */
+
+.clockBlock {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-1);
+  padding-block: var(--space-2);
+}
+
+.clockLabel {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-size);
+}
+
+.clock {
+  margin: 0;
+  font-family: var(--font-family-numeric);
+  font-size: min(var(--type-timer-size), 26vw);
+  font-weight: var(--type-timer-weight);
+  line-height: var(--type-timer-line-height);
+  letter-spacing: var(--type-timer-letter-spacing);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary);
+}
+
+.clockLong {
+  font-size: min(var(--type-timer-size), 17vw);
+}
+
+.paused {
+  margin: 0;
+  padding: var(--space-1) var(--space-3);
+  border: var(--border-width-default) solid var(--color-status-warning);
+  border-radius: var(--radius-full);
+  background: var(--color-status-warning-bg);
+  color: var(--color-status-warning-fg);
+  font-weight: var(--type-label-weight);
+}
+
+.countin {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-surface);
+  border: var(--border-width-default) solid var(--color-accent-default);
+  text-align: center;
+}
+
+.countinNumber {
+  margin: 0;
+  font-family: var(--font-family-numeric);
+  font-size: min(var(--type-timer-size), 30vw);
+  font-weight: var(--type-timer-weight);
+  line-height: var(--type-timer-line-height);
+  color: var(--color-accent-on-inset);
+  font-variant-numeric: tabular-nums;
+}
+
+.first {
+  margin: 0;
+  font-size: var(--type-h3-size);
+  font-weight: var(--type-h3-weight);
+  color: var(--color-text-primary);
+}
+
+.card {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+}
+
+/* Now: calm, inset. Next: raised with an accent edge. The labels say which is which, not the colour. */
+.now {
+  background: var(--color-bg-inset);
+  border: var(--border-width-hairline) solid var(--color-border-subtle);
+}
+
+.next {
+  background: var(--color-bg-surface);
+  border: var(--border-width-default) solid var(--color-accent-default);
+}
+
+.nextSoon {
+  box-shadow: var(--shadow-2);
+}
+
+.cardLabel {
+  margin: 0;
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+}
+
+.cardHeading {
+  margin: 0;
+  font-size: var(--type-h3-size);
+  font-weight: var(--type-h3-weight);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary);
+}
+
+.big {
+  margin: 0;
+  font-family: var(--font-family-numeric);
+  font-size: min(var(--type-timer-size), 24vw);
+  font-weight: var(--type-timer-weight);
+  line-height: var(--type-timer-line-height);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary);
+}
+
+.bigName {
+  margin: 0;
+  font-size: var(--type-display-size);
+  font-weight: var(--type-display-weight);
+  line-height: var(--type-display-line-height);
+  color: var(--color-text-primary);
+}
+
+.unit {
+  font-size: var(--type-numeric-large-size);
+  color: var(--color-text-secondary);
+}
+
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.pill {
+  justify-self: start;
+  padding: var(--space-1) var(--space-4);
+  border-radius: var(--radius-full);
+  background: var(--color-bg-inset);
+  color: var(--color-text-primary);
+  font-size: var(--type-h3-size);
+  font-weight: var(--type-h3-weight);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Switch kettle: an icon and words, not only a colour. */
+.pillSwitch {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: var(--color-status-warning-bg);
+  color: var(--color-status-warning-fg);
+  border: var(--border-width-default) solid var(--color-status-warning);
+}
+
+.countdown {
+  margin: 0;
+  font-size: var(--type-numeric-large-size);
+  font-weight: var(--type-numeric-large-weight);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-secondary);
+}
+
+.countdownSoon {
+  color: var(--color-accent-on-inset);
+}
+
+.done {
+  display: grid;
+  gap: var(--space-1);
+}
+
+/* ---- controls: at the bottom, within a thumb's reach ---- */
+
+.controls {
+  position: sticky;
+  bottom: 0;
+  display: grid;
+  gap: var(--space-3);
+  margin-top: auto;
+  padding: var(--space-3) 0 calc(var(--space-3) + env(safe-area-inset-bottom));
+  background: var(--color-bg-canvas);
+  z-index: var(--z-sticky);
+}
+
+.bigButton {
+  min-height: calc(var(--size-target-min) * 1.6);
+  font-size: var(--type-h3-size);
+}
+
+/* ---- steep ---- */
+
+.steepTimes {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.row {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.missed {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding-left: var(--space-5);
+}
+
+.dialogActions {
+  display: grid;
+  gap: var(--space-3);
+}
+
+@media (min-width: 768px) {
+  .numbers {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .screen {
+    padding-block: var(--space-6);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .nextSoon {
+    transition: box-shadow var(--motion-duration-fast) var(--motion-easing-standard);
+  }
+}
+
+/* Announcements for screen readers: present, never seen. */
+.hiddenLive {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}

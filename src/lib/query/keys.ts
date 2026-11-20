@@ -21,6 +21,8 @@ export const queryKeys = {
     mine: (filters: BrewFilters = {}) => ['brews', 'mine', filters] as const,
   },
   brew: (id: string) => ['brew', id] as const,
+  /** Brew counts and last-brewed dates per recipe version (`my_recipe_brew_stats`). */
+  brewStats: () => ['brew-stats'] as const,
   profile: (handle: string) => ['profile', handle] as const,
   verified: (method?: string) => ['verified', method ?? 'all'] as const,
   notices: () => ['notices'] as const,

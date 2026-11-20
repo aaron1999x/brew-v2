@@ -30,15 +30,8 @@ function defaultStorage(): StorageLike | null {
   }
 }
 
-/** Every valid session of this person, newest first. Unreadable entries are skipped. */
-export function readSessions(userId: string, storage: StorageLike | null = defaultStorage()): BrewSession[] {
-  if (!storage) return [];
-  let raw: string | null;
-  try {
-    raw = storage.getItem(sessionsKey(userId));
-  } catch {
-    return [];
-  }
+/** The valid sessions in a stored value, newest first. Unreadable or foreign entries are skipped. */
+export function parseSessions(userId: string, raw: string | null): BrewSession[] {
   if (!raw) return [];
   let parsed: unknown;
   try {
@@ -57,6 +50,16 @@ export function readSessions(userId: string, storage: StorageLike | null = defau
     sessions.push(result.data as BrewSession);
   }
   return sessions.sort((a, b) => b.createdAt - a.createdAt);
+}
+
+/** Every valid session of this person, newest first. */
+export function readSessions(userId: string, storage: StorageLike | null = defaultStorage()): BrewSession[] {
+  if (!storage) return [];
+  try {
+    return parseSessions(userId, storage.getItem(sessionsKey(userId)));
+  } catch {
+    return [];
+  }
 }
 
 export function getSession(
