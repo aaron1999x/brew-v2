@@ -18,9 +18,16 @@ export async function columnOverflows(page: Page): Promise<string[]> {
       const columns = style.gridTemplateColumns.split(' ').filter(Boolean);
       if (columns.length < 2) continue;
       const gridBox = grid.getBoundingClientRect();
-      const cells = Array.from(grid.children).filter(
-        (c) => getComputedStyle(c).display !== 'none' && c.getBoundingClientRect().width > 0,
-      );
+      // Cells in the flow only: a visually hidden helper (absolute) takes no grid cell.
+      const cells = Array.from(grid.children).filter((c) => {
+        const cs = getComputedStyle(c);
+        return (
+          cs.display !== 'none' &&
+          cs.position !== 'absolute' &&
+          cs.position !== 'fixed' &&
+          c.getBoundingClientRect().width > 0
+        );
+      });
 
       cells.forEach((cell, i) => {
         const box = cell.getBoundingClientRect();
@@ -28,12 +35,12 @@ export async function columnOverflows(page: Page): Promise<string[]> {
         if (box.right > screenWidth + 0.5) problems.push(`${where}: past the screen edge`);
         if (box.left < -0.5) problems.push(`${where}: past the left edge`);
         if (box.right > gridBox.right + 0.5) problems.push(`${where}: wider than its grid`);
-        const next = cells[i + 1];
-        if (next && next.getBoundingClientRect().top < box.bottom - 0.5) {
-          // On the same row: this cell must end before the next one starts.
-          if (box.right > next.getBoundingClientRect().left + 0.5) {
-            problems.push(`${where}: runs under ${describe(next)}`);
-          }
+        // Cells that share a row must not overlap sideways, whatever their order in the DOM.
+        for (const other of cells.slice(i + 1)) {
+          const o = other.getBoundingClientRect();
+          const sharesRow = o.top < box.bottom - 0.5 && box.top < o.bottom - 0.5;
+          const overlapsSideways = box.left < o.right - 0.5 && o.left < box.right - 0.5;
+          if (sharesRow && overlapsSideways) problems.push(`${where}: runs under ${describe(other)}`);
         }
         // Buttons keep a hidden "Working…" layer under their label, so their scroll width isn't
         // what a person sees; their box is still checked against the grid above.
