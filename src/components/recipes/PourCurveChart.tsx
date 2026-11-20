@@ -281,6 +281,7 @@ export function PourCurveChart({ series, drawdown, title = 'Pour curve' }: Props
         })}
         {multiple ? null : (
           <MarkerLabels
+            line={model.lines[0]!.line.map((p) => ({ t: p.t, w: weightToDisplay(p.g, unit) }))}
             items={model.lines.flatMap((l) =>
               l.markers.map((m) => ({ id: `${l.id}-${m.stepId}`, t: m.t, w: m.w, label: m.label })),
             )}
