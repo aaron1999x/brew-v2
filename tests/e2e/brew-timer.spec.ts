@@ -84,12 +84,17 @@ test.describe('the prep screen (Ready)', () => {
     // The total time is a big clock, labelled "Ready".
     await expect(page.getByText('Ready', { exact: true })).toBeVisible();
     await expectClock(page, '1:30');
-    // One line: dose, water, ratio, temperature, and the grind SETTING with the grinder's name.
-    await expect(
-      page.getByText('15 g coffee · 250 g water · 1:16.7 · 93 °C · Grind 24 clicks · Comandante C40'),
-    ).toBeVisible();
+    // Two rows: dose, water, ratio; then temperature, the grind SETTING and the grinder's name.
+    const rows = page.locator('[class*="summaryRow"]');
+    await expect(rows).toHaveCount(2);
+    await expect(rows.nth(0).locator('[class*="summaryItem"]')).toHaveText(['15 g', '250 g', '1:16.7']);
+    await expect(rows.nth(1).locator('[class*="summaryItem"]')).toHaveText([
+      '93 °C',
+      'Grind 24 clicks',
+      'Comandante C40',
+    ]);
     // Steps as compact chips: time and the scale weight; a swirl by name.
-    const chips = page.getByRole('list').filter({ hasText: 'Swirl' }).first();
+    const chips = page.getByRole('list', { name: 'Steps' });
     await expect(chips.getByRole('listitem')).toHaveCount(4);
     await expect(chips.getByRole('listitem').first()).toContainText('0:00');
     await expect(chips.getByRole('listitem').first()).toContainText('30 g');
@@ -103,7 +108,7 @@ test.describe('the prep screen (Ready)', () => {
     await expectNoAxeViolations(page);
   });
 
-  test('shows varied temperatures on the chips, and the Sound switch above Start', async ({
+  test('shows varied temperatures on the chips, and a Sound on / Sound off pill in the top bar', async ({
     page,
     users,
   }) => {
@@ -114,14 +119,59 @@ test.describe('the prep screen (Ready)', () => {
     await expect(page.getByRole('listitem').filter({ hasText: '40 g' })).toContainText('65 °C');
     await expect(page.getByRole('listitem').filter({ hasText: '100 g' })).toContainText('92 °C');
 
-    // The Sound switch is fully visible and sits above the Start button, never under it.
-    const sound = page.getByRole('switch', { name: 'Sound' });
-    await sound.scrollIntoViewIfNeeded();
-    const soundBox = await sound.locator('xpath=ancestor::label').boundingBox();
-    const startBox = await page.getByRole('button', { name: 'Start', exact: true }).boundingBox();
-    expect(soundBox).not.toBeNull();
-    expect(startBox).not.toBeNull();
-    expect(soundBox!.y + soundBox!.height).toBeLessThanOrEqual(startBox!.y + 1);
+    // The pill is a toggle button, a full 44 px tall to tap, in the bar with the title.
+    const pill = page.getByRole('button', { name: 'Sound on' });
+    await expect(pill).toHaveAttribute('aria-pressed', 'true');
+    const box = (await pill.boundingBox())!;
+    expect(box.height).toBeGreaterThanOrEqual(44);
+    const title = (await page.getByRole('heading', { level: 1 }).boundingBox())!;
+    expect(Math.abs(box.y + box.height / 2 - (title.y + title.height / 2))).toBeLessThan(box.height);
+    await pill.click();
+    await expect(page.getByRole('button', { name: 'Sound off' })).toHaveAttribute('aria-pressed', 'false');
+    // It is remembered on this device, and the old switch is gone.
+    await page.reload();
+    await expect(page.getByRole('button', { name: 'Sound off' })).toBeVisible();
+    await expect(page.getByRole('switch', { name: 'Sound' })).toHaveCount(0);
+  });
+
+  test('the step chips share the width equally, and scroll with a hint when there are too many', async ({
+    page,
+    users,
+  }) => {
+    const user = await signIn(page, users, 'prep-chips');
+    const few = await createRecipe(users, user, 'Few steps');
+    await openPrep(page, user, few.slug);
+    const row = page.getByRole('list', { name: 'Steps' });
+    const widths = await row.getByRole('listitem').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().width));
+    expect(widths).toHaveLength(4);
+    for (const w of widths) expect(Math.abs(w - widths[0]!)).toBeLessThan(1);
+    // They fill the row: no gap on the right.
+    const rowBox = (await row.boundingBox())!;
+    const last = (await row.getByRole('listitem').last().boundingBox())!;
+    expect(rowBox.x + rowBox.width - (last.x + last.width)).toBeLessThan(12);
+    await expect(row).toHaveAttribute('data-after', 'false');
+
+    const many = await createRecipe(users, user, 'Many steps', {
+      version: {
+        steps: Array.from({ length: 12 }, (_, i) =>
+          i % 3 === 2
+            ? { id: `s${i}`, kind: 'swirl', at_s: i * 10, duration_s: 5 }
+            : { id: `s${i}`, kind: 'pour', at_s: i * 10, target_g: 20 * (i + 1) },
+        ),
+        brew_water_g: 250,
+      },
+    });
+    await openPrep(page, user, many.slug);
+    const long = page.getByRole('list', { name: 'Steps' });
+    await expect(long).toHaveAttribute('data-after', 'true');
+    await expect(long).toHaveAttribute('data-before', 'false');
+    expect(await long.evaluate((el) => getComputedStyle(el).scrollSnapType)).toContain('x');
+    expect(await long.evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
+    // Scrollable by keyboard once it overflows, and the hint moves to the other edge at the end.
+    await expect(long).toHaveAttribute('tabindex', '0');
+    await long.evaluate((el) => el.scrollTo({ left: el.scrollWidth }));
+    await expect(long).toHaveAttribute('data-after', 'false');
+    await expect(long).toHaveAttribute('data-before', 'true');
   });
 
   test('"Change for this brew" previews the new version, and Reset puts it back', async ({ page, users }) => {
@@ -203,6 +253,19 @@ test.describe('the guided timer', () => {
     await expect(card).toContainText('+60 g this pour');
     await expect(card).toContainText('Switch kettle → 92 °C');
     await expect(card).toContainText('in 20 s');
+    // The status sits in a slim strip at the top of the card, above the next-pour block.
+    const strip = card.locator('[class*="statusStrip"]');
+    await expect(strip).toHaveText('Wait · scale stays at 40 g · 0:15 left');
+    const [stripBox, heroBox] = await Promise.all([strip.boundingBox(), card.locator('[class*="hero"]').first().boundingBox()]);
+    expect(stripBox!.y + stripBox!.height).toBeLessThanOrEqual(heroBox!.y);
+    // The countdown is the accent colour, and only gets bolder in the last 5 s (the warning beep).
+    const countdown = card.getByText(/^in \d+ s$/);
+    const weight = () => countdown.evaluate((el) => getComputedStyle(el).fontWeight);
+    expect(Number(await weight())).toBeLessThan(800);
+    await page.clock.fastForward(17_000);
+    await page.clock.runFor(150);
+    await expect(card).toContainText('in 3 s');
+    expect(Number(await weight())).toBeGreaterThanOrEqual(800);
 
     // After the last pour: the card says so, and the button is Drawdown done.
     await page.clock.fastForward(60_000);
@@ -228,6 +291,10 @@ test.describe('the guided timer', () => {
 
     await page.clock.runFor(10_000);
     await expectClock(page, '0:10');
+    // The thin progress bar under the clock: elapsed of the whole brew, named for assistive technology.
+    const progress = page.getByRole('progressbar', { name: '0:10 of 1:30' });
+    await expect(progress).toHaveAttribute('aria-valuenow', '10');
+    await expect(progress).toHaveAttribute('aria-valuemax', '90');
     // A soft pip 5 s before the swirl and one at it.
     expect((await page.evaluate(() => window.__beeps)).slice(7)).toEqual([1480, 1480]);
     const card = page.getByLabel('Current step');

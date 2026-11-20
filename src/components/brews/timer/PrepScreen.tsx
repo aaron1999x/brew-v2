@@ -2,7 +2,7 @@
 
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { Fragment, useMemo } from 'react';
+import { useMemo } from 'react';
 import { VersionBadge } from '@/components/ui/Badge/Badge';
 import { Button } from '@/components/ui/Button/Button';
 import { IconButton } from '@/components/ui/IconButton/IconButton';
@@ -21,6 +21,8 @@ import { hasPourTemperatures, totalTimeS } from '@/lib/recipes/steps';
 import { useUnits } from '@/lib/settings/useSettings';
 import { QuickChangePanel } from '../QuickChangePanel';
 import { FlipClock } from './FlipClock';
+import { ScrollRow } from './ScrollRow';
+import { SoundPill } from './SoundPill';
 import styles from './timer.module.css';
 
 type Props = Readonly<{
@@ -28,7 +30,7 @@ type Props = Readonly<{
   update: (change: (s: BrewSession) => BrewSession) => BrewSession | null;
 }>;
 
-type Part = { text: string; was?: string };
+export type SummaryItem = { text: string; was?: string };
 
 /** The prototype's help line, adapted to what this kind of brew does. */
 function helpText(mode: 'guided' | 'steep' | 'stopwatch'): string {
@@ -42,10 +44,11 @@ function helpText(mode: 'guided' | 'steep' | 'stopwatch'): string {
 }
 
 /**
- * Before the brew, as in the prototype's Ready state: the total time as a big clock, the steps as
- * compact chips, a one-line summary of the numbers, then "Change for this brew", the sound switch,
- * the help line and a big Start. The content scrolls above the Start button, never under it.
- * Start also turns audio on, as iOS needs a tap for that.
+ * Before the brew, as in the prototype's Ready state: the total time as a big clock, a two-row
+ * summary of the numbers, the steps as compact chips, "Change for this brew", the help line and a
+ * big Start. The sections are spread over the screen; if there are too many for it, the content
+ * scrolls above the Start button, never under it. The Sound pill is in the top bar, like on the
+ * running screen. Start also turns audio on, as iOS needs a tap for that.
  */
 export function PrepScreen({ session, update }: Props) {
   const router = useRouter();
@@ -63,7 +66,7 @@ export function PrepScreen({ session, update }: Props) {
   const varies = hasPourTemperatures(applied.steps);
   const total = totalTimeS(applied.steps) ?? 0;
 
-  const summary = summaryParts(applied, base, changed, { weight, temp });
+  const rows = summaryRows(applied, base, changed, { weight, temp });
 
   function setChange(change: QuickChange | null) {
     update((s) => ({ ...s, quickChange: change }));
@@ -92,6 +95,7 @@ export function PrepScreen({ session, update }: Props) {
             <VersionBadge version={session.versionNo} />
           </h1>
         </div>
+        <SoundPill on={prefs.sound} onToggle={() => setPrefs({ sound: !prefs.sound })} />
       </div>
 
       <div className={styles.prepScroll}>
@@ -102,22 +106,27 @@ export function PrepScreen({ session, update }: Props) {
           </span>
         </div>
 
-        <p className={styles.summary}>
-          {summary.map((part, i) => (
-            <Fragment key={i}>
-              {i > 0 ? ' · ' : null}
-              {part.text}
-              {part.was ? <span className={styles.was}> (changed, was {part.was})</span> : null}
-            </Fragment>
-          ))}
-        </p>
+        <div className={styles.summary}>
+          {rows.map((row, r) =>
+            row.length === 0 ? null : (
+              <p key={r} className={styles.summaryRow}>
+                {row.map((item, i) => (
+                  <span key={i} className={styles.summaryItem}>
+                    {item.text}
+                    {item.was ? <span className={styles.was}> (changed, was {item.was})</span> : null}
+                  </span>
+                ))}
+              </p>
+            ),
+          )}
+        </div>
 
         {applied.steps.length > 0 ? (
           <section aria-labelledby="prep-steps">
             <h2 id="prep-steps" className={styles.sectionTitle}>
               Steps{varies ? ' · temperature varies by pour' : ''}
             </h2>
-            <ol className={styles.chips}>
+            <ScrollRow label="Steps">
               {applied.steps.map((step) => {
                 const pour = step.kind === 'pour' && step.target_g != null;
                 const stepTemp = step.temp_c ?? applied.temp_c;
@@ -139,7 +148,7 @@ export function PrepScreen({ session, update }: Props) {
                   </li>
                 );
               })}
-            </ol>
+            </ScrollRow>
           </section>
         ) : (
           <p className={styles.help}>This recipe has no steps, so you&apos;ll get a stopwatch.</p>
@@ -152,18 +161,14 @@ export function PrepScreen({ session, update }: Props) {
           nextVersionNo={nextVersionNo(session)}
         />
 
-        <div className={styles.toggles}>
-          <Switch isSelected={prefs.sound} onChange={(sound) => setPrefs({ sound })}>
-            Sound
-          </Switch>
+        <div className={styles.options}>
           {canVibrate ? (
             <Switch isSelected={prefs.vibration} onChange={(vibration) => setPrefs({ vibration })}>
               Vibration
             </Switch>
           ) : null}
+          <p className={styles.help}>{helpText(mode)}</p>
         </div>
-
-        <p className={styles.help}>{helpText(mode)}</p>
       </div>
 
       <div className={styles.prepFooter}>
@@ -176,43 +181,43 @@ export function PrepScreen({ session, update }: Props) {
 }
 
 /**
- * One line of the numbers: "15 g coffee · 250 g water · 1:16.7 · 93 °C · Grind 24 clicks · 650 µm ·
- * Comandante C40". The grind setting always comes with the grinder's name. A value changed with
- * "Change for this brew" shows the version's own value beside it.
+ * The numbers as two rows. Row one: dose, water, ratio ("16.5 g · 170 g · 1:10.3"). Row two:
+ * temperature, the grind SETTING (with its size in µm when there is one) and the grinder's name
+ * ("92 °C · Grind 7.5 · 1Zpresso K-Ultra", or "Grind not set" when there is no setting). A value
+ * changed with "Change for this brew" shows the version's own value beside it.
  */
-export function summaryParts(
+export function summaryRows(
   applied: SessionVersion,
   base: SessionVersion,
   changed: ReadonlySet<string>,
   fmt: { weight: (g: number) => string; temp: (c: number) => string },
-): Part[] {
-  const parts: Part[] = [
+): [SummaryItem[], SummaryItem[]] {
+  const first: SummaryItem[] = [
+    { text: fmt.weight(applied.dose_g), was: changed.has('dose') ? fmt.weight(base.dose_g) : undefined },
     {
-      text: `${fmt.weight(applied.dose_g)} coffee`,
-      was: changed.has('dose') ? fmt.weight(base.dose_g) : undefined,
-    },
-    {
-      text: `${fmt.weight(applied.brew_water_g)} water`,
+      text: fmt.weight(applied.brew_water_g),
       was: changed.has('water') ? fmt.weight(base.brew_water_g) : undefined,
     },
   ];
   const ratio = formatRatio(brewRatio(applied.dose_g, applied.brew_water_g));
-  if (ratio) parts.push({ text: ratio });
+  if (ratio) first.push({ text: ratio });
+
+  const second: SummaryItem[] = [];
   if (applied.temp_c != null) {
-    parts.push({
+    second.push({
       text: fmt.temp(applied.temp_c),
       was: changed.has('temp') && base.temp_c != null ? fmt.temp(base.temp_c) : undefined,
     });
   }
-
-  const microns = applied.grind_microns != null ? `${applied.grind_microns} µm` : null;
   const setting = applied.grind_setting?.trim() || null;
+  const microns = applied.grind_microns != null ? `${applied.grind_microns} µm` : null;
   if (setting || microns || applied.grinder) {
-    parts.push({
-      text: `Grind ${[setting, microns].filter(Boolean).join(' · ') || 'not set'}`,
+    const grind = setting ? (microns ? `${setting} (${microns})` : setting) : (microns ?? 'not set');
+    second.push({
+      text: `Grind ${grind}`,
       was: changed.has('grind') ? base.grind_setting?.trim() || 'not set' : undefined,
     });
   }
-  if (applied.grinder) parts.push({ text: applied.grinder });
-  return parts;
+  if (applied.grinder) second.push({ text: applied.grinder });
+  return [first, second];
 }

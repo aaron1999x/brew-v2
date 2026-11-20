@@ -60,8 +60,13 @@ async function expectFitsScreen(page: Page, scope: Scope) {
       if (!scroller) out.push('no scrolling content area');
       else if (start) {
         onScreen(scroller, 'content area');
-        scroller.scrollTop = scroller.scrollHeight;
         const last = scroller.lastElementChild;
+        // Enough room: the sections are spread out, so there is no big empty gap above Start.
+        if (last && scroller.scrollHeight <= scroller.clientHeight + 1) {
+          const gap = rect(scroller).bottom - rect(last).bottom;
+          if (gap > 72) out.push(`there is a ${Math.round(gap)} px empty gap above Start`);
+        }
+        scroller.scrollTop = scroller.scrollHeight;
         if (last && rect(last).bottom > rect(start).top + 1) {
           out.push(`the last line "${describe(last)}" ends under the Start button`);
         }
@@ -73,6 +78,16 @@ async function expectFitsScreen(page: Page, scope: Scope) {
       onScreen(button, 'button');
       const r = rect(button);
       if (r.height < 43.5) out.push(`button "${describe(button)}" is only ${Math.round(r.height)} px tall`);
+      // The label sits inside its button, in the middle (End brew used to hug the right edge).
+      const label = button.firstElementChild;
+      if (label) {
+        const l = rect(label);
+        if (l.left < r.left - 0.5 || l.right > r.right + 0.5) {
+          out.push(`the label of "${describe(button)}" sticks out of its button`);
+        }
+        const off = Math.abs((l.left + l.right) / 2 - (r.left + r.right) / 2);
+        if (off > 3) out.push(`the label of "${describe(button)}" is ${Math.round(off)} px off centre`);
+      }
     }
     for (const el of document.querySelectorAll('main [role="timer"], main h1')) {
       if (shown(el)) onScreen(el, el.tagName === 'H1' ? 'title' : 'clock');
@@ -96,6 +111,9 @@ async function expectFitsScreen(page: Page, scope: Scope) {
       const firstControlTop = Math.min(...below.map((b) => rect(b).top));
       if (below.length > 0 && c.bottom > firstControlTop + 1) {
         out.push(`card "${describe(card)}" runs into the controls`);
+      }
+      if (below.length > 0 && firstControlTop - c.bottom > 24 && card.getAttribute('aria-label') !== 'Get ready' && !document.querySelector('[class*="steepList"]')) {
+        out.push(`card "${describe(card)}" floats ${Math.round(firstControlTop - c.bottom)} px above the controls`);
       }
       const timer = document.querySelector('main [role="timer"]');
       if (timer && shown(timer) && rect(timer).bottom > c.top + 1) {

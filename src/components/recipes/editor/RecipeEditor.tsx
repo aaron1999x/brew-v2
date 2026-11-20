@@ -13,6 +13,7 @@ import { Notice } from '@/components/ui/Notice/Notice';
 import { useOnlineStatus } from '@/components/ui/OfflineBanner/OfflineBanner';
 import { SegmentedControl } from '@/components/ui/SegmentedControl/SegmentedControl';
 import { Select } from '@/components/ui/Select/Select';
+import { GRIND_INPUT_PROPS } from '@/components/brews/QuickChangePanel';
 import { Switch } from '@/components/ui/Switch/Switch';
 import { TextField } from '@/components/ui/TextField/TextField';
 import { Textarea } from '@/components/ui/Textarea/Textarea';
@@ -744,6 +745,7 @@ function EditorForm({
                   label="Grind setting"
                   placeholder="e.g. 24 clicks"
                   maxLength={LIMITS.grindSetting}
+                  inputProps={GRIND_INPUT_PROPS}
                   value={draft.grind_setting}
                   onChange={setText('grind_setting')}
                   errorMessage={error('grind_setting')}

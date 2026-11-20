@@ -13,6 +13,15 @@ import { BREW_LIMITS, type QuickChange } from '@/lib/brews/schema';
 import { useUnits } from '@/lib/settings/useSettings';
 import styles from './QuickChangePanel.module.css';
 
+/** The grind setting is free text ("7.5", "2.5.0", "24 clicks"): a plain text keyboard, nothing auto-corrected. */
+export const GRIND_INPUT_PROPS = {
+  inputMode: 'text',
+  autoCapitalize: 'none',
+  autoCorrect: 'off',
+  autoComplete: 'off',
+  spellCheck: false,
+} as const;
+
 type Props = Readonly<{
   /** The version as saved (not as changed). */
   base: QuickChangeBase & { grinder?: string | null };
@@ -72,7 +81,7 @@ export function QuickChangePanel({ base, change, onChange, nextVersionNo }: Prop
           value={change?.grindSetting ?? base.grind_setting ?? ''}
           maxLength={BREW_LIMITS.grindMax}
           onChange={(text) => onChange(withField(change, 'grindSetting', text))}
-          inputProps={{ autoCapitalize: 'none', autoCorrect: 'off', spellCheck: false }}
+          inputProps={GRIND_INPUT_PROPS}
         />
         <div className={styles.row}>
           <TemperatureField

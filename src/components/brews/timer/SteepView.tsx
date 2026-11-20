@@ -14,12 +14,15 @@ import { useUnits } from '@/lib/settings/useSettings';
 import { FocusCard } from './FocusCard';
 import { FlipClock } from './FlipClock';
 import type { RunControl } from './RunRoot';
+import { SoundPill } from './SoundPill';
+import { TimerProgress } from './TimerProgress';
 import styles from './timer.module.css';
 
 /**
- * A long steep (an hour or more), laid out like the guided timer: the clock, one card with the next
- * step and when it happens on the wall clock, and the controls. No count-in and no wake lock: leave
- * whenever you like, the Home card keeps track. The steps sit below as chips with their clock times.
+ * A long steep (an hour or more), laid out like the guided timer: the clock with its progress bar,
+ * one card with the next step and when it happens on the wall clock, and the controls. No count-in
+ * and no wake lock: leave whenever you like, the Home card keeps track. The steps sit below as
+ * chips with their clock times.
  */
 export function SteepView({ ctl }: Readonly<{ ctl: RunControl }>) {
   const { weight, temp, duration, time, units } = useUnits();
@@ -30,6 +33,7 @@ export function SteepView({ ctl }: Readonly<{ ctl: RunControl }>) {
   const schedule = steepStepTimes(state, steps);
   const finishLabel = endsWithDrawdown(session.method) ? 'Drawdown done' : 'Done';
   const wallClock = (stepSeconds: number) => time(startedAt + stepSeconds * 1000);
+  const audioBlocked = ctl.audioStatus !== 'running' && ctl.audioStatus !== 'unavailable';
 
   const info = focusInfo(steps, elapsed, applied.temp_c, { weight, temp, duration, at: wallClock });
 
@@ -42,13 +46,22 @@ export function SteepView({ ctl }: Readonly<{ ctl: RunControl }>) {
             <VersionBadge version={session.versionNo} />
           </h1>
         </div>
+        {ctl.audioStatus === 'unavailable' ? null : (
+          <SoundPill
+            on={ctl.prefs.sound}
+            blocked={audioBlocked}
+            onToggle={ctl.toggleSound}
+            onEnable={ctl.enableSound}
+          />
+        )}
       </div>
 
-      <div className={styles.clockBlock}>
+      <div className={`${styles.clockBlock} ${styles.clockBlockSteep}`}>
         <p className={styles.clockLabel}>Steeping for</p>
         <span className={styles.clockSizeLong}>
           <FlipClock seconds={elapsed} label="Steeping for" />
         </span>
+        {state.endS != null ? <TimerProgress elapsedS={elapsed} totalS={state.endS} /> : null}
         <p className={styles.clockLabel}>
           {phase === 'finishing'
             ? 'The steep is done'
@@ -66,7 +79,7 @@ export function SteepView({ ctl }: Readonly<{ ctl: RunControl }>) {
         }
       />
 
-      <section aria-labelledby="steep-steps" className={styles.steepList}>
+      <section aria-labelledby="steep-steps" className={styles.steepList} tabIndex={0}>
         <h2 id="steep-steps" className={styles.sectionTitle}>
           Steps
         </h2>
@@ -101,7 +114,7 @@ export function SteepView({ ctl }: Readonly<{ ctl: RunControl }>) {
             Back to Home
           </Button>
         )}
-        <Button size="lg" variant="secondary" fullWidth onPress={ctl.openEnd}>
+        <Button size="lg" variant="ghost" fullWidth onPress={ctl.openEnd}>
           End brew
         </Button>
       </div>

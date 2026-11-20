@@ -1,9 +1,7 @@
 'use client';
 
-import { Volume2, VolumeX } from 'lucide-react';
 import { VersionBadge } from '@/components/ui/Badge/Badge';
 import { Button } from '@/components/ui/Button/Button';
-import { Icon } from '@/components/ui/Icon/Icon';
 import { VisuallyHidden } from '@/components/ui/VisuallyHidden/VisuallyHidden';
 import { stepKindName } from '@/lib/brews/describe';
 import { focusInfo } from '@/lib/brews/focus';
@@ -14,12 +12,15 @@ import { useUnits } from '@/lib/settings/useSettings';
 import { FocusCard } from './FocusCard';
 import { FlipClock, FlipNumber } from './FlipClock';
 import type { RunControl } from './RunRoot';
+import { SoundPill } from './SoundPill';
+import { TimerProgress } from './TimerProgress';
 import styles from './timer.module.css';
 
 /**
  * The guided timer (and the stopwatch, when a recipe has no steps), laid out like the prototype's:
- * the brew clock large at the top, ONE card for what's on now and what's next, the controls at the
- * bottom. Sized with dvh and clamp() so all of it fits the visible screen with no scrolling.
+ * the brew clock large at the top with its thin progress bar, ONE card for what's on now and what's
+ * next, the controls at the bottom. The card is only as tall as its content and the clock takes the
+ * rest, so all of it fits the visible screen with no scrolling.
  */
 export function GuidedView({ ctl }: Readonly<{ ctl: RunControl }>) {
   const { weight, temp, duration, units } = useUnits();
@@ -29,7 +30,7 @@ export function GuidedView({ ctl }: Readonly<{ ctl: RunControl }>) {
   const countLeft = countinLeftS(state, now);
   const drawdown = endsWithDrawdown(session.method) && !stopwatch;
   const finishLabel = drawdown ? 'Drawdown done' : 'Done';
-  const soundOff = ctl.prefs.sound && ctl.audioStatus !== 'running' && ctl.audioStatus !== 'unavailable';
+  const audioBlocked = ctl.audioStatus !== 'running' && ctl.audioStatus !== 'unavailable';
   const first = steps[0];
 
   const info = focusInfo(steps, elapsed, applied.temp_c, { weight, temp, duration, at: duration });
@@ -64,16 +65,12 @@ export function GuidedView({ ctl }: Readonly<{ ctl: RunControl }>) {
           ) : null}
         </div>
         {ctl.audioStatus === 'unavailable' ? null : (
-          <span className={styles.soundButton}>
-            <Button
-              variant="secondary"
-              aria-pressed={soundOff ? undefined : ctl.prefs.sound}
-              onPress={soundOff ? ctl.enableSound : ctl.toggleSound}
-            >
-              <Icon icon={ctl.prefs.sound && !soundOff ? Volume2 : VolumeX} size="md" />
-              {soundOff ? 'Sound is off: tap to turn on' : ctl.prefs.sound ? 'Sound on' : 'Muted'}
-            </Button>
-          </span>
+          <SoundPill
+            on={ctl.prefs.sound}
+            blocked={audioBlocked}
+            onToggle={ctl.toggleSound}
+            onEnable={ctl.enableSound}
+          />
         )}
       </div>
 
@@ -94,6 +91,7 @@ export function GuidedView({ ctl }: Readonly<{ ctl: RunControl }>) {
             <span className={styles.clockSize}>
               <FlipClock seconds={elapsed} label="Brew clock" />
             </span>
+            {state.endS != null ? <TimerProgress elapsedS={elapsed} totalS={state.endS} /> : null}
             {phase === 'paused' ? <p className={styles.paused}>Paused</p> : null}
           </div>
 
@@ -103,8 +101,12 @@ export function GuidedView({ ctl }: Readonly<{ ctl: RunControl }>) {
 
           {stopwatch ? (
             <section className={styles.focus} aria-label="Stopwatch">
-              <p className={styles.status}>Stopwatch</p>
-              <p className={styles.nextLine}>This recipe has no steps. Tap Done when the brew is finished.</p>
+              <div className={styles.focusBody}>
+                <p className={styles.nextLine}>Stopwatch</p>
+                <p className={styles.nextLine}>
+                  This recipe has no steps. Tap Done when the brew is finished.
+                </p>
+              </div>
             </section>
           ) : (
             <FocusCard
@@ -126,7 +128,7 @@ export function GuidedView({ ctl }: Readonly<{ ctl: RunControl }>) {
           <Button size="lg" fullWidth onPress={ctl.skipCountin}>
             Skip · start now
           </Button>
-          <Button size="lg" variant="secondary" fullWidth onPress={ctl.openEnd}>
+          <Button size="lg" variant="ghost" fullWidth onPress={ctl.openEnd}>
             End brew
           </Button>
         </div>
@@ -140,7 +142,7 @@ export function GuidedView({ ctl }: Readonly<{ ctl: RunControl }>) {
           <Button size="lg" variant="secondary" fullWidth onPress={ctl.togglePause}>
             {phase === 'paused' ? 'Resume' : 'Pause'}
           </Button>
-          <Button size="lg" variant="secondary" fullWidth onPress={ctl.openEnd}>
+          <Button size="lg" variant="ghost" fullWidth onPress={ctl.openEnd}>
             End brew
           </Button>
         </div>
@@ -151,7 +153,7 @@ export function GuidedView({ ctl }: Readonly<{ ctl: RunControl }>) {
           <Button size="lg" fullWidth onPress={ctl.togglePause}>
             {phase === 'paused' ? 'Resume' : 'Pause'}
           </Button>
-          <Button size="lg" variant="secondary" fullWidth onPress={ctl.openEnd}>
+          <Button size="lg" variant="ghost" fullWidth onPress={ctl.openEnd}>
             End brew
           </Button>
         </div>
@@ -162,7 +164,7 @@ export function GuidedView({ ctl }: Readonly<{ ctl: RunControl }>) {
           <Button size="lg" fullWidth onPress={ctl.finish}>
             {finishLabel}
           </Button>
-          <Button size="lg" variant="secondary" fullWidth onPress={ctl.openEnd}>
+          <Button size="lg" variant="ghost" fullWidth onPress={ctl.openEnd}>
             End brew
           </Button>
         </div>

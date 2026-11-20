@@ -125,9 +125,10 @@ const flavoursSchema = z
  * version has it"; `grindSetting: null` and `tempC: null` mean "cleared".
  */
 export const quickChangeSchema = z.object({
+  // Plain text, kept exactly as typed: no trim here, or a space typed between words would vanish
+  // when the saved session is read back ("24 clicks" would become "24clicks").
   grindSetting: z
     .string()
-    .trim()
     .max(BREW_LIMITS.grindMax, `Grind setting can be up to ${BREW_LIMITS.grindMax} characters`)
     .nullable()
     .optional(),
