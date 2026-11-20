@@ -2,7 +2,7 @@
 
 import { Archive, ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Badge, VersionBadge, VisibilityBadge } from '@/components/ui/Badge/Badge';
 import { Icon } from '@/components/ui/Icon/Icon';
 import { Notice } from '@/components/ui/Notice/Notice';
@@ -17,6 +17,9 @@ import { useUnits } from '@/lib/settings/useSettings';
 import { formatRate } from '@/lib/units';
 import { LazyPourCurve } from './LazyPourCurve';
 import styles from './RecipePage.module.css';
+
+/** The side column's distance from the top of the window while it sticks (matches the CSS). */
+const STICKY_GAP_PX = 16;
 
 function Row({
   label,
@@ -79,6 +82,24 @@ export function RecipeView({
 }: Props) {
   const { weight, temp, duration, date } = useUnits();
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const sideRef = useRef<HTMLDivElement>(null);
+  const [sideFits, setSideFits] = useState(false);
+
+  // The side column sticks while the main column scrolls, but only when it is shorter than the
+  // window: a taller one would hide its lower part.
+  useEffect(() => {
+    const el = sideRef.current;
+    if (!el) return;
+    const measure = () => setSideFits(el.offsetHeight <= window.innerHeight - STICKY_GAP_PX * 2);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    window.addEventListener('resize', measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [version.id]);
 
   // Arriving here after a save (or a link): the heading is where a screen reader starts.
   useEffect(() => {
@@ -139,18 +160,21 @@ export function RecipeView({
       {switcher}
       {actions}
       <div className={styles.columns}>
-        <div className={styles.versionInfo}>
-          {notice}
-          {version.locked_at ? (
-            <Notice>This version has brews. Changes save as a new version.</Notice>
-          ) : null}
-          {version.change_note ? (
-            <p className={styles.changeNote}>
-              <span className={styles.muted}>Change note: </span>
-              {version.change_note}
-            </p>
-          ) : null}
-        </div>
+        {notice || version.locked_at || version.change_note ? (
+          <div className={styles.versionInfo}>
+            <h2 className={styles.versionTitle}>This version</h2>
+            {notice}
+            {version.locked_at ? (
+              <Notice>This version has brews. Changes save as a new version.</Notice>
+            ) : null}
+            {version.change_note ? (
+              <p className={styles.changeNote}>
+                <span className={styles.muted}>Change note: </span>
+                {version.change_note}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
 
         <div className={styles.mainColumn}>
           <dl className={styles.key} aria-label="Key numbers">
@@ -185,7 +209,11 @@ export function RecipeView({
           <Steps steps={version.steps} />
         </div>
 
-        <div className={styles.sideColumn}>
+        <div
+          ref={sideRef}
+          className={styles.sideColumn}
+          data-sticky={sideFits ? 'true' : undefined}
+        >
           <CoffeeSection version={version} />
 
           <GearSection version={version} />
@@ -286,7 +314,7 @@ function CoffeeSection({ version }: { version: VersionRow }) {
 
 function GearSection({ version }: { version: VersionRow }) {
   const entries = RECIPE_GEAR_CATEGORIES.filter((c) => version.gear[c]);
-  if (entries.length === 0) return null;
+  if (entries.length === 0 && version.water_ppm == null) return null;
   return (
     <Section title="Gear">
       <dl className={styles.list}>
