@@ -48,6 +48,17 @@ export function StepCard({
   const err = (field: string) => errors[stepFieldId(step.id, field)];
   const n = index + 1;
 
+  // From 768 px a pour's time, target, rate (and temperature) share one row.
+  const fieldsClass = `${styles.fields} ${
+    step.kind === 'pour'
+      ? varyTemp
+        ? styles.fieldsPour4
+        : styles.fieldsPour3
+      : step.kind === 'other'
+        ? styles.fieldsPour3
+        : ''
+  }`;
+
   return (
     <fieldset className={styles.card} aria-label={heading.accessible}>
       <div className={styles.header}>
@@ -73,7 +84,7 @@ export function StepCard({
         </div>
       </div>
 
-      <div className={styles.fields}>
+      <div className={fieldsClass}>
         <DurationField
           id={stepFieldId(step.id, 'at_s')}
           label="Time"
@@ -146,17 +157,21 @@ export function StepCard({
           </>
         )}
 
-        <TextField
-          id={stepFieldId(step.id, 'technique')}
-          label="Technique (optional)"
-          placeholder={
-            step.kind === 'pour' ? 'e.g. slow spiral, centre only' : 'e.g. gentle, 3 clockwise turns'
-          }
-          maxLength={TECHNIQUE_MAX}
-          value={step.technique ?? ''}
-          onChange={(technique) => onChange({ technique })}
-          errorMessage={err('technique')}
-        />
+        <div className={styles.technique}>
+          <TextField
+            id={stepFieldId(step.id, 'technique')}
+            label="Technique (optional)"
+            placeholder={
+              step.kind === 'pour'
+                ? 'e.g. slow spiral, centre only'
+                : 'e.g. gentle, 3 clockwise turns'
+            }
+            maxLength={TECHNIQUE_MAX}
+            value={step.technique ?? ''}
+            onChange={(technique) => onChange({ technique })}
+            errorMessage={err('technique')}
+          />
+        </div>
       </div>
     </fieldset>
   );

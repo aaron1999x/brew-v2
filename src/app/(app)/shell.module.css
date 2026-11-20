@@ -3,7 +3,7 @@
 }
 
 .main {
-  max-width: 48rem;
+  max-width: var(--layout-wide);
   margin: 0 auto;
   /* Room for the fixed tab bar and the iOS home indicator. */
   padding-bottom: calc(var(--size-tab-bar) + env(safe-area-inset-bottom) + var(--space-6));
@@ -14,7 +14,21 @@
 }
 
 .body {
+  max-width: var(--layout-reading);
+  margin-inline: auto;
   padding: var(--space-4);
+}
+
+/* Settings and gear keep a form width. */
+.bodyForm {
+  composes: body;
+  max-width: var(--layout-form);
+}
+
+/* Pages that use the full app width (the recipes list). */
+.bodyWide {
+  composes: body;
+  max-width: none;
 }
 
 @media (min-width: 768px) {

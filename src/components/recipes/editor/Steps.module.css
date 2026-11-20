@@ -59,6 +59,30 @@
   gap: var(--space-3);
 }
 
+.technique {
+  min-width: 0;
+}
+
+/* Tablet and desktop: the fields of a step share a row; the technique takes the next one. */
+@media (min-width: 768px) {
+  .fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+
+  .fieldsPour3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .fieldsPour4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .technique {
+    grid-column: 1 / -1;
+  }
+}
+
 .error {
   margin: 0;
   color: var(--color-status-danger);

@@ -11,7 +11,7 @@ export default async function EditProfilePage() {
   return (
     <>
       <TopBar title="Edit profile" backHref="/profile" />
-      <div className={styles.body}>
+      <div className={styles.bodyForm}>
         <ProfileForm />
       </div>
     </>

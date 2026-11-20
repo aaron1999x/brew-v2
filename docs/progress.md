@@ -289,6 +289,19 @@ No blockers. Fixed after its review: a version locked while the editor is open n
 ### Next (M4)
 Guided timer and brew log (`docs/phase-5-roadmap.md` M4).
 
+## Wider desktop layouts (between M3 and M4)
+
+Branch `feat/desktop-layouts`. Phone layouts (under 768 px) are unchanged: the new wrappers use `display: contents` and the DOM order is the same.
+
+- **Tokens:** `--layout-wide` (75rem, app pages), `--layout-form` (40rem, settings, gear, the editor on a tablet), `--layout-reading` (45rem, home, profile, admin and other pages that don't use the width). Breakpoints stay at 768 and 1024 px (a media query can't use a variable); two local ones at 1280 px (below).
+- **App shell:** `main` is `--layout-wide`; `.body` caps at `--layout-reading`, `.bodyForm` at `--layout-form` (every `/settings/*` page, including gear), `.bodyWide` for the recipes list. Auth pages keep 28rem. Settings and account forms went from 28rem to `--layout-form`.
+- **Recipe page:** from 1024 px a main column (key numbers, pour curve, steps) and a side column (change note, locked notice, coffee, gear, targets, notes). Key numbers: 3 across from 768 px, **6 across from 1280 px** (at 1024 px the main column is about 490 px, too narrow for six); bypass, overall ratio and expected volume follow the core six.
+- **Editor:** from 1024 px a form column and a sticky "Live numbers" panel (the four numbers and the pour curve of the steps as typed). The panel mounts the curve only at 1024 px and up (`useMediaQuery`), so phones never load it; the inline "Calculated" box shows below 1024 px. Coffee, gear and numbers fields are 2 across from 768 px and 3 across from 1024 px; a pour's time, target, rate and temperature share a row from 768 px; targets are three pairs in a row from **1280 px** (stacked pairs before). The bypass toggle takes a full row.
+- **Recipes list:** columns (recipe, dose, water, ratio, coffee, last edited) from 1024 px with a header row, filters in one row. Chosen over a card grid because the list is sorted by dates and names, and columns scan better; cards would need a mini curve per row. Tablet keeps the stacked row.
+- **Compare and versions:** compare shows each changed value as v1 and v2 cells side by side from 768 px and two items across from 1024 px; versions are two cards across from 1024 px.
+- **Tests:** `desktop-layouts.spec.ts` (fit at 320, 390, 768, 1024 and 1440 px; structure at each breakpoint; axe in light and dark at 768, 1024 and 1440 px). `expectColumnsFit` now ignores absolutely positioned helpers (visually hidden spans take no grid cell) and checks every pair of cells in a row, so a cell placed out of DOM order is not a false alarm.
+- **Known:** the version select on the recipe page stretches across the full width on desktop.
+
 ## M4 Guided timer and brew log
 ## M5 Offline and PWA
 ## M6 Public pages and publishing

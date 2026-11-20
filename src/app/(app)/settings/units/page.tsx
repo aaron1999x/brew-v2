@@ -11,7 +11,7 @@ export default async function UnitsPage() {
   return (
     <>
       <TopBar title="Units and region" backHref="/settings" />
-      <div className={styles.body}>
+      <div className={styles.bodyForm}>
         <UnitsForm />
       </div>
     </>

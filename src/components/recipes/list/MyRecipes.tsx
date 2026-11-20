@@ -75,10 +75,9 @@ export function MyRecipes() {
   };
   const clear = () => {
     setTyped(null);
-    router.replace(
-      listHref({ ...DEFAULT_LIST_PARAMS, sort: params.sort, tab: params.tab }),
-      { scroll: false },
-    );
+    router.replace(listHref({ ...DEFAULT_LIST_PARAMS, sort: params.sort, tab: params.tab }), {
+      scroll: false,
+    });
   };
 
   const all = useMemo(() => recipes.data ?? [], [recipes.data]);
@@ -157,7 +156,18 @@ export function MyRecipes() {
               <VisuallyHidden>Showing </VisuallyHidden>
               {visible.length} {visible.length === 1 ? 'recipe' : 'recipes'}
             </p>
-            <ul className={styles.list} aria-label={params.tab === 'archived' ? 'Archived recipes' : 'Recipes'}>
+            <div className={styles.columnHeads} aria-hidden="true">
+              <span>Recipe</span>
+              <span>Dose</span>
+              <span>Water</span>
+              <span>Ratio</span>
+              <span>Coffee</span>
+              <span>Last edited</span>
+            </div>
+            <ul
+              className={styles.list}
+              aria-label={params.tab === 'archived' ? 'Archived recipes' : 'Recipes'}
+            >
               {handle
                 ? visible.map((item) => <Row key={item.id} item={item} handle={handle} />)
                 : null}
@@ -204,7 +214,7 @@ function Empty({
 }
 
 function Row({ item, handle }: Readonly<{ item: RecipeListItem; handle: string }>) {
-  const { weight } = useUnits();
+  const { weight, date } = useUnits();
   const ratio = formatRatio(brewRatio(item.dose_g, item.brew_water_g));
   const numbers = [
     item.dose_g != null ? weight(item.dose_g) : null,
@@ -218,8 +228,29 @@ function Row({ item, handle }: Readonly<{ item: RecipeListItem; handle: string }
         <span className={styles.meta}>
           {methodLabel(item.method, item.method_custom)} · v{item.latest_version_no}
         </span>
-        {numbers.length > 0 ? <span className={`${styles.meta} num`}>{numbers.join(' · ')}</span> : null}
-        {item.coffee_name ? <span className={styles.meta}>{item.coffee_name}</span> : null}
+        {numbers.length > 0 ? (
+          <span className={`${styles.meta} ${styles.joined} num`}>{numbers.join(' · ')}</span>
+        ) : null}
+        {item.coffee_name ? (
+          <span className={`${styles.meta} ${styles.coffee}`}>{item.coffee_name}</span>
+        ) : null}
+        {/* From 1024 px the numbers sit in their own columns, so the joined line above is hidden. */}
+        <span className={`${styles.meta} ${styles.cell} num`}>
+          <VisuallyHidden>Dose </VisuallyHidden>
+          {item.dose_g != null ? weight(item.dose_g) : null}
+        </span>
+        <span className={`${styles.meta} ${styles.cell} num`}>
+          <VisuallyHidden>Water </VisuallyHidden>
+          {item.brew_water_g != null ? weight(item.brew_water_g) : null}
+        </span>
+        <span className={`${styles.meta} ${styles.cell} num`}>
+          <VisuallyHidden>Ratio </VisuallyHidden>
+          {ratio}
+        </span>
+        <span className={`${styles.meta} ${styles.cell} ${styles.edited}`}>
+          <VisuallyHidden>Last edited </VisuallyHidden>
+          {date(item.edited_at)}
+        </span>
       </Link>
       <RecipeActions
         id={item.id}

@@ -11,7 +11,7 @@ export default async function AccountPage() {
   return (
     <>
       <TopBar title="Account" backHref="/settings" />
-      <div className={styles.body}>
+      <div className={styles.bodyForm}>
         <AccountSettings email={user.email ?? ''} />
       </div>
     </>

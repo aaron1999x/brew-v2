@@ -2,7 +2,7 @@
 
 import { Archive, ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Badge, VersionBadge, VisibilityBadge } from '@/components/ui/Badge/Badge';
 import { Icon } from '@/components/ui/Icon/Icon';
 import { Notice } from '@/components/ui/Notice/Notice';
@@ -18,10 +18,22 @@ import { formatRate } from '@/lib/units';
 import { LazyPourCurve } from './LazyPourCurve';
 import styles from './RecipePage.module.css';
 
-function Row({ label, children }: { label: string; children: ReactNode }) {
+/** The side column's distance from the top of the window while it sticks (matches the CSS). */
+const STICKY_GAP_PX = 16;
+
+function Row({
+  label,
+  children,
+  extra = false,
+}: {
+  label: string;
+  children: ReactNode;
+  /** A key number outside the six core ones; on a wide screen it wraps to a second row. */
+  extra?: boolean;
+}) {
   if (children == null || children === '') return null;
   return (
-    <div className={styles.row}>
+    <div className={extra ? `${styles.row} ${styles.extra}` : styles.row}>
       <dt>{label}</dt>
       <dd>{children}</dd>
     </div>
@@ -70,6 +82,24 @@ export function RecipeView({
 }: Props) {
   const { weight, temp, duration, date } = useUnits();
   const headingRef = useRef<HTMLHeadingElement>(null);
+  const sideRef = useRef<HTMLDivElement>(null);
+  const [sideFits, setSideFits] = useState(false);
+
+  // The side column sticks while the main column scrolls, but only when it is shorter than the
+  // window: a taller one would hide its lower part.
+  useEffect(() => {
+    const el = sideRef.current;
+    if (!el) return;
+    const measure = () => setSideFits(el.offsetHeight <= window.innerHeight - STICKY_GAP_PX * 2);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    window.addEventListener('resize', measure);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [version.id]);
 
   // Arriving here after a save (or a link): the heading is where a screen reader starts.
   useEffect(() => {
@@ -100,7 +130,7 @@ export function RecipeView({
       : null;
 
   return (
-    <>
+    <div className={styles.view}>
       <header className={styles.header}>
         <Link href={backHref} aria-label="Back" className={styles.back} data-primary-control="">
           <Icon icon={ChevronLeft} size="md" />
@@ -129,58 +159,75 @@ export function RecipeView({
 
       {switcher}
       {actions}
-      {notice}
-      {version.locked_at ? (
-        <Notice>This version has brews. Changes save as a new version.</Notice>
-      ) : null}
-      {version.change_note ? (
-        <p className={styles.changeNote}>
-          <span className={styles.muted}>Change note: </span>
-          {version.change_note}
-        </p>
-      ) : null}
+      <div className={styles.columns}>
+        {notice || version.locked_at || version.change_note ? (
+          <div className={styles.versionInfo}>
+            <h2 className={styles.versionTitle}>This version</h2>
+            {notice}
+            {version.locked_at ? (
+              <Notice>This version has brews. Changes save as a new version.</Notice>
+            ) : null}
+            {version.change_note ? (
+              <p className={styles.changeNote}>
+                <span className={styles.muted}>Change note: </span>
+                {version.change_note}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
 
-      <dl className={styles.key} aria-label="Key numbers">
-        <Row label="Dose">{weight(version.dose_g)}</Row>
-        <Row label="Brew water">{weight(version.brew_water_g)}</Row>
-        <Row label="Ratio">{formatRatio(numbers.ratio)}</Row>
-        <Row label="Temperature">{version.temp_c != null ? temp(version.temp_c) : null}</Row>
-        <Row label="Grind">{grind ? (grinder ? `${grind} (${grinder})` : grind) : null}</Row>
-        <Row label="Bypass">
-          {version.bypass_g > 0
-            ? `${weight(version.bypass_g)}, ${version.bypass_timing === 'before' ? 'before' : 'after'} brewing`
-            : null}
-        </Row>
-        <Row label="Overall ratio">{overall}</Row>
-        <Row label="Expected volume">
-          {numbers.expectedFinalVolumeG != null ? weight(numbers.expectedFinalVolumeG) : null}
-        </Row>
-        <Row label="Total time">
-          {numbers.totalTimeS != null ? duration(numbers.totalTimeS) : null}
-        </Row>
-      </dl>
+        <div className={styles.mainColumn}>
+          <dl className={styles.key} aria-label="Key numbers">
+            <Row label="Dose">{weight(version.dose_g)}</Row>
+            <Row label="Brew water">{weight(version.brew_water_g)}</Row>
+            <Row label="Ratio">{formatRatio(numbers.ratio)}</Row>
+            <Row label="Temperature">{version.temp_c != null ? temp(version.temp_c) : null}</Row>
+            <Row label="Grind">{grind ? (grinder ? `${grind} (${grinder})` : grind) : null}</Row>
+            <Row label="Bypass" extra>
+              {version.bypass_g > 0
+                ? `${weight(version.bypass_g)}, ${version.bypass_timing === 'before' ? 'before' : 'after'} brewing`
+                : null}
+            </Row>
+            <Row label="Overall ratio" extra>
+              {overall}
+            </Row>
+            <Row label="Expected volume" extra>
+              {numbers.expectedFinalVolumeG != null ? weight(numbers.expectedFinalVolumeG) : null}
+            </Row>
+            <Row label="Total time">
+              {numbers.totalTimeS != null ? duration(numbers.totalTimeS) : null}
+            </Row>
+          </dl>
 
-      {version.steps.length > 0 ? (
-        <LazyPourCurve
-          series={[{ id: version.id, label: `v${version.version_no}`, steps: version.steps }]}
-          drawdown={drawdown}
-        />
-      ) : null}
+          {version.steps.length > 0 ? (
+            <LazyPourCurve
+              series={[{ id: version.id, label: `v${version.version_no}`, steps: version.steps }]}
+              drawdown={drawdown}
+            />
+          ) : null}
 
-      <Steps steps={version.steps} />
+          <Steps steps={version.steps} />
+        </div>
 
-      <CoffeeSection version={version} />
+        <div
+          ref={sideRef}
+          className={styles.sideColumn}
+          data-sticky={sideFits ? 'true' : undefined}
+        >
+          <CoffeeSection version={version} />
 
-      <GearSection version={version} />
+          <GearSection version={version} />
 
-      <TargetsSection version={version} />
+          <TargetsSection version={version} />
 
-      {version.notes ? (
-        <Section title="Notes">
-          <p className={styles.notes}>{version.notes}</p>
-        </Section>
-      ) : null}
-    </>
+          {version.notes ? (
+            <Section title="Notes">
+              <p className={styles.notes}>{version.notes}</p>
+            </Section>
+          ) : null}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -267,7 +314,7 @@ function CoffeeSection({ version }: { version: VersionRow }) {
 
 function GearSection({ version }: { version: VersionRow }) {
   const entries = RECIPE_GEAR_CATEGORIES.filter((c) => version.gear[c]);
-  if (entries.length === 0) return null;
+  if (entries.length === 0 && version.water_ppm == null) return null;
   return (
     <Section title="Gear">
       <dl className={styles.list}>

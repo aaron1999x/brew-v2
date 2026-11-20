@@ -66,3 +66,87 @@
   line-height: var(--type-body-small-line-height);
   overflow-wrap: anywhere;
 }
+
+/* Columns appear from 1024 px; on a phone and a tablet the row keeps its stacked lines. */
+.columnHeads,
+.cell {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .page {
+    --list-columns: minmax(0, 3fr) 6rem 6rem 5rem minmax(0, 2fr) 8rem;
+  }
+
+  /* Search, the two filters and the sort share one row; the tabs stay on top. */
+  .controls {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    align-items: start;
+  }
+
+  .controls > :first-child {
+    grid-column: 1 / -1;
+  }
+
+  .controls > .pair {
+    display: contents;
+  }
+
+  .controls > :nth-child(2) {
+    grid-column: span 2;
+  }
+
+  .columnHeads {
+    display: grid;
+    grid-template-columns: var(--list-columns);
+    gap: var(--space-4);
+    /* Lines up with the row's border and its link padding. */
+    padding: 0
+      calc(
+        var(--border-width-hairline) + var(--space-2) + var(--size-target-min) + var(--space-1) +
+          var(--space-4)
+      )
+      0 calc(var(--border-width-hairline) + var(--space-4));
+    color: var(--color-text-secondary);
+    font-size: var(--type-body-small-size);
+    font-weight: var(--type-label-weight);
+  }
+
+  .link {
+    grid-template-columns: var(--list-columns);
+    align-items: center;
+    gap: var(--space-4);
+  }
+
+  .joined {
+    display: none;
+  }
+
+  .cell {
+    display: block;
+  }
+
+  /* The name and its method line stack in the first column, the coffee sits in its own. */
+  .name {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .link > .meta:nth-child(2) {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .cell,
+  .coffee {
+    grid-row: 1 / span 2;
+  }
+
+  .coffee {
+    grid-column: 5;
+  }
+
+  .edited {
+    grid-column: 6;
+  }
+}

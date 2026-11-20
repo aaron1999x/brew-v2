@@ -11,7 +11,7 @@ export default async function GearPage() {
   return (
     <>
       <TopBar title="My gear" backHref="/settings" />
-      <div className={styles.body}>
+      <div className={styles.bodyForm}>
         <GearList />
       </div>
     </>
