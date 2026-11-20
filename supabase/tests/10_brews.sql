@@ -2,7 +2,7 @@
 -- locking; the snapshot guard; the flavours and date checks; my_recipe_brew_stats; account deletion.
 begin;
 \ir 00_helpers.sql
-select plan(71);
+select plan(77);
 
 -- A brew payload: id, version, a date, overall 7.5 (overridable through p_extra).
 create function tests.brew(p_id uuid, p_version uuid, p_extra jsonb default '{}')
@@ -81,6 +81,10 @@ select throws_ok(format($$select public.log_brew(%L::jsonb)$$,
 select lives_ok(format($$select public.log_brew(%L::jsonb)$$,
   tests.brew(gen_random_uuid(), :'v1', jsonb_build_object('brewed_at', now() - interval '3 days'))::text),
   'a brew in the past is fine');
+select throws_ok(format($$insert into public.brews (id, user_id, recipe_version_id, brewed_at, overall, created_at)
+                          values (gen_random_uuid(), %L, %L, now() + interval '1 year', 5, now() + interval '2 years')$$,
+                        :'alice', :'v1'),
+  '23514', null, 'a direct insert can''t move created_at forward to get past the date check');
 select throws_ok(format($$select public.log_brew(%L::jsonb)$$,
   tests.brew(gen_random_uuid(), :'v1', '{"sweetness": 7.3}')::text),
   '23514', null, 'scores must be in 0.5 steps');
@@ -123,6 +127,16 @@ select throws_ok($$select * from public.my_recipe_brew_stats()$$, '42501', null,
 select tests.as_user(:'alice');
 select lives_ok(format($$update public.brews set notes = 'Sweet and clean', next_change = 'Finer' where id = %L$$, :'b1'),
   'the owner can edit results and notes');
+-- Everything the M4 edit form changes, in one update, plus soft delete and undo.
+select lives_ok(format($$update public.brews set drawdown_s = 180, beverage_g = 215, tds_pct = 1.38,
+    sweetness = 6, acidity = 5.5, brightness = 6.5, body = 4, clarity = 7, balance = 6, aftertaste = 5, overall = 8,
+    flavours = array['peach', 'black tea'], tasted_temp = 'warm', tasted_after_min = 10,
+    notes = 'Edited', next_change = 'Coarser', brewed_at = now() - interval '1 hour', client_updated_at = now()
+  where id = %L$$, :'b1'),
+  'the edit form can change results, scores, flavours, tasted at, notes, next time and brewed at');
+select is((select ey_pct from public.brews where id = :'b1'), 19.8, 'EY is recomputed from the edited results');
+select lives_ok(format($$update public.brews set deleted_at = now() where id = %L$$, :'b1'), 'the owner can soft-delete a brew');
+select lives_ok(format($$update public.brews set deleted_at = null where id = %L$$, :'b1'), 'and undo the delete');
 select throws_ok(format($$update public.brews set recipe_version_id = %L where id = %L$$, :'vb', :'b1'),
   'P0001', 'brew_version_immutable', 'a brew can''t move to another version');
 select throws_ok(format($$update public.brews set dose_g_snapshot = 30 where id = %L$$, :'b1'),
@@ -184,6 +198,10 @@ select throws_ok(format($$select public.log_brew(%L::jsonb, %L::jsonb)$$, tests.
 select throws_ok(format($$select public.log_brew(%L::jsonb, %L::jsonb)$$, tests.brew(gen_random_uuid(), :'v1')::text,
   jsonb_build_object('steps', replace(:'qc_steps', '"at_s":45', '"at_s":50')::jsonb, 'change_note', 'x')::text),
   'P0001', 'quick_change_invalid', 'a change to step times is rejected');
+select throws_ok(format($$select public.log_brew(%L::jsonb, %L::jsonb)$$, tests.brew(gen_random_uuid(), :'v1')::text,
+  jsonb_build_object('steps', replace(:'qc_steps', '"duration_s":5}', '"duration_s":5,"target_g":40}')::jsonb,
+                     'change_note', 'x')::text),
+  'P0001', 'quick_change_invalid', 'a quick change can''t add a target to a non-pour step');
 select throws_ok(format($$select public.log_brew(%L::jsonb, %L::jsonb)$$, tests.brew(gen_random_uuid(), :'v1')::text,
   jsonb_build_object('steps', '[]'::jsonb, 'change_note', 'x')::text),
   'P0001', 'quick_change_invalid', 'dropping the steps is rejected');
