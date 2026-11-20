@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useMemo, useState, type FormEvent, type ReactNode } from 'react';
+import { useDeferredValue, useEffect, useId, useMemo, useState, type FormEvent, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { QueryBoundary } from '@/components/feedback/QueryBoundary';
 import { Button } from '@/components/ui/Button/Button';
@@ -71,7 +71,9 @@ import {
 } from '@/lib/recipes/save';
 import { LIMITS } from '@/lib/recipes/schema';
 import { useUnits } from '@/lib/settings/useSettings';
+import { useMediaQuery } from '@/lib/ui/useMediaQuery';
 import { DiffSections } from '../Changes';
+import { LazyPourCurve } from '../LazyPourCurve';
 import { RecipeGearPicker } from './RecipeGearPicker';
 import { StepsEditor } from './StepsEditor';
 import { useUnsavedGuard } from './useUnsavedGuard';
@@ -103,14 +105,31 @@ function sortByPosition(errors: DraftError[]): DraftError[] {
   });
 }
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
+/** How a section lays out its fields from 768 px: two across, three across, or pairs of targets. */
+const FIELD_LAYOUTS = {
+  two: styles.fieldsTwo,
+  three: styles.fieldsThree,
+  targets: styles.fieldsTargets,
+} as const;
+
+function Section({
+  title,
+  children,
+  layout,
+}: {
+  title: string;
+  children: ReactNode;
+  layout?: keyof typeof FIELD_LAYOUTS;
+}) {
   const id = useId();
   return (
     <section aria-labelledby={id} className={styles.section}>
       <h2 id={id} className={styles.sectionTitle}>
         {title}
       </h2>
-      <div className={styles.fields}>{children}</div>
+      <div className={layout ? `${styles.fields} ${FIELD_LAYOUTS[layout]}` : styles.fields}>
+        {children}
+      </div>
     </section>
   );
 }
@@ -292,6 +311,23 @@ function EditorForm({
     .join(', ');
   const announced = useDebounced(summaryLine, 800);
 
+  // The four numbers show inside the form on a phone and tablet, and in a side panel from 1024 px.
+  const wide = useMediaQuery('(min-width: 1024px)');
+  const panelId = useId();
+  const curveSteps = useDeferredValue(draft.steps);
+  const curveSeries = useMemo(
+    () => [{ id: 'draft', label: 'Draft', steps: curveSteps }],
+    [curveSteps],
+  );
+  const hasCurve = curveSteps.some((s) => s.kind === 'pour' && s.target_g != null);
+  const curveDrawdown =
+    draft.drawdown_min_s != null || draft.drawdown_max_s != null
+      ? {
+          from: draft.drawdown_min_s ?? draft.drawdown_max_s ?? 0,
+          to: draft.drawdown_max_s ?? draft.drawdown_min_s ?? 0,
+        }
+      : null;
+
   // A brew on another tab or device can lock this version while the editor is open. The database
   // says so on save (`version_locked`); from then on the editor plans a new version instead.
   const [lockedNow, setLockedNow] = useState(false);
@@ -388,6 +424,31 @@ function EditorForm({
     }
   }
 
+  const liveList = (
+    <dl className={styles.numbersList}>
+      <div>
+        <dt>Ratio</dt>
+        <dd className="num">{ratio ?? '–'}</dd>
+      </div>
+      <div>
+        <dt>Overall ratio</dt>
+        <dd className="num">{formatRatio(numbers.overallRatio) ?? '–'}</dd>
+      </div>
+      <div>
+        <dt>Expected volume</dt>
+        <dd className="num">
+          {numbers.expectedFinalVolumeG != null ? weight(numbers.expectedFinalVolumeG) : '–'}
+        </dd>
+      </div>
+      <div>
+        <dt>Total time</dt>
+        <dd className="num">
+          {numbers.totalTimeS != null ? duration(numbers.totalTimeS) : '–'}
+        </dd>
+      </div>
+    </dl>
+  );
+
   const methodOptions = BREW_METHODS.map((m) => ({ id: m, label: METHOD_LABELS[m] }));
   const roastOptions = [
     { id: NOT_SET, label: 'Not set' },
@@ -446,403 +507,400 @@ function EditorForm({
 
           <FormErrorSummary errors={summary} />
 
-          <Section title="Basics">
-            <TextField
-              id={fieldId('name')}
-              label="Name"
-              isRequired
-              maxLength={LIMITS.name}
-              value={draft.name}
-              onChange={setText('name')}
-              isInvalid={Boolean(live[fieldId('name')])}
-              errorMessage={live[fieldId('name')]}
-            />
-            <Select
-              id={fieldId('method')}
-              label="Method"
-              isRequired
-              placeholder="Choose a method"
-              options={methodOptions}
-              selectedKey={draft.method}
-              onSelectionChange={(key) => set('method', String(key) as BrewMethod)}
-              isInvalid={Boolean(live[fieldId('method')])}
-              errorMessage={live[fieldId('method')]}
-            />
-            {draft.method === 'other' ? (
-              <TextField
-                id={fieldId('method_custom')}
-                label="Method name"
-                isRequired
-                maxLength={METHOD_CUSTOM_MAX}
-                value={draft.method_custom}
-                onChange={setText('method_custom')}
-                isInvalid={Boolean(live[fieldId('method_custom')])}
-                errorMessage={live[fieldId('method_custom')]}
-              />
-            ) : null}
-          </Section>
+          <div className={styles.columns}>
+            <div className={styles.formColumn}>
+              <Section title="Basics" layout="two">
+                <TextField
+                  id={fieldId('name')}
+                  label="Name"
+                  isRequired
+                  maxLength={LIMITS.name}
+                  value={draft.name}
+                  onChange={setText('name')}
+                  isInvalid={Boolean(live[fieldId('name')])}
+                  errorMessage={live[fieldId('name')]}
+                />
+                <Select
+                  id={fieldId('method')}
+                  label="Method"
+                  isRequired
+                  placeholder="Choose a method"
+                  options={methodOptions}
+                  selectedKey={draft.method}
+                  onSelectionChange={(key) => set('method', String(key) as BrewMethod)}
+                  isInvalid={Boolean(live[fieldId('method')])}
+                  errorMessage={live[fieldId('method')]}
+                />
+                {draft.method === 'other' ? (
+                  <TextField
+                    id={fieldId('method_custom')}
+                    label="Method name"
+                    isRequired
+                    maxLength={METHOD_CUSTOM_MAX}
+                    value={draft.method_custom}
+                    onChange={setText('method_custom')}
+                    isInvalid={Boolean(live[fieldId('method_custom')])}
+                    errorMessage={live[fieldId('method_custom')]}
+                  />
+                ) : null}
+              </Section>
 
-          <Section title="Gear">
-            {RECIPE_GEAR_CATEGORIES.map((category) => (
-              <RecipeGearPicker
-                key={category}
-                id={`recipe-gear-${category}`}
-                label={GEAR_CATEGORY_LABELS[category]}
-                category={category}
-                myGear={myGear}
-                catalog={catalog.data ?? []}
-                isLoading={catalog.isPending}
-                value={choiceFor(category)}
-                onChange={(choice) =>
-                  setDraft((d) => ({ ...d, gear: { ...d.gear, [category]: choice } }))
-                }
-              />
-            ))}
-          </Section>
+              <Section title="Gear" layout="three">
+                {RECIPE_GEAR_CATEGORIES.map((category) => (
+                  <RecipeGearPicker
+                    key={category}
+                    id={`recipe-gear-${category}`}
+                    label={GEAR_CATEGORY_LABELS[category]}
+                    category={category}
+                    myGear={myGear}
+                    catalog={catalog.data ?? []}
+                    isLoading={catalog.isPending}
+                    value={choiceFor(category)}
+                    onChange={(choice) =>
+                      setDraft((d) => ({ ...d, gear: { ...d.gear, [category]: choice } }))
+                    }
+                  />
+                ))}
+              </Section>
 
-          <Section title="Coffee">
-            <TextField
-              id={fieldId('coffee_name')}
-              label="Coffee"
-              maxLength={LIMITS.coffeeText}
-              value={draft.coffee_name}
-              onChange={setText('coffee_name')}
-              errorMessage={error('coffee_name')}
-              isInvalid={Boolean(error('coffee_name'))}
-            />
-            <TextField
-              id={fieldId('roaster')}
-              label="Roaster"
-              maxLength={LIMITS.coffeeText}
-              value={draft.roaster}
-              onChange={setText('roaster')}
-              errorMessage={error('roaster')}
-              isInvalid={Boolean(error('roaster'))}
-            />
-            <TextField
-              id={fieldId('origin')}
-              label="Origin"
-              maxLength={LIMITS.coffeeText}
-              value={draft.origin}
-              onChange={setText('origin')}
-              errorMessage={error('origin')}
-              isInvalid={Boolean(error('origin'))}
-            />
-            <Combobox
-              id={fieldId('process')}
-              label="Process"
-              items={PROCESS_PRESETS.map((p) => ({ id: p, label: p }))}
-              allowsCustomValue
-              customOptionLabel={(t) => `Use “${t}”`}
-              defaultText={draft.process || undefined}
-              onTextChange={(text) => set('process', text)}
-              errorMessage={error('process')}
-              isInvalid={Boolean(error('process'))}
-            />
-            <TextField
-              id={fieldId('varietal')}
-              label="Varietal"
-              maxLength={LIMITS.coffeeText}
-              value={draft.varietal}
-              onChange={setText('varietal')}
-              errorMessage={error('varietal')}
-              isInvalid={Boolean(error('varietal'))}
-            />
-            <PlainNumber
-              id={fieldId('altitude_m')}
-              label="Altitude (metres)"
-              value={draft.altitude_m}
-              onChange={(v) => set('altitude_m', v)}
-              error={error('altitude_m')}
-            />
-            <Select
-              id={fieldId('roast_level')}
-              label="Roast level"
-              options={roastOptions}
-              selectedKey={draft.roast_level ?? NOT_SET}
-              onSelectionChange={(key) =>
-                set('roast_level', key === NOT_SET ? null : (String(key) as RoastLevel))
-              }
-            />
-            <DateField
-              id={fieldId('roast_date')}
-              label="Roast date"
-              value={draft.roast_date}
-              onChange={(v) => set('roast_date', v)}
-              isInvalid={Boolean(error('roast_date'))}
-              errorMessage={error('roast_date')}
-            />
-            <PlainNumber
-              id={fieldId('colour_reading')}
-              label="Roast colour reading"
-              decimals={1}
-              value={draft.colour_reading}
-              onChange={(v) => set('colour_reading', v)}
-              error={error('colour_reading')}
-            />
-            <Combobox
-              id={fieldId('colour_scale')}
-              label="Colour scale"
-              items={COLOUR_SCALE_PRESETS.map((p) => ({ id: p, label: p }))}
-              allowsCustomValue
-              customOptionLabel={(t) => `Use “${t}”`}
-              defaultText={draft.colour_scale || undefined}
-              onTextChange={(text) => set('colour_scale', text)}
-              errorMessage={error('colour_scale')}
-              isInvalid={Boolean(error('colour_scale'))}
-            />
-          </Section>
+              <Section title="Coffee" layout="three">
+                <TextField
+                  id={fieldId('coffee_name')}
+                  label="Coffee"
+                  maxLength={LIMITS.coffeeText}
+                  value={draft.coffee_name}
+                  onChange={setText('coffee_name')}
+                  errorMessage={error('coffee_name')}
+                  isInvalid={Boolean(error('coffee_name'))}
+                />
+                <TextField
+                  id={fieldId('roaster')}
+                  label="Roaster"
+                  maxLength={LIMITS.coffeeText}
+                  value={draft.roaster}
+                  onChange={setText('roaster')}
+                  errorMessage={error('roaster')}
+                  isInvalid={Boolean(error('roaster'))}
+                />
+                <TextField
+                  id={fieldId('origin')}
+                  label="Origin"
+                  maxLength={LIMITS.coffeeText}
+                  value={draft.origin}
+                  onChange={setText('origin')}
+                  errorMessage={error('origin')}
+                  isInvalid={Boolean(error('origin'))}
+                />
+                <Combobox
+                  id={fieldId('process')}
+                  label="Process"
+                  items={PROCESS_PRESETS.map((p) => ({ id: p, label: p }))}
+                  allowsCustomValue
+                  customOptionLabel={(t) => `Use “${t}”`}
+                  defaultText={draft.process || undefined}
+                  onTextChange={(text) => set('process', text)}
+                  errorMessage={error('process')}
+                  isInvalid={Boolean(error('process'))}
+                />
+                <TextField
+                  id={fieldId('varietal')}
+                  label="Varietal"
+                  maxLength={LIMITS.coffeeText}
+                  value={draft.varietal}
+                  onChange={setText('varietal')}
+                  errorMessage={error('varietal')}
+                  isInvalid={Boolean(error('varietal'))}
+                />
+                <PlainNumber
+                  id={fieldId('altitude_m')}
+                  label="Altitude (metres)"
+                  value={draft.altitude_m}
+                  onChange={(v) => set('altitude_m', v)}
+                  error={error('altitude_m')}
+                />
+                <Select
+                  id={fieldId('roast_level')}
+                  label="Roast level"
+                  options={roastOptions}
+                  selectedKey={draft.roast_level ?? NOT_SET}
+                  onSelectionChange={(key) =>
+                    set('roast_level', key === NOT_SET ? null : (String(key) as RoastLevel))
+                  }
+                />
+                <DateField
+                  id={fieldId('roast_date')}
+                  label="Roast date"
+                  value={draft.roast_date}
+                  onChange={(v) => set('roast_date', v)}
+                  isInvalid={Boolean(error('roast_date'))}
+                  errorMessage={error('roast_date')}
+                />
+                <PlainNumber
+                  id={fieldId('colour_reading')}
+                  label="Roast colour reading"
+                  decimals={1}
+                  value={draft.colour_reading}
+                  onChange={(v) => set('colour_reading', v)}
+                  error={error('colour_reading')}
+                />
+                <Combobox
+                  id={fieldId('colour_scale')}
+                  label="Colour scale"
+                  items={COLOUR_SCALE_PRESETS.map((p) => ({ id: p, label: p }))}
+                  allowsCustomValue
+                  customOptionLabel={(t) => `Use “${t}”`}
+                  defaultText={draft.colour_scale || undefined}
+                  onTextChange={(text) => set('colour_scale', text)}
+                  errorMessage={error('colour_scale')}
+                  isInvalid={Boolean(error('colour_scale'))}
+                />
+              </Section>
 
-          <Section title="Numbers">
-            <div className={styles.pair}>
-              <WeightField
-                id={fieldId('dose_g')}
-                label="Coffee dose"
-                isRequired
-                min={0}
-                value={draft.dose_g}
-                onChange={(v) => set('dose_g', v)}
-                isInvalid={Boolean(error('dose_g'))}
-                errorMessage={error('dose_g')}
-              />
-              <WeightField
-                id={fieldId('brew_water_g')}
-                label="Brew water"
-                isRequired
-                min={0}
-                value={draft.brew_water_g}
-                onChange={(v) => set('brew_water_g', v)}
-                isInvalid={Boolean(error('brew_water_g'))}
-                errorMessage={error('brew_water_g')}
-              />
-            </div>
-            <WeightField
-              id={fieldId('bypass_g')}
-              label="Bypass water (optional)"
-              description="Water added to the cup, not through the coffee"
-              min={0}
-              value={draft.bypass_g}
-              onChange={(v) => set('bypass_g', v)}
-              isInvalid={Boolean(error('bypass_g'))}
-              errorMessage={error('bypass_g')}
-            />
-            <div>
-              <SegmentedControl
-                id={fieldId('bypass_timing')}
-                label="Bypass goes in"
-                segments={BYPASS_TIMINGS.map((t) => ({ value: t, label: BYPASS_TIMING_LABELS[t] }))}
-                value={draft.bypass_timing}
-                onChange={(value) => set('bypass_timing', value as BypassTiming)}
-                isInvalid={Boolean(error('bypass_timing'))}
-              />
-              {error('bypass_timing') ? (
-                <p className={styles.fieldError}>{error('bypass_timing')}</p>
-              ) : null}
-            </div>
-            <TemperatureField
-              id={fieldId('temp_c')}
-              label="Water temperature"
-              min={0}
-              max={LIMITS.tempC}
-              value={draft.temp_c}
-              onChange={(v) => set('temp_c', v)}
-              isInvalid={Boolean(error('temp_c'))}
-              errorMessage={error('temp_c')}
-            />
-            <TextField
-              id={fieldId('grind_setting')}
-              label="Grind setting"
-              placeholder="e.g. 24 clicks"
-              maxLength={LIMITS.grindSetting}
-              value={draft.grind_setting}
-              onChange={setText('grind_setting')}
-              errorMessage={error('grind_setting')}
-              isInvalid={Boolean(error('grind_setting'))}
-            />
-            <div className={styles.pair}>
-              <PlainNumber
-                id={fieldId('grind_microns')}
-                label="Grind size (µm)"
-                value={draft.grind_microns}
-                onChange={(v) => set('grind_microns', v)}
-                error={error('grind_microns')}
-              />
-              <PlainNumber
-                id={fieldId('water_ppm')}
-                label="Water hardness (ppm)"
-                value={draft.water_ppm}
-                onChange={(v) => set('water_ppm', v)}
-                error={error('water_ppm')}
-              />
-            </div>
-            <PlainNumber
-              id={fieldId('retention_ratio')}
-              label="Retention (g water per g coffee)"
-              description="Leave empty to use 2.0"
-              decimals={1}
-              value={draft.retention_ratio}
-              onChange={(v) => set('retention_ratio', v)}
-              error={error('retention_ratio')}
-            />
-
-            <div className={styles.numbers}>
-              <h3 className={styles.numbersTitle}>Calculated</h3>
-              <dl className={styles.numbersList}>
-                <div>
-                  <dt>Ratio</dt>
-                  <dd className="num">{ratio ?? '–'}</dd>
+              <Section title="Numbers" layout="three">
+                <div className={styles.pair}>
+                  <WeightField
+                    id={fieldId('dose_g')}
+                    label="Coffee dose"
+                    isRequired
+                    min={0}
+                    value={draft.dose_g}
+                    onChange={(v) => set('dose_g', v)}
+                    isInvalid={Boolean(error('dose_g'))}
+                    errorMessage={error('dose_g')}
+                  />
+                  <WeightField
+                    id={fieldId('brew_water_g')}
+                    label="Brew water"
+                    isRequired
+                    min={0}
+                    value={draft.brew_water_g}
+                    onChange={(v) => set('brew_water_g', v)}
+                    isInvalid={Boolean(error('brew_water_g'))}
+                    errorMessage={error('brew_water_g')}
+                  />
                 </div>
-                <div>
-                  <dt>Overall ratio</dt>
-                  <dd className="num">{formatRatio(numbers.overallRatio) ?? '–'}</dd>
+                <WeightField
+                  id={fieldId('bypass_g')}
+                  label="Bypass water (optional)"
+                  description="Water added to the cup, not through the coffee"
+                  min={0}
+                  value={draft.bypass_g}
+                  onChange={(v) => set('bypass_g', v)}
+                  isInvalid={Boolean(error('bypass_g'))}
+                  errorMessage={error('bypass_g')}
+                />
+                <div className={styles.wide}>
+                  <SegmentedControl
+                    id={fieldId('bypass_timing')}
+                    label="Bypass goes in"
+                    segments={BYPASS_TIMINGS.map((t) => ({ value: t, label: BYPASS_TIMING_LABELS[t] }))}
+                    value={draft.bypass_timing}
+                    onChange={(value) => set('bypass_timing', value as BypassTiming)}
+                    isInvalid={Boolean(error('bypass_timing'))}
+                  />
+                  {error('bypass_timing') ? (
+                    <p className={styles.fieldError}>{error('bypass_timing')}</p>
+                  ) : null}
                 </div>
-                <div>
-                  <dt>Expected volume</dt>
-                  <dd className="num">
-                    {numbers.expectedFinalVolumeG != null ? weight(numbers.expectedFinalVolumeG) : '–'}
-                  </dd>
+                <TemperatureField
+                  id={fieldId('temp_c')}
+                  label="Water temperature"
+                  min={0}
+                  max={LIMITS.tempC}
+                  value={draft.temp_c}
+                  onChange={(v) => set('temp_c', v)}
+                  isInvalid={Boolean(error('temp_c'))}
+                  errorMessage={error('temp_c')}
+                />
+                <TextField
+                  id={fieldId('grind_setting')}
+                  label="Grind setting"
+                  placeholder="e.g. 24 clicks"
+                  maxLength={LIMITS.grindSetting}
+                  value={draft.grind_setting}
+                  onChange={setText('grind_setting')}
+                  errorMessage={error('grind_setting')}
+                  isInvalid={Boolean(error('grind_setting'))}
+                />
+                <div className={styles.pair}>
+                  <PlainNumber
+                    id={fieldId('grind_microns')}
+                    label="Grind size (µm)"
+                    value={draft.grind_microns}
+                    onChange={(v) => set('grind_microns', v)}
+                    error={error('grind_microns')}
+                  />
+                  <PlainNumber
+                    id={fieldId('water_ppm')}
+                    label="Water hardness (ppm)"
+                    value={draft.water_ppm}
+                    onChange={(v) => set('water_ppm', v)}
+                    error={error('water_ppm')}
+                  />
                 </div>
-                <div>
-                  <dt>Total time</dt>
-                  <dd className="num">
-                    {numbers.totalTimeS != null ? duration(numbers.totalTimeS) : '–'}
-                  </dd>
+                <PlainNumber
+                  id={fieldId('retention_ratio')}
+                  label="Retention (g water per g coffee)"
+                  description="Leave empty to use 2.0"
+                  decimals={1}
+                  value={draft.retention_ratio}
+                  onChange={(v) => set('retention_ratio', v)}
+                  error={error('retention_ratio')}
+                />
+
+                <div className={styles.numbers}>
+                  <h3 className={styles.numbersTitle}>Calculated</h3>
+                  {liveList}
                 </div>
-              </dl>
-              <VisuallyHidden>
-                <span role="status">{announced}</span>
-              </VisuallyHidden>
-            </div>
-          </Section>
+                <VisuallyHidden>
+                  <span role="status">{announced}</span>
+                </VisuallyHidden>
+              </Section>
 
-          <Section title="Steps">
-            <StepsEditor
-              steps={draft.steps}
-              onChange={(steps) => set('steps', steps)}
-              varyTemp={draft.vary_temp}
-              onVaryTempChange={(on) => set('vary_temp', on)}
-              context={{ dose_g: draft.dose_g, brew_water_g: draft.brew_water_g }}
-              errors={live}
-            />
-          </Section>
+              <Section title="Steps">
+                <StepsEditor
+                  steps={draft.steps}
+                  onChange={(steps) => set('steps', steps)}
+                  varyTemp={draft.vary_temp}
+                  onVaryTempChange={(on) => set('vary_temp', on)}
+                  context={{ dose_g: draft.dose_g, brew_water_g: draft.brew_water_g }}
+                  errors={live}
+                />
+              </Section>
 
-          <Section title="Targets">
-            <p className={styles.note}>Optional. Used to check a brew against what you aimed for.</p>
-            <div className={styles.pair}>
-              <DurationField
-                id={fieldId('drawdown_min_s')}
-                label="Drawdown, shortest"
-                value={draft.drawdown_min_s}
-                onChange={(v) => set('drawdown_min_s', v)}
-                errorMessage={error('drawdown_min_s')}
-              />
-              <DurationField
-                id={fieldId('drawdown_max_s')}
-                label="Drawdown, longest"
-                value={draft.drawdown_max_s}
-                onChange={(v) => set('drawdown_max_s', v)}
-                errorMessage={error('drawdown_max_s')}
-              />
-            </div>
-            <div className={styles.pair}>
-              <PlainNumber
-                id={fieldId('tds_min')}
-                label="TDS % lowest"
-                decimals={2}
-                value={draft.tds_min}
-                onChange={(v) => set('tds_min', v)}
-                error={error('tds_min')}
-              />
-              <PlainNumber
-                id={fieldId('tds_max')}
-                label="TDS % highest"
-                decimals={2}
-                value={draft.tds_max}
-                onChange={(v) => set('tds_max', v)}
-                error={error('tds_max')}
-              />
-            </div>
-            <div className={styles.pair}>
-              <PlainNumber
-                id={fieldId('ey_min')}
-                label="Extraction % lowest"
-                decimals={1}
-                value={draft.ey_min}
-                onChange={(v) => set('ey_min', v)}
-                error={error('ey_min')}
-              />
-              <PlainNumber
-                id={fieldId('ey_max')}
-                label="Extraction % highest"
-                decimals={1}
-                value={draft.ey_max}
-                onChange={(v) => set('ey_max', v)}
-                error={error('ey_max')}
-              />
-            </div>
-          </Section>
+              <Section title="Targets" layout="targets">
+                <p className={styles.note}>Optional. Used to check a brew against what you aimed for.</p>
+                <div className={styles.pair}>
+                  <DurationField
+                    id={fieldId('drawdown_min_s')}
+                    label="Drawdown, shortest"
+                    value={draft.drawdown_min_s}
+                    onChange={(v) => set('drawdown_min_s', v)}
+                    errorMessage={error('drawdown_min_s')}
+                  />
+                  <DurationField
+                    id={fieldId('drawdown_max_s')}
+                    label="Drawdown, longest"
+                    value={draft.drawdown_max_s}
+                    onChange={(v) => set('drawdown_max_s', v)}
+                    errorMessage={error('drawdown_max_s')}
+                  />
+                </div>
+                <div className={styles.pair}>
+                  <PlainNumber
+                    id={fieldId('tds_min')}
+                    label="TDS % lowest"
+                    decimals={2}
+                    value={draft.tds_min}
+                    onChange={(v) => set('tds_min', v)}
+                    error={error('tds_min')}
+                  />
+                  <PlainNumber
+                    id={fieldId('tds_max')}
+                    label="TDS % highest"
+                    decimals={2}
+                    value={draft.tds_max}
+                    onChange={(v) => set('tds_max', v)}
+                    error={error('tds_max')}
+                  />
+                </div>
+                <div className={styles.pair}>
+                  <PlainNumber
+                    id={fieldId('ey_min')}
+                    label="Extraction % lowest"
+                    decimals={1}
+                    value={draft.ey_min}
+                    onChange={(v) => set('ey_min', v)}
+                    error={error('ey_min')}
+                  />
+                  <PlainNumber
+                    id={fieldId('ey_max')}
+                    label="Extraction % highest"
+                    decimals={1}
+                    value={draft.ey_max}
+                    onChange={(v) => set('ey_max', v)}
+                    error={error('ey_max')}
+                  />
+                </div>
+              </Section>
 
-          <Section title="Notes">
-            <div>
-              <Textarea
-                id={fieldId('notes')}
-                label="Notes (optional)"
-                value={draft.notes}
-                onChange={setText('notes')}
-                isInvalid={Boolean(error('notes'))}
-                errorMessage={error('notes')}
-              />
-              <p className={styles.counter} aria-live="polite">
-                {draft.notes.length}/{LIMITS.notes}
-              </p>
-            </div>
-          </Section>
-
-          {editing ? (
-            <Section title="Review and save">
-              <div className={styles.review} data-testid="review">
-                <p className={styles.reviewSummary} data-testid="change-summary" role="status">
-                  {plan ? changeSummary(plan.diff.count) : 'Fill in the required fields to see what changed'}
-                </p>
-                {plan?.action === 'new-version' ? (
-                  <p className={styles.note}>
-                    {mode === 'new-version'
-                      ? `Saves as v${nextNo}, and v${base.version.version_no} stays as it is.`
-                      : `Saves as v${nextNo}, because v${base.version.version_no} has brews.`}
+              <Section title="Notes">
+                <div>
+                  <Textarea
+                    id={fieldId('notes')}
+                    label="Notes (optional)"
+                    value={draft.notes}
+                    onChange={setText('notes')}
+                    isInvalid={Boolean(error('notes'))}
+                    errorMessage={error('notes')}
+                  />
+                  <p className={styles.counter} aria-live="polite">
+                    {draft.notes.length}/{LIMITS.notes}
                   </p>
-                ) : null}
-                {plan?.action === 'in-place' ? (
-                  <p className={styles.note}>Saves your changes to v{base.version.version_no}.</p>
-                ) : null}
-                {plan && plan.diff.count > 0 ? (
-                  <details className={styles.changes}>
-                    <summary className={styles.changesSummary}>See what changed</summary>
-                    <DiffSections diff={plan.diff} />
-                  </details>
-                ) : null}
-              </div>
-              <TextField
-                id={fieldId('change_note')}
-                label="Change note (optional)"
-                placeholder="e.g. finer grind, 92 °C"
-                maxLength={LIMITS.changeNote}
-                value={draft.change_note}
-                onChange={setText('change_note')}
-                isInvalid={Boolean(error('change_note'))}
-                errorMessage={error('change_note')}
-              />
-              {nothingChanged && plan?.action === 'nothing' ? (
-                <p className={styles.nothing} role="status">
-                  Nothing has changed, so there is nothing to save. Change something, or cancel.
-                </p>
-              ) : null}
-            </Section>
-          ) : null}
+                </div>
+              </Section>
 
-          <div className={styles.footer}>
-            <Button type="submit" size="lg" fullWidth isPending={pending} pendingLabel="Saving…">
-              {saveLabel}
-            </Button>
+              {editing ? (
+                <Section title="Review and save">
+                  <div className={styles.review} data-testid="review">
+                    <p className={styles.reviewSummary} data-testid="change-summary" role="status">
+                      {plan ? changeSummary(plan.diff.count) : 'Fill in the required fields to see what changed'}
+                    </p>
+                    {plan?.action === 'new-version' ? (
+                      <p className={styles.note}>
+                        {mode === 'new-version'
+                          ? `Saves as v${nextNo}, and v${base.version.version_no} stays as it is.`
+                          : `Saves as v${nextNo}, because v${base.version.version_no} has brews.`}
+                      </p>
+                    ) : null}
+                    {plan?.action === 'in-place' ? (
+                      <p className={styles.note}>Saves your changes to v{base.version.version_no}.</p>
+                    ) : null}
+                    {plan && plan.diff.count > 0 ? (
+                      <details className={styles.changes}>
+                        <summary className={styles.changesSummary}>See what changed</summary>
+                        <DiffSections diff={plan.diff} />
+                      </details>
+                    ) : null}
+                  </div>
+                  <TextField
+                    id={fieldId('change_note')}
+                    label="Change note (optional)"
+                    placeholder="e.g. finer grind, 92 °C"
+                    maxLength={LIMITS.changeNote}
+                    value={draft.change_note}
+                    onChange={setText('change_note')}
+                    isInvalid={Boolean(error('change_note'))}
+                    errorMessage={error('change_note')}
+                  />
+                  {nothingChanged && plan?.action === 'nothing' ? (
+                    <p className={styles.nothing} role="status">
+                      Nothing has changed, so there is nothing to save. Change something, or cancel.
+                    </p>
+                  ) : null}
+                </Section>
+              ) : null}
+
+              <div className={styles.footer}>
+                <Button type="submit" size="lg" fullWidth isPending={pending} pendingLabel="Saving…">
+                  {saveLabel}
+                </Button>
+              </div>
+            </div>
+
+            <section aria-labelledby={panelId} className={styles.panel}>
+              <h2 id={panelId} className={styles.sectionTitle}>
+                Live numbers
+              </h2>
+              {liveList}
+              {wide ? (
+                hasCurve ? (
+                  <LazyPourCurve series={curveSeries} drawdown={curveDrawdown} />
+                ) : (
+                  <p className={styles.note}>Add a pour with a target to see the curve.</p>
+                )
+              ) : null}
+            </section>
           </div>
         </div>
       </form>
