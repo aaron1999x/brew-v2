@@ -16,7 +16,7 @@ import {
   deviceDefaults,
   formatDate,
   formatDateTime,
-  formatDuration,
+  formatClock,
   formatTemp,
   formatTime,
   formatWeight,
@@ -72,7 +72,14 @@ export function useSettings() {
   });
 }
 
-export type SettingsPatch = Partial<Settings>;
+/**
+ * What to change. `onboarding` is only what to *add*, never the whole object: the database merges it
+ * into what is stored (`merge_onboarding`), so two saves close together, or from two tabs, can't
+ * overwrite each other's steps.
+ */
+export type SettingsPatch = Partial<Omit<Settings, 'onboarding'>> & {
+  onboarding?: Partial<Onboarding>;
+};
 
 type UpdateOptions = {
   /** Toast shown after a successful save. Leave out for quiet saves (onboarding). */
@@ -89,12 +96,18 @@ export function useUpdateSettings({ successMessage }: UpdateOptions = {}) {
   const mutation = useMutation({
     mutationFn: async (patch: SettingsPatch) => {
       const userId = await currentUserId();
-      const { onboarding, ...rest } = patch;
-      const { error } = await createClient()
-        .from('user_settings')
-        .update({ ...rest, ...(onboarding ? { onboarding: onboarding as NonNullable<Json> } : {}) })
-        .eq('user_id', userId);
-      if (error) throw error;
+      const supabase = createClient();
+      const { onboarding, ...columns } = patch;
+      if (Object.keys(columns).length > 0) {
+        const { error } = await supabase.from('user_settings').update(columns).eq('user_id', userId);
+        if (error) throw error;
+      }
+      // Never a read-modify-write of the whole object from what this tab thinks is stored (the
+      // cache can be stale or refetched half-way): the database adds this patch to what it holds.
+      if (onboarding && Object.keys(onboarding).length > 0) {
+        const { error } = await supabase.rpc('merge_onboarding', { p_patch: onboarding as Json });
+        if (error) throw error;
+      }
     },
     onMutate: async (patch) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.settings() });
@@ -140,7 +153,8 @@ export function useUnits() {
       isLoading: query.isLoading,
       temp: (celsius: number) => formatTemp(celsius, units.temp_unit),
       weight: (grams: number) => formatWeight(grams, units.weight_unit),
-      duration: formatDuration,
+      /** Step times, durations, totals and drawdown targets: m:ss, then h:mm:ss from one hour. */
+      duration: formatClock,
       date: (value: Date | string | number) =>
         formatDate(value, units.date_format, units.time_zone),
       time: (value: Date | string | number) =>

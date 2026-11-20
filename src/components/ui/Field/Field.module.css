@@ -96,6 +96,11 @@
 .input {
   flex: 1;
   min-width: 0;
+  /*
+   * An <input>'s intrinsic width (about 20 characters) would otherwise set the field's minimum
+   * width in a grid, pushing a two-column row past the screen. It grows to fill the shell anyway.
+   */
+  width: 0;
   min-height: calc(var(--size-target-min) - 2 * var(--border-width-default));
   padding: 0;
   border: 0;

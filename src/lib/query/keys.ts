@@ -10,7 +10,11 @@ export type BrewFilters = { recipeId?: string; versionId?: string; search?: stri
 export const queryKeys = {
   recipes: {
     mine: (filters: RecipeFilters = {}) => ['recipes', 'mine', filters] as const,
+    /** Every recipes list, for invalidating them together. */
+    all: () => ['recipes'] as const,
   },
+  /** Every open recipe page and version list, for invalidating or patching them together. */
+  recipePages: () => ['recipe'] as const,
   recipe: (handle: string, slug: string) => ['recipe', handle, slug] as const,
   recipeVersion: (id: string) => ['recipe-version', id] as const,
   brews: {
@@ -21,6 +25,7 @@ export const queryKeys = {
   verified: (method?: string) => ['verified', method ?? 'all'] as const,
   notices: () => ['notices'] as const,
   gear: () => ['gear'] as const,
+  gearCatalog: () => ['gear-catalog'] as const,
   settings: () => ['settings'] as const,
   profileMe: () => ['profile', 'me'] as const,
   handleStatus: (handle: string) => ['handle-status', handle] as const,

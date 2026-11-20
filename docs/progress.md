@@ -227,6 +227,68 @@ Status: **done, in review** (branch `feat/m2-accounts`, PR #11).
 Gear, recipes, versions (`docs/phase-5-roadmap.md` M3).
 
 ## M3 Gear, recipes, versions
+
+Done on branch `feat/m3-recipes`, PR #14 (ready for review, not merged). Stage 1 ran on `/model opus`; Stages 2 to 7 on `/model opusplan`.
+
+### Built
+- **Gear:** `/settings/gear` (catalogue search, custom items, nickname, notes, one default per category, delete with "Recipes that use it keep its name"); the onboarding gear step (Brewer and Grinder saved as defaults, skippable; the Home checklist links skipped gear to Settings); favourite gear chosen from my gear, kept in step by a trigger, with older free-text favourites showing Add to my gear and Remove.
+- **Recipe editor** (`/recipes/new`, `/@handle/slug/edit?v=N`, `/@handle/slug/new-version?from=N`, no tab bar): basics, gear (my gear first, then the catalogue, then free text; new recipes pre-fill from my defaults, new versions from the version they start from), coffee, numbers with live ratio and volume, a steps editor (pour, wait, swirl, stir, press, other; move up and down; delete with undo; sort by time; per-pour temperatures), targets, notes. Validates on submit with the error summary; a copy is kept on the device (per person, recipe, version and mode) and restored after a reload; unsaved changes ask before leaving; offline says "Creating and editing recipes needs a connection" and keeps the form.
+- **Versions:** edit in place while a version has no brews; a version with brews takes only name, notes and the change note in place, and anything else becomes the next version (`lib/recipes/save.ts` `decideSave` decides, the database enforces). "N fields changed" and a change note before saving; "Nothing has changed" instead of an empty version. `/v/N`, `/versions`, `/compare?a=&b=` (only changed fields, steps matched by id, both curves overlaid), a version switcher.
+- **Recipe page:** `RecipeView` (props only; owner actions and the switcher are slots), header, key numbers, pour curve, steps, coffee, gear, targets, notes, change note, locked notice, Archived badge.
+- **Pour curve** (`lib/recipes/curve.ts`, `PourCurveChart`, lazy `LazyPourCurve`): each pour is a ramp (previous target to its target at its `rate_gps`, or 5 g/s, capped by the next step), an area with a gradient and the line on top, faint before the first pour, unit on the y labels, m:ss on x, 3 to 5 ticks each, light horizontal lines only, step markers, drawdown band, a tooltip that reads a pour's target at the pour's time ("1:10 · 90 g"), a text alternative and a data table, a dashed second version on compare, reduced motion respected.
+- **My recipes** (`/recipes`): search (name, coffee, roaster, origin), method and visibility filters, sort (last brewed falling back to last edited, last edited, name), Recipes and Archived tabs, all on the device over one loaded list and kept in the URL. A "more actions" menu on every row and on the recipe page: Duplicate (the version on screen, as a private "(copy)" v1), Archive or Restore, Delete (asks first); archive and delete show at once, roll back on failure and offer Undo; a deleted recipe and its pages are the not-available 404; all of it says "Changing recipes needs a connection" when offline.
+- **Download my data** already exported gear, recipes (soft-deleted too) and every version; now proven by `export.spec.ts`.
+
+### Decisions and deviations
+- **The "6-step recipe in under 3 minutes" criterion was dropped by Aaron** (20 Nov 2026): recipes are created rarely, brew logging speed in M4 matters more. Don't time it or ask again.
+- **Times everywhere use `formatClock`** (m:ss, then h:mm:ss from one hour), via `useUnits().duration`; never the older `formatDuration` (it gives "75:00"). Times and durations may be 0 to 48 h.
+- **Weights in the recipe payload are rounded to 0.1 g** (the columns are `numeric(…,1)`; M2's 0.01 g applies to settings display only), so the database, the diff and "Nothing has changed" agree. Fields never write back a converted value that wasn't edited.
+- **Routing:** `/@handle/…` is rewritten in `proxy.ts` to an internal `/u/[handle]/…` segment; direct `/u/…` visits and capital-letter handles redirect (308) to the lowercase `@` URL. Bare `/@handle` is the not-available page until M6. Every recipe page is owner-only until M6 (`getOwnedRecipe`): a visitor, a missing, deleted or someone else's recipe, or a version that doesn't exist all give the same `NotAvailable` page with a 404.
+- Next 16 has no router-level navigation blocking, so the guard covers the editor's own exits (Cancel, a history entry plus `popstate` for back and swipe-back, `beforeunload`); the device draft covers iOS reloads (`useUnsavedGuard`).
+- **Compare shows only the changed fields** of each section (no context lines); unchanged sections say "No changes". The diff compares a gear category by its saved name, so a change of `catalog_id` that keeps the name is not seen (known edge).
+- The combobox list opens on typing, ArrowDown, the chevron, or a tap or click, not on Tab focus. The Recipes/Archived tabs are a radio-group `SegmentedControl`.
+- Filters and sort run on the device over one query (`['recipes','mine',{}]`), not one query per filter.
+- `useUnits` falls back to the device's units until the person's settings arrive, so a US browser can show ounces for a moment before grams (existing behaviour).
+- Compare's tooltip reads both versions at the hovered time (one version snaps to a pour's start; two don't).
+
+### Database (staging; `db:push` after each commit, types regenerated)
+- `20261118000001_m3_gear_recipes.sql`: `gear_set_default(p_item_id)`; the favourites trigger `gear_items_sync_favourites()` (security definer, does nothing during the account-deletion cascade); `steps_shape_ok(jsonb)` with `recipe_versions_steps_shape` and `recipe_versions_steps_schema`; named checks `recipe_versions_bypass_consistent`, `recipe_versions_drawdown_range`, `recipe_versions_tds_range`, `recipe_versions_ey_range`, `recipes_method_custom_required`; `recipes.edited_at`; `save_recipe(p_recipe_id, p_name, p_method, p_method_custom, p_base_version_id, p_version, p_as_new_version)` (in place or the next version, one transaction; raises `recipe_not_found`, `version_not_found`, `version_locked`); `recipe_versions_update` refuses versions of soft-deleted recipes; 17 catalogue rows (89 in all).
+- `20261118000002_revoke_anon_execute.sql`: logged-out visitors could execute every public function. Member-only functions and all trigger functions are revoked from `public, anon`. **Every new function needs an explicit `revoke … from public, anon` (or an allowlist entry with a reason in `supabase/tests/08_function_grants.sql`).**
+- `20261120000001_merge_onboarding.sql`: `merge_onboarding(p_patch jsonb)` adds a patch to the stored onboarding object in one statement (the app used to read, change and write the whole object, so two saves could lose a step); whitelists keys and values (`onboarding_invalid`). Callers pass patches (`{ onboarding: { steps: { units: 'done' } } }`), never merged objects.
+- pgTAP: `07_gear_recipes.sql` (126), `08_function_grants.sql` (10), `09_merge_onboarding.sql` (19); 316 across 9 files, all passing on staging.
+- Error map: `gear_not_found`, `steps_invalid` and the named constraints (`CONSTRAINT_MESSAGES`, `toConstraintName`); `version_locked` is also handled in the editor when a brew locks a version while it is open.
+
+### Method fixtures
+`src/lib/recipes/__fixtures__/methods.json`: V60, Switch (hybrid), AeroPress inverted, French press, cold brew (a 12:00:00 wait and a 300 g bypass after). Used by unit tests, pgTAP (inlined as `\set fx_<key>`; a unit test checks the copies match) and `methods.spec.ts`, which builds each through the editor and compares every saved field.
+
+### Testing notes
+- **Vitest must run from the capital-C path** (`C:/Users/aaron/Documents/code/brew-v2`); from `c:\…` every file fails with "Vitest failed to find the current suite". Not a code problem.
+- **E2E specs need the staging secret key, so they run locally only:** `npm run build`, then one spec file at a time with `npx playwright test <file> --project=iphone|desktop --workers=1 --reporter=line`. They create `@test.invalid` users and remove them in teardown; the global teardown fails if any are left.
+- Gotchas learned: React Aria draws switches and checkboxes with a hidden input (click the label text); wait for `[data-entering]` to be gone before axe on a sheet or dialog; a bulk supabase-js insert needs every row to set the same columns; `getByLabel` of a required field needs a non-exact match (the asterisk); mouse positions are viewport-relative (scroll the chart into view first); Recharts v3 puts tick labels in `.recharts-yAxis-tick-labels` and `.recharts-xAxis-tick-labels`; `useUnits` flashes device units, so wait for the unit you expect.
+- `tests/e2e/helpers/layout.ts` (`expectColumnsFit`) finds every multi-column grid and anything past the screen edge; used at 390 and 320 px on the editor, recipe, versions, compare, list and gear screens. Two shared fixes came from it: a bare `<input>` kept its intrinsic width in a grid (`Field.module.css` `.input { width: 0 }`), and a `Select` button kept its content width (`min-width: 0`).
+- `scripts/seed-brew.mjs` (staging only) seeds a brew to lock a version for manual checks. **The lock is permanent** (the lock guard also refuses changes to `locked_at` by the secret key): use a throwaway recipe.
+- `npm run verify:account-delete` (staging) now covers a user with gear, a favourite, a recipe with three versions, an archived and a soft-deleted recipe, and checks another user's gear and recipe survive.
+- Totals at the end of M3: 766 unit tests (53 files); the e2e specs `recipes`, `methods`, `versions`, `lifecycle`, `recipes-units`, `editor-a11y`, `export`, `gear`, `profile`, `settings`, `inputs` and `fields` pass on iPhone and desktop, with axe in light and dark on every new screen and state and a keyboard-only path through the editor and its steps.
+
+### Reviewer (M3)
+No blockers. Fixed after its review: a version locked while the editor is open now turns the save into "Save as vN" (it used to repeat a misleading error); archive, restore, duplicate and delete say "Changing recipes needs a connection" offline and fail and roll back if the connection drops mid-save; the new-recipe device draft is per person; raw query keys moved to `queryKeys` (`queryKeys.recipes.all()`, `queryKeys.recipePages()`); compare's tooltip reads both versions at the same time; unit tests for the lifecycle cache patching (rollback, undo) and the unsaved-changes guard. **Left as known and minor:** the diff ignores a `catalog_id` change that keeps a gear name; the Combobox chevron is 24 px (the input is the primary target); the pour curve uses a few numeric literals (axis width, marker size, gradient opacity) that aren't tokens; the draft saver can re-save up to 400 ms after a save; after Delete on the recipe page the not-available page can flash before the list. VoiceOver and the real iPhone behaviour were checked by hand (Aaron's device checks), not by the reviewer.
+
+### What M4 must use
+- `lib/recipes/calc.ts` (`extractionYield` for EY, `brewRatio`, `recipeNumbers`) and `steps.ts` (`curvePoints`, `pourDeltas`, `bloom`, `totalTimeS`, `stepLabel`, `stepHeading`, the step defaults and rules); `lib/recipes/curve.ts` for anything drawn from steps.
+- `DurationField`, `RateField`, `WeightField`, `TemperatureField`, `useUnits()`; `formatClock` for every time.
+- The chart wrapper (`components/charts`), `PourCurveChart` and `LazyPourCurve`; Recharts only through `next/dynamic`.
+- `RecipeView`, `RecipeActions` and `ActionMenu` for any recipe screen; `HydratedRecipe` with `getOwnedRecipe`/`getRecipeBySlug` for owner pages; `queryKeys` (`recipes.mine`, `recipes.all`, `recipe`, `recipePages`).
+- `recipes.last_brewed_at` already drives "Last brewed" in the list; a brew locks its version through the database (`brews_after_insert`), which is what the editor's locked behaviour relies on.
+- Test helpers: `tests/e2e/helpers/recipes.ts` (`createRecipe`, `saveNextVersion`, `seedBrew` to lock a version, `versionRows`), `layout.ts` (`expectColumnsFit`), `axe.ts`; `scripts/seed-brew.mjs` for manual checks.
+
+### What M6 must use
+- `NotAvailable` (the one page, 404 status) for every private, hidden, deleted or missing thing; `RecipeView` takes plain props, so a public page can render it on the server (pass no owner slots); `fetchRecipeBySlug` already returns every version and returns null when RLS hides the recipe.
+- The `@handle` routing in `proxy.ts` (rewrite to `/u/[handle]/…`, redirects for capitals and `/u/…`), `lib/recipes/paths.ts` for every recipe URL, `getOwnedRecipe` to swap for a public-or-owner check, and the hydration pattern in `HydratedRecipe`.
+- The list filters already have a Visibility filter (Private, Public, Hidden) waiting for published recipes.
+
+### Next (M4)
+Guided timer and brew log (`docs/phase-5-roadmap.md` M4).
+
 ## M4 Guided timer and brew log
 ## M5 Offline and PWA
 ## M6 Public pages and publishing

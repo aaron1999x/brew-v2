@@ -699,6 +699,7 @@ export type Database = {
           archived_at: string | null;
           created_at: string;
           deleted_at: string | null;
+          edited_at: string;
           forked_from_owner_id: string | null;
           forked_from_recipe_id: string | null;
           forked_from_version_id: string | null;
@@ -724,6 +725,7 @@ export type Database = {
           archived_at?: string | null;
           created_at?: string;
           deleted_at?: string | null;
+          edited_at?: string;
           forked_from_owner_id?: string | null;
           forked_from_recipe_id?: string | null;
           forked_from_version_id?: string | null;
@@ -748,6 +750,7 @@ export type Database = {
           archived_at?: string | null;
           created_at?: string;
           deleted_at?: string | null;
+          edited_at?: string;
           forked_from_owner_id?: string | null;
           forked_from_recipe_id?: string | null;
           forked_from_version_id?: string | null;
@@ -999,6 +1002,7 @@ export type Database = {
           archived_at: string | null;
           created_at: string;
           deleted_at: string | null;
+          edited_at: string;
           forked_from_owner_id: string | null;
           forked_from_recipe_id: string | null;
           forked_from_version_id: string | null;
@@ -1037,6 +1041,7 @@ export type Database = {
           archived_at: string | null;
           created_at: string;
           deleted_at: string | null;
+          edited_at: string;
           forked_from_owner_id: string | null;
           forked_from_recipe_id: string | null;
           forked_from_version_id: string | null;
@@ -1114,6 +1119,7 @@ export type Database = {
         };
       };
       email_is_verified: { Args: { uid: string }; Returns: boolean };
+      gear_set_default: { Args: { p_item_id: string }; Returns: undefined };
       handle_status: { Args: { p_handle: string }; Returns: string };
       handle_suggestions: { Args: { p_base: string }; Returns: string[] };
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
@@ -1124,6 +1130,7 @@ export type Database = {
         Returns: undefined;
       };
       make_slug: { Args: { p_name: string; p_owner: string }; Returns: string };
+      merge_onboarding: { Args: { p_patch: Json }; Returns: Json };
       mod_resolve_report: {
         Args: { p_report_id: string; p_status: Database['public']['Enums']['report_status'] };
         Returns: undefined;
@@ -1148,6 +1155,64 @@ export type Database = {
         }[];
       };
       recipe_is_public: { Args: { r_id: string }; Returns: boolean };
+      save_recipe: {
+        Args: {
+          p_as_new_version: boolean;
+          p_base_version_id: string;
+          p_method: Database['public']['Enums']['brew_method'];
+          p_method_custom: string;
+          p_name: string;
+          p_recipe_id: string;
+          p_version: Json;
+        };
+        Returns: {
+          altitude_m: number | null;
+          brew_water_g: number;
+          brewer_catalog_id: string | null;
+          bypass_g: number;
+          bypass_timing: Database['public']['Enums']['bypass_timing'];
+          change_note: string | null;
+          coffee_name: string | null;
+          colour_reading: number | null;
+          colour_scale: string | null;
+          created_at: string;
+          dose_g: number;
+          drawdown_max_s: number | null;
+          drawdown_min_s: number | null;
+          ey_max: number | null;
+          ey_min: number | null;
+          gear: NonNullable<Json>;
+          grind_microns: number | null;
+          grind_setting: string | null;
+          grinder_catalog_id: string | null;
+          id: string;
+          locked_at: string | null;
+          notes: string | null;
+          origin: string | null;
+          process: string | null;
+          recipe_id: string;
+          retention_ratio: number | null;
+          roast_date: string | null;
+          roast_level: Database['public']['Enums']['roast_level'] | null;
+          roaster: string | null;
+          steps: NonNullable<Json>;
+          steps_schema: number;
+          tds_max: number | null;
+          tds_min: number | null;
+          temp_c: number | null;
+          updated_at: string;
+          varietal: string | null;
+          version_no: number;
+          water_ppm: number | null;
+        };
+        SetofOptions: {
+          from: '*';
+          to: 'recipe_versions';
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
+      steps_shape_ok: { Args: { p_steps: Json }; Returns: boolean };
       verified_recipes: {
         Args: {
           p_before?: string;

@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus, X } from 'lucide-react';
+import Link from 'next/link';
 import { useState, type FormEvent } from 'react';
 import { HandleField } from '@/components/auth/HandleField';
 import { QueryBoundary } from '@/components/feedback/QueryBoundary';
@@ -9,22 +9,23 @@ import {
   FormErrorSummary,
   type FormError,
 } from '@/components/ui/FormErrorSummary/FormErrorSummary';
-import { Icon } from '@/components/ui/Icon/Icon';
-import { IconButton } from '@/components/ui/IconButton/IconButton';
+import { Checkbox } from '@/components/ui/Checkbox/Checkbox';
 import { RadioGroup } from '@/components/ui/RadioGroup/RadioGroup';
-import { Select } from '@/components/ui/Select/Select';
 import { TextField } from '@/components/ui/TextField/TextField';
 import { Textarea } from '@/components/ui/Textarea/Textarea';
 import { toast } from '@/components/ui/Toast/toast';
 import { HANDLE_MESSAGES, useHandleStatus } from '@/lib/auth/handle';
 import { toUserMessage } from '@/lib/errors/messages';
+import { useAddGear, useGear } from '@/lib/gear/hooks';
 import {
-  GEAR_CATEGORIES,
   MAX_FAVOURITE_GEAR,
-  MAX_GEAR_NAME,
-  cleanFavouriteGear,
+  buildFavouriteGear,
+  gearCategoryLabel,
+  isLinkedFavourite,
   parseFavouriteGear,
+  type LegacyFavourite,
 } from '@/lib/profile/gear';
+import { gearDisplayName } from '@/lib/recipes/gear';
 import {
   EXPERIENCE_LEVELS,
   useProfileMe,
@@ -43,12 +44,10 @@ const ID = {
   name: 'profile-display-name',
   handle: 'profile-handle',
   bio: 'profile-bio',
-  gear: (i: number) => `profile-gear-${i}`,
+  favourites: 'profile-favourite-gear',
 };
 
-type GearRow = { key: number; category: string; name: string };
-
-/** /settings/profile: photo, display name, handle (live check), bio, experience, favourite gear. */
+/** /settings/profile: photo, display name, handle (live check), bio, experience, favourite gear (chosen from my gear). */
 export function ProfileForm() {
   const profile = useProfileMe();
   return (
@@ -68,9 +67,17 @@ function Form({ profile }: { profile: ProfileMe }) {
   const [handle, setHandle] = useState(profile.handle);
   const [bio, setBio] = useState(profile.bio ?? '');
   const [level, setLevel] = useState<string>(profile.experience_level ?? NO_LEVEL);
-  const [nextKey, setNextKey] = useState(100);
-  const [gear, setGear] = useState<GearRow[]>(() =>
-    parseFavouriteGear(profile.favourite_gear).map((g, i) => ({ key: i, ...g })),
+  const gear = useGear();
+  const addGear = useAddGear();
+  // Favourites: ids of my gear items in the order chosen, plus older free-text entries (M2) that
+  // can be removed or turned into gear items.
+  const [chosen, setChosen] = useState<string[]>(() =>
+    parseFavouriteGear(profile.favourite_gear)
+      .filter(isLinkedFavourite)
+      .map((g) => g.item_id),
+  );
+  const [legacy, setLegacy] = useState<LegacyFavourite[]>(() =>
+    parseFavouriteGear(profile.favourite_gear).filter((g) => !isLinkedFavourite(g)),
   );
   const [errors, setErrors] = useState<FormError[]>([]);
   const { status, isChecking } = useHandleStatus(handle);
@@ -94,6 +101,12 @@ function Form({ profile }: { profile: ProfileMe }) {
     if (bio.length > BIO_MAX) {
       found.push({ fieldId: ID.bio, message: `Keep your bio to ${BIO_MAX} characters or fewer.` });
     }
+    if (chosen.length + legacy.length > MAX_FAVOURITE_GEAR) {
+      found.push({
+        fieldId: ID.favourites,
+        message: `Choose up to ${MAX_FAVOURITE_GEAR} favourite gear items.`,
+      });
+    }
     return found;
   }
 
@@ -109,7 +122,8 @@ function Form({ profile }: { profile: ProfileMe }) {
         ...(handle !== profile.handle ? { handle } : {}),
         bio: bio.trim() === '' ? null : bio.trim(),
         experience_level: level === NO_LEVEL ? null : (level as ExperienceLevel),
-        favourite_gear: cleanFavouriteGear(gear),
+        // Without the gear list loaded the favourites are left as they are.
+        ...(gear.data ? { favourite_gear: buildFavouriteGear(chosen, gear.data, legacy) } : {}),
       });
       toast.success('Profile saved.');
     } catch (error) {
@@ -121,8 +135,26 @@ function Form({ profile }: { profile: ProfileMe }) {
     }
   }
 
-  function updateGear(key: number, patch: Partial<GearRow>) {
-    setGear((rows) => rows.map((r) => (r.key === key ? { ...r, ...patch } : r)));
+  function toggleFavourite(id: string, on: boolean) {
+    setChosen((ids) => (on ? [...ids.filter((i) => i !== id), id] : ids.filter((i) => i !== id)));
+  }
+
+  /** An older free-text favourite becomes one of my gear items, and stays a favourite. */
+  async function addLegacyToGear(entry: LegacyFavourite) {
+    try {
+      const id = await addGear.mutateAsync({
+        category: entry.category,
+        catalog_id: null,
+        custom_name: entry.name.slice(0, 80),
+        nickname: null,
+        notes: null,
+      });
+      setLegacy((rows) => rows.filter((r) => r !== entry));
+      setChosen((ids) => [...ids, id]);
+      toast.success('Added to your gear.');
+    } catch {
+      // The hook showed the error toast.
+    }
   }
 
   return (
@@ -176,44 +208,66 @@ function Form({ profile }: { profile: ProfileMe }) {
           { value: NO_LEVEL, label: 'Prefer not to say' },
         ]}
       />
-      <fieldset className={styles.gearFieldset}>
+      <fieldset className={styles.gearFieldset} id={ID.favourites}>
         <legend className={styles.gearLegend}>Favourite gear</legend>
-        <p className={styles.note}>Up to {MAX_FAVOURITE_GEAR} items. Free text for now.</p>
-        <ul className={styles.gearList}>
-          {gear.map((row, i) => (
-            <li key={row.key} className={styles.gearRow}>
-              <Select
-                label={`Gear ${i + 1} category`}
-                options={GEAR_CATEGORIES.map((c) => ({ id: c.value, label: c.label }))}
-                selectedKey={row.category}
-                onSelectionChange={(key) => updateGear(row.key, { category: String(key) })}
-              />
-              <TextField
-                id={ID.gear(i)}
-                label={`Gear ${i + 1} name`}
-                value={row.name}
-                onChange={(value) => updateGear(row.key, { name: value })}
-                maxLength={MAX_GEAR_NAME}
-              />
-              <IconButton
-                label={`Remove gear ${i + 1}`}
-                icon={X}
-                onPress={() => setGear((rows) => rows.filter((r) => r.key !== row.key))}
-              />
-            </li>
-          ))}
-        </ul>
-        {gear.length < MAX_FAVOURITE_GEAR ? (
-          <div>
-            <Button
-              variant="secondary"
-              onPress={() => {
-                setGear((rows) => [...rows, { key: nextKey, category: 'grinder', name: '' }]);
-                setNextKey((k) => k + 1);
-              }}
-            >
-              <Icon icon={Plus} size="sm" /> Add gear
+        <p className={styles.note}>Choose up to {MAX_FAVOURITE_GEAR} items from your gear.</p>
+        {gear.isPending ? (
+          <p className={styles.note}>Loading your gear…</p>
+        ) : gear.isError ? (
+          <p className={styles.note}>
+            Couldn&apos;t load your gear.{' '}
+            <Button variant="ghost" size="sm" onPress={() => void gear.refetch()}>
+              Try again
             </Button>
+          </p>
+        ) : gear.data.length === 0 ? (
+          <p className={styles.note}>
+            You haven&apos;t added any gear yet. <Link href="/settings/gear">Add gear</Link>
+          </p>
+        ) : (
+          <ul className={styles.gearList}>
+            {gear.data.map((item) => (
+              <li key={item.id}>
+                <Checkbox
+                  isSelected={chosen.includes(item.id)}
+                  onChange={(on) => toggleFavourite(item.id, on)}
+                >
+                  {gearDisplayName(item)} ({gearCategoryLabel(item.category).toLowerCase()})
+                </Checkbox>
+              </li>
+            ))}
+          </ul>
+        )}
+        {legacy.length > 0 ? (
+          <div>
+            <p className={styles.note}>
+              Older favourites, typed in before you could choose from your gear:
+            </p>
+            <ul className={styles.gearList}>
+              {legacy.map((entry) => (
+                <li key={`${entry.category}-${entry.name}`} className={styles.gearRow}>
+                  <span>
+                    {gearCategoryLabel(entry.category)}: {entry.name}
+                  </span>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    isPending={addGear.isPending}
+                    pendingLabel="Adding…"
+                    onPress={() => void addLegacyToGear(entry)}
+                  >
+                    Add to my gear
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onPress={() => setLegacy((rows) => rows.filter((r) => r !== entry))}
+                  >
+                    Remove
+                  </Button>
+                </li>
+              ))}
+            </ul>
           </div>
         ) : null}
       </fieldset>

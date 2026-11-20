@@ -23,7 +23,34 @@ export const ERROR_MESSAGES = {
   email_invalid: 'Enter a valid email address.',
   handle_taken: 'That handle is taken. Try another.',
   handle_invalid: 'Use 3–30 lowercase letters, numbers or underscores.',
+  gear_not_found: 'That gear item no longer exists.',
+  steps_invalid: "Some steps aren't valid. Check the highlighted steps.",
 } as const;
+
+/**
+ * Named check / unique constraints (Postgres 23514 / 23505) → plain messages. Matched by the
+ * constraint name in the error message. Constraints come from migration …_m3_gear_recipes.sql
+ * (and the Phase 1 gear default index). The forms validate first, so these are a safety net.
+ */
+export const CONSTRAINT_MESSAGES: Record<string, string> = {
+  recipe_versions_steps_shape: ERROR_MESSAGES.steps_invalid,
+  recipe_versions_steps_schema: ERROR_MESSAGES.steps_invalid,
+  recipe_versions_bypass_consistent: 'Choose when the bypass water goes in, or set bypass to 0.',
+  recipe_versions_drawdown_range: "The shortest drawdown can't be longer than the longest.",
+  recipe_versions_tds_range: "The lowest TDS can't be higher than the highest.",
+  recipe_versions_ey_range: "The lowest extraction can't be higher than the highest.",
+  recipes_method_custom_required: 'Name the method when you choose Other.',
+  gear_one_default_per_category: 'You already have a default for this category. Try again.',
+};
+
+/** The constraint named in a check or unique violation, if it's one we translate. */
+export function toConstraintName(error: unknown): string | null {
+  const e = asErrorLike(error);
+  const text = `${typeof error === 'string' ? error : ''} ${str(e?.message)} ${str(e?.details)}`;
+  const match = /violates (?:check|unique) constraint "([a-z0-9_]+)"/.exec(text);
+  const name = match?.[1];
+  return name && Object.hasOwn(CONSTRAINT_MESSAGES, name) ? name : null;
+}
 
 export type ErrorCode = keyof typeof ERROR_MESSAGES;
 
@@ -117,6 +144,8 @@ function isNetworkError(error: unknown): boolean {
 export function toUserMessage(error: unknown): string {
   const code = toErrorCode(error);
   if (code) return ERROR_MESSAGES[code];
+  const constraint = toConstraintName(error);
+  if (constraint) return CONSTRAINT_MESSAGES[constraint]!;
 
   const e = asErrorLike(error);
   if (isNetworkError(error)) return MESSAGE_NETWORK;

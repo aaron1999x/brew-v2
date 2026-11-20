@@ -50,6 +50,36 @@
   outline: none;
 }
 
+.itemLabel {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.badge {
+  flex: none;
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-small-size);
+}
+
+.section {
+  display: grid;
+}
+
+.section + .section {
+  margin-top: var(--space-1);
+  border-top: var(--border-width-hairline) solid var(--color-border-subtle);
+  padding-top: var(--space-1);
+}
+
+.header {
+  padding: var(--space-2) var(--space-3) var(--space-1);
+  color: var(--color-text-secondary);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-label-weight);
+  text-transform: none;
+}
+
 .item[data-hovered],
 .item[data-focused] {
   background: var(--color-bg-inset);

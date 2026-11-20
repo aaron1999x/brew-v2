@@ -11,6 +11,9 @@ export const ozToG = (oz: number): number => oz * G_PER_OZ;
 export const TEMP_DECIMALS = 1;
 export const WEIGHT_DECIMALS: Record<WeightUnit, number> = { g: 1, oz: 2 };
 
+/** Pour rates are stored as g/s; shown as g/s or oz/s. oz/s needs 3 decimals (1 g/s is 0.035 oz/s). */
+export const RATE_DECIMALS: Record<WeightUnit, number> = { g: 1, oz: 3 };
+
 export function roundTo(value: number, decimals: number): number {
   const f = 10 ** decimals;
   // Number.EPSILON nudges 1.005-style halves up, so 1.005 becomes 1.01 rather than 1.
@@ -25,6 +28,16 @@ export function tempToDisplay(celsius: number, unit: TempUnit): number {
 /** A stored gram value as a number in the user's unit, rounded for display. */
 export function weightToDisplay(grams: number, unit: WeightUnit): number {
   return roundTo(unit === 'oz' ? gToOz(grams) : grams, WEIGHT_DECIMALS[unit]);
+}
+
+/** A stored g/s rate as a number in the user's unit, rounded for display. */
+export function rateToDisplay(gramsPerSecond: number, unit: WeightUnit): number {
+  return roundTo(unit === 'oz' ? gToOz(gramsPerSecond) : gramsPerSecond, RATE_DECIMALS[unit]);
+}
+
+/** A typed rate as stored g/s (to 0.01 g/s). */
+export function rateFromDisplay(value: number, unit: WeightUnit): number {
+  return roundTo(unit === 'oz' ? ozToG(value) : value, 2);
 }
 
 /**

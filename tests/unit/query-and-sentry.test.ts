@@ -47,3 +47,15 @@ describe('sentry scrubbing', () => {
     expect(out.user).toBeUndefined();
   });
 });
+
+describe('recipe query key prefixes', () => {
+  it('invalidate and patch every list or page together', () => {
+    expect(queryKeys.recipes.all()).toEqual(['recipes']);
+    expect(queryKeys.recipes.mine()).toEqual(['recipes', 'mine', {}]);
+    expect(queryKeys.recipePages()).toEqual(['recipe']);
+    expect(queryKeys.recipe('me', 'v60')).toEqual(['recipe', 'me', 'v60']);
+    // The prefixes match the keys they stand for.
+    expect(queryKeys.recipes.mine().slice(0, 1)).toEqual(queryKeys.recipes.all());
+    expect(queryKeys.recipe('me', 'v60').slice(0, 1)).toEqual(queryKeys.recipePages());
+  });
+});

@@ -52,7 +52,13 @@ export function FormErrorSummary({ errors, title }: Props) {
               className={styles.link}
               onClick={(event) => {
                 event.preventDefault();
-                document.getElementById(e.fieldId)?.focus();
+                // The id may sit on a wrapper (a combobox, a radio group): focus the control inside.
+                const target = document.getElementById(e.fieldId);
+                const focusable = 'input, select, textarea, button, [tabindex]';
+                (target?.matches(focusable)
+                  ? target
+                  : target?.querySelector<HTMLElement>(focusable)
+                )?.focus();
               }}
             >
               {e.message}
