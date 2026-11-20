@@ -13,6 +13,7 @@ import { Notice } from '@/components/ui/Notice/Notice';
 import { useOnlineStatus } from '@/components/ui/OfflineBanner/OfflineBanner';
 import { SegmentedControl } from '@/components/ui/SegmentedControl/SegmentedControl';
 import { Select } from '@/components/ui/Select/Select';
+import { Switch } from '@/components/ui/Switch/Switch';
 import { TextField } from '@/components/ui/TextField/TextField';
 import { Textarea } from '@/components/ui/Textarea/Textarea';
 import { toast } from '@/components/ui/Toast/toast';
@@ -70,6 +71,7 @@ import {
   type EditorMode,
 } from '@/lib/recipes/save';
 import { LIMITS } from '@/lib/recipes/schema';
+import { pourTemperatureTrail, setVaryTemperature } from '@/lib/recipes/steps';
 import { useUnits } from '@/lib/settings/useSettings';
 import { useMediaQuery } from '@/lib/ui/useMediaQuery';
 import { DiffSections } from '../Changes';
@@ -216,7 +218,7 @@ function EditorForm({
 }>) {
   const queryClient = useQueryClient();
   const online = useOnlineStatus();
-  const { weight, duration } = useUnits();
+  const { weight, duration, temp } = useUnits();
   const catalog = useGearCatalog();
   const profile = useProfileMe();
   const { user } = useSession();
@@ -288,6 +290,14 @@ function EditorForm({
     setDraft((d) => ({ ...d, [key]: value }));
   const setText = (key: keyof RecipeDraft) => (value: string) =>
     setDraft((d) => ({ ...d, [key]: value }));
+
+  // The hint under "Vary temperature by pour": what every pour uses, or the temperatures chosen.
+  const trail = pourTemperatureTrail(draft.steps, draft.temp_c);
+  const varyTempHint = draft.vary_temp
+    ? `Each pour sets its own temperature in Steps${trail.length > 0 ? ` · ${trail.map((t) => temp(t)).join(' → ')}` : ''}`
+    : draft.temp_c != null
+      ? `Every pour uses ${temp(draft.temp_c)}`
+      : 'Every pour uses the water temperature';
 
   // ---- live numbers ----
   const numbers = recipeNumbers({
@@ -713,6 +723,22 @@ function EditorForm({
                   isInvalid={Boolean(error('temp_c'))}
                   errorMessage={error('temp_c')}
                 />
+                {/* As in the prototype's Parameters card: right under the temperature it varies. */}
+                <div className={styles.wide}>
+                  <Switch
+                    isSelected={draft.vary_temp}
+                    onChange={(on) =>
+                      setDraft((d) => ({
+                        ...d,
+                        vary_temp: on,
+                        steps: setVaryTemperature(d.steps, on, d.temp_c),
+                      }))
+                    }
+                  >
+                    Vary temperature by pour
+                  </Switch>
+                  <p className={styles.note}>{varyTempHint}</p>
+                </div>
                 <TextField
                   id={fieldId('grind_setting')}
                   label="Grind setting"
@@ -763,7 +789,6 @@ function EditorForm({
                   steps={draft.steps}
                   onChange={(steps) => set('steps', steps)}
                   varyTemp={draft.vary_temp}
-                  onVaryTempChange={(on) => set('vary_temp', on)}
                   context={{ dose_g: draft.dose_g, brew_water_g: draft.brew_water_g }}
                   errors={live}
                 />

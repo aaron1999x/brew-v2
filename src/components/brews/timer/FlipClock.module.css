@@ -1,0 +1,153 @@
+/* Split-flap cards (ported from the prototype's FlipClock). Sized by font-size: everything is in em. */
+
+.clock {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--font-family-numeric);
+  line-height: 1;
+}
+
+.part {
+  display: inline-flex;
+  align-items: center;
+}
+
+.sep {
+  padding: 0 0.12em;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--color-text-primary);
+}
+
+.flip {
+  --flip-bg: var(--color-flip-bg);
+  --flip-fg: var(--color-flip-text);
+  --flip-h: 1.32em;
+  --flip-r: 0.14em;
+  position: relative;
+  display: inline-block;
+  height: var(--flip-h);
+  line-height: var(--flip-h);
+  border-radius: var(--flip-r);
+  perspective: 6em;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  color: var(--flip-fg);
+  box-shadow: var(--shadow-1);
+}
+
+/* The count-in number: the accent card. */
+.accent {
+  --flip-bg: var(--color-accent-default);
+  --flip-fg: var(--color-text-on-accent);
+}
+
+/* Gives the card its width. */
+.sizer {
+  display: block;
+  visibility: hidden;
+  padding: 0 0.16em;
+  text-align: center;
+}
+
+.half {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 50%;
+  overflow: hidden;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  background: var(--flip-bg);
+  will-change: transform;
+}
+
+.half > span {
+  display: block;
+  height: var(--flip-h);
+  line-height: var(--flip-h);
+  text-align: center;
+}
+
+/* The top half catches a little more light. */
+.top {
+  top: 0;
+  border-radius: var(--flip-r) var(--flip-r) 0 0;
+  transform-origin: 50% 100%;
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--flip-fg) 8%, transparent),
+    color-mix(in srgb, var(--flip-fg) 2%, transparent)
+  );
+}
+
+.bottom {
+  bottom: 0;
+  border-radius: 0 0 var(--flip-r) var(--flip-r);
+  transform-origin: 50% 0%;
+  background-image: linear-gradient(
+    color-mix(in srgb, black 6%, transparent),
+    color-mix(in srgb, black 14%, transparent)
+  );
+}
+
+.bottom > span {
+  margin-top: calc(var(--flip-h) / -2);
+}
+
+.flap {
+  z-index: 2;
+}
+
+/* The hinge line between the two halves. */
+.flip::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(50% - 0.5px);
+  height: 1px;
+  background: color-mix(in srgb, black 45%, transparent);
+  box-shadow: 0 1px 0 color-mix(in srgb, white 8%, transparent);
+  z-index: 3;
+  pointer-events: none;
+}
+
+@keyframes fold-top {
+  from {
+    transform: rotateX(0);
+    filter: brightness(1);
+  }
+
+  to {
+    transform: rotateX(-90deg);
+    filter: brightness(0.55);
+  }
+}
+
+@keyframes unfold-bottom {
+  from {
+    transform: rotateX(90deg);
+    filter: brightness(1.6);
+  }
+
+  to {
+    transform: rotateX(0);
+    filter: brightness(1);
+  }
+}
+
+.foldTop {
+  animation: fold-top 0.28s ease-in both;
+}
+
+.unfoldBottom {
+  animation: unfold-bottom 0.28s cubic-bezier(0.3, 1.4, 0.6, 1) 0.28s both;
+}
+
+/* The component also skips the flaps under reduced motion; this is the belt to its braces. */
+@media (prefers-reduced-motion: reduce) {
+  .flap {
+    display: none;
+  }
+}

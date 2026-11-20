@@ -1,103 +1,24 @@
-import type { Page } from '@playwright/test';
 import { expectNoAxeViolations } from './helpers/axe';
+import {
+  dismissMissed,
+  expectClock,
+  openPrep,
+  pauseClockSoon,
+  stubDevice,
+  VARIED,
+} from './helpers/brew-device';
 import { createRecipe } from './helpers/recipes';
-import { expect, signIn, test, waitForApp, type TestUser } from './helpers/test-users';
+import { expect, signIn, test, waitForApp } from './helpers/test-users';
 
-// The guided timer, the long steep and the stopwatch, on the V60 fixture and three other methods.
-// Uses the staging secret key from the runner's environment and skips without it. `page.clock`
-// drives the timer; wake lock and Web Audio are stubbed so beeps and the lock can be counted.
-// Metric units (en-GB) keep the numbers simple.
+// The guided timer, the long steep and the stopwatch, on the V60 fixture and other methods, laid out
+// like the prototype's Timer page. Uses the staging secret key from the runner's environment and
+// skips without it. `page.clock` drives the timer; wake lock and Web Audio are stubbed so beeps and
+// the lock can be counted. Metric units (en-GB) keep the numbers simple.
 test.use({ serviceWorkers: 'block', locale: 'en-GB', timezoneId: 'Europe/London' });
-
-declare global {
-  interface Window {
-    __beeps: number[];
-    __wakeRequests: number;
-  }
-}
-
-/** Counts every beep's frequency and every wake lock request. */
-async function stubDevice(page: Page) {
-  await page.addInitScript(() => {
-    window.__beeps = [];
-    window.__wakeRequests = 0;
-    class FakeAudioContext {
-      state = 'suspended';
-      currentTime = 0;
-      destination = {};
-      addEventListener() {}
-      async resume() {
-        this.state = 'running';
-      }
-      createBuffer() {
-        return {};
-      }
-      createBufferSource() {
-        return { connect() {}, start() {} };
-      }
-      createGain() {
-        const node = {
-          gain: { setValueAtTime() {}, exponentialRampToValueAtTime() {} },
-          connect: () => node,
-        };
-        return node;
-      }
-      createOscillator() {
-        const osc = {
-          type: '',
-          frequency: { value: 0 },
-          connect: () => ({ connect() {} }),
-          start() {
-            window.__beeps.push(osc.frequency.value);
-          },
-          stop() {},
-        };
-        return osc;
-      }
-    }
-    Object.defineProperty(window, 'AudioContext', { value: FakeAudioContext, configurable: true });
-    Object.defineProperty(navigator, 'wakeLock', {
-      configurable: true,
-      value: {
-        request: async () => {
-          window.__wakeRequests += 1;
-          return { release: async () => {}, addEventListener() {} };
-        },
-      },
-    });
-  });
-}
 
 test.beforeEach(async ({ page }) => {
   await stubDevice(page);
 });
-
-/** Opens the recipe's choice sheet and starts a guided timer; lands on the prep screen. */
-async function openPrep(page: Page, user: TestUser, slug: string) {
-  await page.goto(`/@${user.handle}/${slug}?brew=1`);
-  await waitForApp(page);
-  const sheet = page.getByRole('dialog', { name: 'Brew this recipe' });
-  await expect(sheet).toBeVisible();
-  await sheet.getByRole('button', { name: 'Guided timer' }).click();
-  await page.waitForURL('**/brew?session=*');
-  await expect(page).toHaveTitle(/Brew/);
-  await expect(page.getByRole('button', { name: /^Start/ })).toBeVisible();
-}
-
-async function pauseClockSoon(page: Page) {
-  const now = await page.evaluate(() => Date.now());
-  await page.clock.pauseAt(now + 1000);
-}
-
-const clockText = (page: Page) => page.getByRole('timer');
-
-/** Closes the "While you were away" summary that a long jump in time brings up. */
-async function dismissMissed(page: Page) {
-  const dialog = page.getByRole('alertdialog', { name: 'While you were away' });
-  await expect(dialog).toBeVisible();
-  await dialog.getByRole('button', { name: 'Got it' }).click();
-  await expect(dialog).toBeHidden();
-}
 
 test.describe('choosing what to brew', () => {
   test('the picker lists my recipes, searches them and opens the choice sheet', async ({ page, users }) => {
@@ -148,17 +69,65 @@ test.describe('choosing what to brew', () => {
   });
 });
 
-test.describe('the prep screen', () => {
-  test('shows the recipe and a "Change for this brew" panel that previews the new version', async ({
+test.describe('the prep screen (Ready)', () => {
+  test('shows the total time as a clock, the steps as chips, a one-line summary and the help line', async ({
     page,
     users,
   }) => {
     const user = await signIn(page, users, 'prep');
-    const recipe = await createRecipe(users, user);
+    const recipe = await createRecipe(users, user, 'Morning V60', {
+      version: { gear: { brewer: { name: 'Hario V60 02' }, grinder: { name: 'Comandante C40' } } },
+    });
     await openPrep(page, user, recipe.slug);
     await expect(page.getByRole('heading', { level: 1, name: /Morning V60/ })).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Steps' })).toBeVisible();
+
+    // The total time is a big clock, labelled "Ready".
+    await expect(page.getByText('Ready', { exact: true })).toBeVisible();
+    await expectClock(page, '1:30');
+    // One line: dose, water, ratio, temperature, and the grind SETTING with the grinder's name.
+    await expect(
+      page.getByText('15 g coffee · 250 g water · 1:16.7 · 93 °C · Grind 24 clicks · Comandante C40'),
+    ).toBeVisible();
+    // Steps as compact chips: time and the scale weight; a swirl by name.
+    const chips = page.getByRole('list').filter({ hasText: 'Swirl' }).first();
+    await expect(chips.getByRole('listitem')).toHaveCount(4);
+    await expect(chips.getByRole('listitem').first()).toContainText('0:00');
+    await expect(chips.getByRole('listitem').first()).toContainText('30 g');
+    await expect(chips.getByRole('listitem').nth(1)).toContainText('Swirl');
+    // The prototype's one-line help.
+    await expect(
+      page.getByText(
+        '5 s count-in before the brew clock. Beeps 5 s before each pour (a soft pip for other steps). Screen stays awake while running.',
+      ),
+    ).toBeVisible();
     await expectNoAxeViolations(page);
+  });
+
+  test('shows varied temperatures on the chips, and the Sound switch above Start', async ({
+    page,
+    users,
+  }) => {
+    const user = await signIn(page, users, 'prep-varied');
+    const recipe = await createRecipe(users, user, 'Varied', { version: VARIED });
+    await openPrep(page, user, recipe.slug);
+    await expect(page.getByRole('heading', { name: /Steps · temperature varies by pour/ })).toBeVisible();
+    await expect(page.getByRole('listitem').filter({ hasText: '40 g' })).toContainText('65 °C');
+    await expect(page.getByRole('listitem').filter({ hasText: '100 g' })).toContainText('92 °C');
+
+    // The Sound switch is fully visible and sits above the Start button, never under it.
+    const sound = page.getByRole('switch', { name: 'Sound' });
+    await sound.scrollIntoViewIfNeeded();
+    const soundBox = await sound.locator('xpath=ancestor::label').boundingBox();
+    const startBox = await page.getByRole('button', { name: 'Start', exact: true }).boundingBox();
+    expect(soundBox).not.toBeNull();
+    expect(startBox).not.toBeNull();
+    expect(soundBox!.y + soundBox!.height).toBeLessThanOrEqual(startBox!.y + 1);
+  });
+
+  test('"Change for this brew" previews the new version, and Reset puts it back', async ({ page, users }) => {
+    const user = await signIn(page, users, 'prep-change');
+    const recipe = await createRecipe(users, user);
+    await openPrep(page, user, recipe.slug);
 
     const panel = page.getByRole('button', { name: /Change for this brew/ });
     await expect(panel).toHaveAttribute('aria-expanded', 'false');
@@ -173,6 +142,8 @@ test.describe('the prep screen', () => {
     await expect(page.getByText('Grind 24 clicks → 22 clicks · 93 → 94 °C')).toBeVisible();
     await expect(page.getByText('Saves as v2 when you log this brew.')).toBeVisible();
     await expect(page.getByText('Changed', { exact: true })).toBeVisible();
+    // The summary line follows the change.
+    await expect(page.getByText(/94 °C \(changed, was 93 °C\)/)).toBeVisible();
     await expectNoAxeViolations(page);
 
     await page.getByRole('button', { name: 'Reset' }).click();
@@ -182,40 +153,98 @@ test.describe('the prep screen', () => {
 });
 
 test.describe('the guided timer', () => {
-  test('counts in, runs the clock, beeps for each step, pauses and resumes', async ({ page, users }) => {
+  test('counts in on one big card, then runs a flip clock', async ({ page, users }) => {
     const user = await signIn(page, users, 'guided');
+    const recipe = await createRecipe(users, user, 'Varied', { version: VARIED });
+    await page.clock.install();
+    await openPrep(page, user, recipe.slug);
+    await pauseClockSoon(page);
+
+    await page.getByRole('button', { name: 'Start', exact: true }).click();
+    // The count-in: a big number card showing the first step, and "Skip · start now".
+    await expect(page.getByText('Get ready · brew clock starts in')).toBeVisible();
+    await expect(page.getByText('Bloom → 40 g · 65 °C')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Skip · start now' })).toBeVisible();
+    await expect(page.getByRole('timer')).toHaveCount(0);
+
+    await page.clock.runFor(5200);
+    await expectClock(page, '0:00');
+    expect(await page.evaluate(() => window.__wakeRequests)).toBeGreaterThan(0);
+    // Count-in ticks at 5, 4, 3, 2, 1 and two beeps for the start. The wait at 0:05 would warn
+    // 5 s before it, which is the start itself; it plays as the quiet pip at 0:00 with the start beep.
+    expect(await page.evaluate(() => window.__beeps)).toEqual([880, 880, 880, 880, 880, 990, 990, 1480]);
+  });
+
+  test('one focus card says what is on the scale, what is next, the next weight and the kettle', async ({
+    page,
+    users,
+  }) => {
+    const user = await signIn(page, users, 'focus');
+    const recipe = await createRecipe(users, user, 'Varied', { version: VARIED });
+    await page.clock.install();
+    await openPrep(page, user, recipe.slug);
+    await pauseClockSoon(page);
+    await page.getByRole('button', { name: 'Start', exact: true }).click();
+    await page.clock.runFor(5200);
+
+    // Straight after the bloom pour starts.
+    const card = page.getByLabel('Current step');
+    await expect(card).toContainText('On scale 40 g · kettle 65 °C');
+    await expect(card).toContainText('Next: Wait at 0:05');
+    await expect(page.getByLabel('Next step')).toHaveCount(0); // one card, not two
+
+    // During the wait.
+    await page.clock.fastForward(20_000);
+    await page.clock.runFor(150);
+    await dismissMissed(page);
+    await expect(card).toContainText('Wait · scale stays at 40 g · 0:15 left');
+    await expect(card).toContainText('Next pour at 0:40 · Centre spiral');
+    await expect(card).toContainText('100');
+    await expect(card).toContainText('+60 g this pour');
+    await expect(card).toContainText('Switch kettle → 92 °C');
+    await expect(card).toContainText('in 20 s');
+
+    // After the last pour: the card says so, and the button is Drawdown done.
+    await page.clock.fastForward(60_000);
+    await page.clock.runFor(150);
+    await dismissMissed(page);
+    await expect(card).toContainText('Last pour done');
+    await expect(card).toContainText('Target drawdown 2:45–3:15');
+    await expect(page.getByRole('button', { name: 'Drawdown done' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'End brew' })).toBeVisible();
+  });
+
+  test('beeps for each step, pauses and resumes without counting the pause', async ({ page, users }) => {
+    const user = await signIn(page, users, 'guided-beeps');
     const recipe = await createRecipe(users, user);
     await page.clock.install();
     await openPrep(page, user, recipe.slug);
     await pauseClockSoon(page);
 
     await page.getByRole('button', { name: 'Start', exact: true }).click();
-    await expect(page.getByText('Get ready · brew clock starts in')).toBeVisible();
-    await expect(page.getByRole('timer')).toHaveCount(0);
     await page.clock.runFor(5200);
-    await expect(clockText(page)).toHaveText('0:00');
-    expect(await page.evaluate(() => window.__wakeRequests)).toBeGreaterThan(0);
-    // Count-in ticks at 5, 4, 3, 2, 1 and two beeps for the start.
+    await expectClock(page, '0:00');
     expect(await page.evaluate(() => window.__beeps)).toEqual([880, 880, 880, 880, 880, 990, 990]);
 
     await page.clock.runFor(10_000);
-    await expect(clockText(page)).toHaveText('0:10');
+    await expectClock(page, '0:10');
     // A soft pip 5 s before the swirl and one at it.
     expect((await page.evaluate(() => window.__beeps)).slice(7)).toEqual([1480, 1480]);
-    await expect(page.getByLabel('Current step')).toContainText('Swirl');
-    await expect(page.getByLabel('Next step')).toContainText('Pour at 0:45');
-    await expect(page.getByLabel('Next step')).toContainText('150');
+    const card = page.getByLabel('Current step');
+    await expect(card).toContainText('Swirl · scale stays at 30 g');
+    await expect(card).toContainText('Next pour at 0:45');
+    await expect(card).toContainText('150');
+    await expect(card).toContainText('+120 g this pour');
 
     await page.getByRole('button', { name: 'Pause' }).click();
     await expect(page.getByText('Paused', { exact: true })).toBeVisible();
     await page.clock.runFor(20_000);
-    await expect(clockText(page)).toHaveText('0:10');
+    await expectClock(page, '0:10');
 
     // The 20 s pause is not counted: 10.2 s + 5 s.
     await page.getByRole('button', { name: 'Resume' }).click();
     await page.clock.runFor(5_000);
-    await expect(clockText(page)).toHaveText('0:15');
-    await expect(page.getByLabel('Current step')).toContainText('Swirl');
+    await expectClock(page, '0:15');
 
     // axe uses timers, so let the clock run again first.
     await page.clock.resume();
@@ -238,7 +267,7 @@ test.describe('the guided timer', () => {
     await expect(dialog).toBeVisible();
     await expect(dialog).toContainText('Swirl at 0:10');
     await expect(dialog).toContainText('Pour to 150 g at 0:45');
-    await expect(clockText(page)).toHaveText('0:50');
+    await expectClock(page, '0:50');
     await dialog.getByRole('button', { name: 'Got it' }).click();
     await expect(dialog).toBeHidden();
   });
@@ -258,8 +287,8 @@ test.describe('the guided timer', () => {
     await page.clock.fastForward(90_000);
     await page.clock.runFor(150);
     await dismissMissed(page);
-    await expect(page.getByLabel('All steps done')).toBeVisible();
-    await expect(page.getByLabel('All steps done')).toContainText('Target drawdown 2:45–3:15');
+    await expect(page.getByLabel('Current step')).toContainText('Last pour done');
+    await expect(page.getByLabel('Current step')).toContainText('Target drawdown 2:45–3:15');
     await page.clock.fastForward(70_000);
     await page.clock.runFor(150);
     await page.getByRole('button', { name: 'Drawdown done' }).click();
@@ -293,6 +322,7 @@ test.describe('the guided timer', () => {
     await page.clock.fastForward(256_000);
     await page.clock.runFor(150);
     await dismissMissed(page);
+    await expect(page.getByLabel('Current step')).toContainText('All steps done');
     await expect(page.getByRole('button', { name: 'Done', exact: true })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Drawdown done' })).toHaveCount(0);
     await page.getByRole('button', { name: 'Done', exact: true }).click();
@@ -348,8 +378,9 @@ test.describe('other kinds of brew', () => {
     await pauseClockSoon(page);
     await page.getByRole('button', { name: 'Start', exact: true }).click();
     await page.clock.runFor(5200 + 3000);
-    await expect(clockText(page)).toHaveText('0:03');
+    await expectClock(page, '0:03');
     await expect(page.getByRole('button', { name: 'Done', exact: true })).toBeVisible();
+    await expect(page.getByLabel('Stopwatch')).toBeVisible();
     await expect(page.getByLabel('Next step')).toHaveCount(0);
     await page.getByRole('button', { name: 'Pause' }).click();
     await expect(page.getByRole('button', { name: 'Resume' })).toBeVisible();
@@ -373,11 +404,14 @@ test.describe('other kinds of brew', () => {
     });
     await openPrep(page, user, recipe.slug);
     await expect(page.getByRole('button', { name: 'Start steep' })).toBeVisible();
+    // A steep is h:mm:ss on the Ready clock.
+    await expectClock(page, '12:01:00');
     await page.getByRole('button', { name: 'Start steep' }).click();
-    await expect(page.getByText('Steeping for')).toBeVisible();
-    await expect(page.getByText(/Ends at /)).toBeVisible();
+    await expect(page.getByText('Steeping for', { exact: true })).toBeVisible();
+    await expect(page.getByText(/ends at /)).toBeVisible();
     await expect(page.getByText('Get ready')).toHaveCount(0);
     await expect(page.getByRole('timer')).toBeVisible();
+    await expect(page.getByLabel('Current step')).toContainText('Next: Wait at');
     expect(await page.evaluate(() => window.__wakeRequests)).toBe(0);
     await expectNoAxeViolations(page);
 
@@ -404,7 +438,36 @@ test.describe('unfinished brews on Home', () => {
 
     await page.getByRole('button', { name: 'Actions for Morning V60 v1' }).click();
     await page.getByRole('menuitem', { name: 'Discard' }).click();
-    await page.getByRole('alertdialog', { name: 'Discard this brew?' }).getByRole('button', { name: 'Discard' }).click();
+    await page
+      .getByRole('alertdialog', { name: 'Discard this brew?' })
+      .getByRole('button', { name: 'Discard' })
+      .click();
     await expect(page.getByRole('heading', { name: 'In progress' })).toHaveCount(0);
   });
 });
+
+for (const scheme of ['light', 'dark'] as const) {
+  test.describe(`accessibility, ${scheme} theme`, () => {
+    test.use({ colorScheme: scheme });
+
+    test('prep, count-in, running and paused timer screens have no violations', async ({ page, users }) => {
+      const user = await signIn(page, users, `a11y-${scheme}`);
+      const recipe = await createRecipe(users, user, 'Varied', { version: VARIED });
+      await openPrep(page, user, recipe.slug);
+      await page.getByRole('button', { name: /Change for this brew/ }).click();
+      await expectNoAxeViolations(page);
+
+      await page.getByRole('button', { name: 'Start', exact: true }).click();
+      await expect(page.getByLabel('Get ready')).toBeVisible();
+      await expectNoAxeViolations(page);
+
+      await page.getByRole('button', { name: 'Skip · start now' }).click();
+      await expect(page.getByRole('timer')).toBeVisible();
+      await expectNoAxeViolations(page);
+
+      await page.getByRole('button', { name: 'Pause' }).click();
+      await expect(page.getByText('Paused', { exact: true })).toBeVisible();
+      await expectNoAxeViolations(page);
+    });
+  });
+}

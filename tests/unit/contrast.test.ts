@@ -65,6 +65,8 @@ const pairs: ReadonlyArray<readonly [string, string, number, string]> = [
   ),
   ['--color-text-muted', '--color-bg-field', 4.5, 'placeholder text'],
   ['--color-text-on-accent', '--color-accent-default', 4.5, 'primary button label'],
+  ['--color-flip-text', '--color-flip-bg', 4.5, 'split-flap clock digits'],
+  ['--color-accent-default', '--color-bg-surface', 4.5, 'step time on a chip'],
   ['--color-accent-default', '--color-bg-canvas', 4.5, 'ghost button and link text'],
   ['--color-accent-default', '--color-bg-surface', 4.5, 'ghost button and link text'],
   ['--color-accent-on-inset', '--color-bg-inset', 4.5, 'ghost button hover and current nav link'],

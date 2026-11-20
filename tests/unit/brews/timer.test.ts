@@ -108,19 +108,45 @@ describe('cueSchedule', () => {
     expect(kind('go:0')).toBe('go');
   });
 
-  it('gives steps at 0:00 no cue of their own and skips a warning that would land on the start', () => {
+  it('gives steps at 0:00 no cue of their own; a step within 5 s warns as soon as the brew starts, like the prototype', () => {
     const steps: StepData[] = [
       { id: 'a', kind: 'other', at_s: 0, label: 'Close valve' },
       { id: 'b', kind: 'pour', at_s: 0, target_g: 240 },
       { id: 'c', kind: 'pour', at_s: 4, target_g: 300 },
       { id: 'd', kind: 'pour', at_s: 6, target_g: 350 },
     ];
-    const ids = cueSchedule(steps, 'guided').map((c) => c.id);
+    const schedule = cueSchedule(steps, 'guided');
+    const ids = schedule.map((c) => c.id);
     expect(ids).not.toContain('g:a');
     expect(ids).not.toContain('g:b');
-    expect(ids).not.toContain('w:c');
-    expect(ids).toContain('g:c');
-    expect(ids).toContain('w:d');
+    expect(ids).not.toContain('w:a');
+    expect(schedule.find((c) => c.id === 'w:c')).toMatchObject({ t: 0, kind: 'warn' });
+    expect(schedule.find((c) => c.id === 'g:c')).toMatchObject({ t: 4, kind: 'go' });
+    expect(schedule.find((c) => c.id === 'w:d')).toMatchObject({ t: 1, kind: 'warn' });
+  });
+
+  it('plays that early warning together with the start beep', () => {
+    const steps: StepData[] = [{ id: 'c', kind: 'pour', at_s: 3, target_g: 300 }];
+    const schedule = cueSchedule(steps, 'guided');
+    const started = reduce(createTimerState(steps), { type: 'START', now: T0 });
+    const r = run(started, T0, T0 + 5000 + 500, 100, schedule);
+    const atStart = r.played.filter((p) => p.at >= 0 && p.at < 0.2).map((p) => p.id);
+    expect(atStart.sort()).toEqual(['go:0', 'w:c']);
+  });
+
+  it('plays a steep’s early warning too (there is no start beep in a steep)', () => {
+    const steps: StepData[] = [
+      { id: 'x', kind: 'pour', at_s: 3, target_g: 100 },
+      { id: 'y', kind: 'wait', at_s: 4000, duration_s: 100 },
+    ];
+    const schedule = cueSchedule(steps, 'steep');
+    let state = reduce(createTimerState(steps), { type: 'START', now: T0 });
+    expect(state.mode).toBe('steep');
+    const first = advance(state, T0 + 100, schedule);
+    expect(first.live.map((c) => c.id)).toEqual(['w:x']);
+    state = first.state;
+    const second = advance(state, T0 + 3100, schedule);
+    expect(second.live.map((c) => c.id)).toEqual(['g:x']);
   });
 
   it('has no count-in for a steep and no step cues for the stopwatch', () => {

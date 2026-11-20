@@ -25,9 +25,16 @@ const { StepsEditor } = await import('@/components/recipes/editor/StepsEditor');
 
 const CONTEXT = { dose_g: 15, brew_water_g: 250 };
 
-function Harness({ initial = [] as StepData[], onSteps }: { initial?: StepData[]; onSteps?: (s: StepData[]) => void }) {
+function Harness({
+  initial = [] as StepData[],
+  onSteps,
+  vary = false,
+}: {
+  initial?: StepData[];
+  onSteps?: (s: StepData[]) => void;
+  vary?: boolean;
+}) {
   const [steps, setSteps] = useState(initial);
-  const [vary, setVary] = useState(false);
   return (
     <StepsEditor
       steps={steps}
@@ -36,7 +43,6 @@ function Harness({ initial = [] as StepData[], onSteps }: { initial?: StepData[]
         onSteps?.(next);
       }}
       varyTemp={vary}
-      onVaryTempChange={setVary}
       context={CONTEXT}
       errors={{}}
     />
@@ -161,22 +167,15 @@ describe('StepsEditor', () => {
     ]);
   });
 
-  it('shows pour temperature only while "Vary temperature by pour" is on, and drops it when off', async () => {
-    const user = userEvent.setup();
-    const seen: StepData[][] = [];
-    render(
-      <Harness
-        initial={[{ id: 'a', kind: 'pour', at_s: 0, target_g: 250, temp_c: 93 }]}
-        onSteps={(s) => seen.push(s)}
-      />,
-    );
+  it('shows a pour’s temperature field only while "Vary temperature by pour" (in the Numbers section) is on', () => {
+    const initial: StepData[] = [{ id: 'a', kind: 'pour', at_s: 0, target_g: 250, temp_c: 93 }];
+    const { rerender } = render(<Harness initial={initial} />);
     const group = screen.getByRole('group', { name: 'Step 1, pour, 0:00' });
     expect(within(group).queryByLabelText(/Temperature/)).toBeNull();
-    await user.click(screen.getByText('Vary temperature by pour'));
-    expect(within(group).getByLabelText(/Temperature/)).toBeInTheDocument();
-    await user.click(screen.getByText('Vary temperature by pour'));
-    expect(within(group).queryByLabelText(/Temperature/)).toBeNull();
-    expect(seen.at(-1)![0]!.temp_c).toBeNull();
+    // The switch itself no longer lives in this list.
+    expect(screen.queryByText('Vary temperature by pour')).toBeNull();
+    rerender(<Harness initial={initial} vary />);
+    expect(within(screen.getByRole('group', { name: 'Step 1, pour, 0:00' })).getByLabelText(/Temperature/)).toBeInTheDocument();
   });
 
   it('offers to sort steps that are out of order', async () => {

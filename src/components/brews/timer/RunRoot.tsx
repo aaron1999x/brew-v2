@@ -51,6 +51,7 @@ export type RunControl = {
   canVibrate: boolean;
   audioStatus: AudioStatus;
   enableSound: () => void;
+  toggleSound: () => void;
   togglePause: () => void;
   skipCountin: () => void;
   finish: () => void;
@@ -158,6 +159,10 @@ export function RunRoot({ session, update, leave }: Props) {
     canVibrate,
     audioStatus,
     enableSound: () => void unlockAudio(),
+    toggleSound: () => {
+      setPrefs({ sound: !prefs.sound });
+      if (!prefs.sound) void unlockAudio();
+    },
     togglePause,
     skipCountin: () => dispatch({ type: 'SKIP_COUNTIN' }),
     finish: () => {

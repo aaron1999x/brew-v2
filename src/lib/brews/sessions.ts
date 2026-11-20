@@ -124,6 +124,7 @@ export function toSessionVersion(
     retention_ratio: number | null;
     temp_c: number | null;
     grind_setting: string | null;
+    grind_microns?: number | null;
     drawdown_min_s: number | null;
     drawdown_max_s: number | null;
     tds_min: number | null;
@@ -141,6 +142,7 @@ export function toSessionVersion(
     retention_ratio: v.retention_ratio,
     temp_c: v.temp_c,
     grind_setting: v.grind_setting,
+    grind_microns: v.grind_microns ?? null,
     grinder: grinderName,
     drawdown_min_s: v.drawdown_min_s,
     drawdown_max_s: v.drawdown_max_s,

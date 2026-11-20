@@ -70,8 +70,9 @@ export function createTimerState(steps: readonly StepData[]): TimerState {
     startedAt: null,
     pausedAt: null,
     pausedTotalMs: 0,
-    // Start just below the first count-in tick (t = −5) so it is not skipped.
-    seenS: mode === 'steep' ? 0 : -(COUNTIN_S + 1),
+    // Start just below the first cue (the count-in's first tick at t = −5, or a steep's first
+    // step at 0:00) so it is not skipped.
+    seenS: mode === 'steep' ? -0.001 : -(COUNTIN_S + 1),
     finishedS: null,
     drawdownS: null,
     ended: null,
@@ -112,7 +113,7 @@ export function reduce(state: TimerState, event: TimerEvent): TimerState {
     case 'START': {
       if (state.phase !== 'prep') return state;
       if (state.mode === 'steep') {
-        return { ...state, phase: 'running', startedAt: event.now, seenS: 0 };
+        return { ...state, phase: 'running', startedAt: event.now, seenS: -0.001 };
       }
       return { ...state, phase: 'countin', countinStartedAt: event.now };
     }
@@ -196,9 +197,12 @@ export type Cue = {
 };
 
 /**
- * Every cue of a brew, in time order. The count-in ticks at −5 … −1 and the start beep at 0 (not
- * for a steep). Each step after 0:00 gets a warning 5 s before it (skipped when it would fall on
- * the start beep) and a beep at its time. Steps at 0:00 get none of their own: the start beep covers them.
+ * Every cue of a brew, in time order, exactly as the prototype plays them (src/pages/Timer.tsx):
+ * the count-in ticks at −5 … −1 and the start beep at 0 (not for a steep), then for every step after
+ * 0:00 a warning 5 s before it (a single beep for a pour, a quiet pip for any other step) and the
+ * cue at the step itself (two beeps for a pour, a pip for the rest). A step at 5 s or sooner gets its
+ * warning as soon as the brew starts, together with the start beep. Steps at 0:00 get no cue of their
+ * own: the start beep covers them.
  */
 export function cueSchedule(steps: readonly StepData[], mode: TimerMode): Cue[] {
   const cues: Cue[] = [];
@@ -211,14 +215,12 @@ export function cueSchedule(steps: readonly StepData[], mode: TimerMode): Cue[] 
   steps.forEach((step, stepIndex) => {
     if (step.at_s <= 0) return;
     const pour = step.kind === 'pour';
-    if (step.at_s > COUNTIN_S) {
-      cues.push({
-        id: `w:${step.id}`,
-        t: step.at_s - COUNTIN_S,
-        kind: pour ? 'warn' : 'soft-warn',
-        stepIndex,
-      });
-    }
+    cues.push({
+      id: `w:${step.id}`,
+      t: Math.max(0, step.at_s - COUNTIN_S),
+      kind: pour ? 'warn' : 'soft-warn',
+      stepIndex,
+    });
     cues.push({ id: `g:${step.id}`, t: step.at_s, kind: pour ? 'go' : 'soft-go', stepIndex });
   });
   return cues

@@ -150,6 +150,9 @@
   --color-chart-series-a: var(--color-teal-600);
   --color-chart-series-b: var(--color-roast-600);
   --color-chart-series-c: var(--color-violet-600);
+  /* Split-flap clock cards: the brew clock and the count-in */
+  --color-flip-bg: var(--color-neutral-900);
+  --color-flip-text: var(--color-neutral-50);
   --color-chart-grid: var(--color-neutral-100);
   --color-chart-target-band: var(--color-green-300);
   --color-bg-raised: var(--color-neutral-0);
@@ -197,6 +200,9 @@
   --color-chart-series-a: var(--color-teal-300);
   --color-chart-series-b: var(--color-roast-300);
   --color-chart-series-c: var(--color-violet-300);
+  /* Split-flap clock cards: the brew clock and the count-in */
+  --color-flip-bg: var(--color-neutral-800);
+  --color-flip-text: var(--color-neutral-50);
   --color-chart-grid: var(--color-neutral-800);
   --color-chart-target-band: var(--color-green-600);
   --color-bg-raised: var(--color-neutral-800);
@@ -245,6 +251,9 @@
     --color-chart-series-a: var(--color-teal-300);
     --color-chart-series-b: var(--color-roast-300);
     --color-chart-series-c: var(--color-violet-300);
+    /* Split-flap clock cards: the brew clock and the count-in */
+    --color-flip-bg: var(--color-neutral-800);
+    --color-flip-text: var(--color-neutral-50);
     --color-chart-grid: var(--color-neutral-800);
     --color-chart-target-band: var(--color-green-600);
     --color-bg-raised: var(--color-neutral-800);

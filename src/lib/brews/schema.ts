@@ -376,6 +376,8 @@ export const sessionVersionSchema = z.object({
   retention_ratio: z.number().nullable(),
   temp_c: z.number().nullable(),
   grind_setting: z.string().nullable(),
+  /** Optional: sessions saved before this field existed don't have it. */
+  grind_microns: z.number().nullable().optional(),
   grinder: z.string().nullable(),
   drawdown_min_s: z.number().nullable(),
   drawdown_max_s: z.number().nullable(),

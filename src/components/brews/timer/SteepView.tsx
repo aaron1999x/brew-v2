@@ -2,63 +2,89 @@
 
 import { VersionBadge } from '@/components/ui/Badge/Badge';
 import { Button } from '@/components/ui/Button/Button';
-import { Notice } from '@/components/ui/Notice/Notice';
-import { missedStepText } from '@/lib/brews/describe';
-import { endsWithDrawdown, steepEndsAt, steepRemainingS, steepStepTimes } from '@/lib/brews/timer';
+import { stepKindName } from '@/lib/brews/describe';
+import { focusInfo } from '@/lib/brews/focus';
+import {
+  endsWithDrawdown,
+  steepEndsAt,
+  steepRemainingS,
+  steepStepTimes,
+} from '@/lib/brews/timer';
 import { useUnits } from '@/lib/settings/useSettings';
+import { FocusCard } from './FocusCard';
+import { FlipClock } from './FlipClock';
 import type { RunControl } from './RunRoot';
 import styles from './timer.module.css';
 
 /**
- * A long steep (an hour or more): elapsed and remaining time, when each step happens on the clock,
- * and Done. No count-in and no wake lock: leave whenever you like, the Home card keeps track.
+ * A long steep (an hour or more), laid out like the guided timer: the clock, one card with the next
+ * step and when it happens on the wall clock, and the controls. No count-in and no wake lock: leave
+ * whenever you like, the Home card keeps track. The steps sit below as chips with their clock times.
  */
 export function SteepView({ ctl }: Readonly<{ ctl: RunControl }>) {
-  const { weight, duration, time } = useUnits();
-  const { session, steps, state, phase, elapsed, now } = ctl;
+  const { weight, temp, duration, time, units } = useUnits();
+  const { session, steps, applied, state, phase, elapsed, now } = ctl;
   const endsAt = steepEndsAt(state);
   const remaining = steepRemainingS(state, now);
   const startedAt = state.startedAt ?? now;
   const schedule = steepStepTimes(state, steps);
   const finishLabel = endsWithDrawdown(session.method) ? 'Drawdown done' : 'Done';
+  const wallClock = (stepSeconds: number) => time(startedAt + stepSeconds * 1000);
+
+  const info = focusInfo(steps, elapsed, applied.temp_c, { weight, temp, duration, at: wallClock });
 
   return (
     <div className={styles.screen}>
       <div className={styles.top}>
-        <h1 className={styles.title}>
-          {session.recipeName} <VersionBadge version={session.versionNo} />
-        </h1>
+        <div className={styles.titleBlock}>
+          <h1 className={styles.title}>
+            <span className={styles.titleText}>{session.recipeName}</span>
+            <VersionBadge version={session.versionNo} />
+          </h1>
+        </div>
       </div>
 
       <div className={styles.clockBlock}>
         <p className={styles.clockLabel}>Steeping for</p>
-        <p role="timer" className={`${styles.clock} ${styles.clockLong}`}>
-          {duration(Math.max(0, Math.floor(elapsed)))}
+        <span className={styles.clockSizeLong}>
+          <FlipClock seconds={elapsed} label="Steeping for" />
+        </span>
+        <p className={styles.clockLabel}>
+          {phase === 'finishing'
+            ? 'The steep is done'
+            : `${duration(Math.ceil(remaining))} to go${endsAt != null ? ` · ends at ${time(endsAt)}` : ''}`}
         </p>
-        {phase === 'finishing' ? (
-          <p className={styles.paused}>The steep is done</p>
-        ) : (
-          <p className={styles.clockLabel}>{duration(Math.ceil(remaining))} to go</p>
-        )}
-        {endsAt != null ? <p className={styles.clockLabel}>Ends at {time(endsAt)}</p> : null}
       </div>
 
-      <Notice>You can leave this screen. The steep keeps going, and Home shows when it ends.</Notice>
+      <FocusCard
+        info={info}
+        weightUnit={units.weight_unit}
+        doneAction={
+          finishLabel === 'Drawdown done'
+            ? 'Tap Drawdown done when the coffee has finished draining.'
+            : 'Tap Done when the brew is finished.'
+        }
+      />
 
-      <section aria-labelledby="steep-steps" className={styles.section}>
+      <section aria-labelledby="steep-steps" className={styles.steepList}>
         <h2 id="steep-steps" className={styles.sectionTitle}>
           Steps
         </h2>
-        <ol className={styles.stepList}>
+        <ol className={styles.chips}>
           {steps.map((step, i) => {
             const at = schedule[i]?.atMs ?? startedAt + step.at_s * 1000;
             const passed = elapsed >= step.at_s;
+            const pour = step.kind === 'pour' && step.target_g != null;
             return (
-              <li key={step.id} className={styles.stepItem}>
-                <span className={styles.stepHead}>
-                  {missedStepText(step, weight, () => time(at))}
-                  {passed ? ' · done' : ''}
+              <li
+                key={step.id}
+                className={`${styles.stepChip} ${pour ? '' : styles.stepChipOther} ${passed ? styles.stepChipDone : ''}`}
+              >
+                <span className={styles.stepTime}>{time(at)}</span>
+                <span className={styles.stepMain}>
+                  {pour ? weight(step.target_g as number) : stepKindName(step)}
                 </span>
+                {passed ? <span className={styles.stepSub}>done</span> : null}
               </li>
             );
           })}
@@ -70,10 +96,11 @@ export function SteepView({ ctl }: Readonly<{ ctl: RunControl }>) {
           <Button size="lg" fullWidth onPress={ctl.finish}>
             {finishLabel}
           </Button>
-        ) : null}
-        <Button size="lg" variant="secondary" fullWidth onPress={ctl.goHome}>
-          Back to Home
-        </Button>
+        ) : (
+          <Button size="lg" fullWidth onPress={ctl.goHome}>
+            Back to Home
+          </Button>
+        )}
         <Button size="lg" variant="secondary" fullWidth onPress={ctl.openEnd}>
           End brew
         </Button>
