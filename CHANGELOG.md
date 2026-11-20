@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.0](https://github.com/aaron1999x/brew-v2/compare/v0.5.0...v0.6.0) (2026-11-20)
+
+
+### New features
+
+* wider desktop layouts ([#17](https://github.com/aaron1999x/brew-v2/issues/17)) ([324f599](https://github.com/aaron1999x/brew-v2/commit/324f599fce4518cd345a34d3e79d4045a7e4cee5))
+
 ## [0.5.0](https://github.com/aaron1999x/brew-v2/compare/v0.4.0...v0.5.0) (2026-11-20)
 
 
