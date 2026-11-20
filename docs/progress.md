@@ -306,6 +306,21 @@ Branch `feat/desktop-layouts`. Phone layouts (under 768 px) are unchanged: the n
 - **Known:** the version select on the recipe page stretches across the full width on desktop.
 
 ## M4 Guided timer and brew log
+## M4 in progress
+
+Branch `feat/m4-brews`, draft PR (the full M4 prompt is in its description). Plan: `C:\Users\aaron\.claude\plans\linked-meandering-kahan.md` (stages 1–6). Decided at planning: keep the prototype's single 5 s warning beep before each step after 0:00; `log_brew` allows a plain log on a soft-deleted recipe (the detail page reads the snapshots) but raises `version_not_found` for a quick change on one.
+
+### Stage 1 done: database (migration `20261120000002_m4_brews.sql`, pgTAP `10_brews.sql`)
+- **`brews_before_write` now also guards updates:** `user_id`, the snapshots (`recipe_name_snapshot`, `author_handle_snapshot`, `version_no_snapshot`, `dose_g_snapshot`), `is_others_recipe`, `source` and `created_at` can't change (`immutable_field`); `recipe_id` can't change except to null when the recipe row is gone (account deletion). Before, an owner could rewrite `dose_g_snapshot` and fake the EY.
+- **Constraints:** `brews_flavours_valid` (`brews_flavours_ok(text[])`: at most 12 tags, 1–30 characters after trimming, no case-insensitive duplicates) and `brews_brewed_at_not_future` (`brewed_at <= created_at + 5 minutes`). The migration repairs existing flavour rows first (the push showed no repair notice, so presumably none needed it).
+- **`log_brew(p_brew, p_new_version default null)`** (security invoker, members only): idempotent on the brew id (advisory lock, returns the caller's existing brew, soft-deleted included); `brew_conflict` if the id belongs to someone else; `overall_required`; whitelisted brew columns only. A quick change (`grind_setting`, `temp_c`, `dose_g`, `brew_water_g`, step `target_g` and per-pour `temp_c`, plus a 1–200 character `change_note`) goes through `save_recipe(…, true)`, the editor's own path; anything else, no real change, or out-of-range values raise `quick_change_invalid`. One transaction.
+- **`my_recipe_brew_stats()`** returns `(recipe_id, recipe_version_id, brew_count, last_brewed_at)` for the caller's non-deleted brews. Counts and last-brewed dates must come from here: `recipe_counters.owner_brews` and `recipes.last_brewed_at` are never lowered by a soft delete.
+- A quick change also moves the recipe's "Last edited" (`save_recipe` sets `edited_at`); accepted.
+- pgTAP: 71 tests in `10_brews.sql`; `08_function_grants.sql` now 12 (members can run the three new functions, anon can't call `log_brew` or `my_recipe_brew_stats`; the anon allowlist is unchanged at 10).
+
+### Next
+Stage 2: brew logic in `src/lib/brews/` (waits for Aaron to switch to `/model opusplan`).
+
 ## M5 Offline and PWA
 ## M6 Public pages and publishing
 ## M7 Sharing loop

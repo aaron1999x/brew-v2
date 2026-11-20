@@ -995,6 +995,7 @@ export type Database = {
         Args: { p_role: Database['public']['Enums']['app_role']; p_user_id: string };
         Returns: undefined;
       };
+      brews_flavours_ok: { Args: { p_tags: string[] }; Returns: boolean };
       can_sign_up: { Args: { p_email: string }; Returns: boolean };
       copy_recipe: {
         Args: { p_version_id: string };
@@ -1125,6 +1126,49 @@ export type Database = {
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean };
       is_moderator: { Args: Record<PropertyKey, never>; Returns: boolean };
       is_suspended: { Args: { uid: string }; Returns: boolean };
+      log_brew: {
+        Args: { p_brew: Json; p_new_version?: Json };
+        Returns: {
+          acidity: number | null;
+          aftertaste: number | null;
+          author_handle_snapshot: string | null;
+          balance: number | null;
+          beverage_g: number | null;
+          body: number | null;
+          brewed_at: string;
+          brightness: number | null;
+          clarity: number | null;
+          client_updated_at: string | null;
+          created_at: string;
+          deleted_at: string | null;
+          dose_g_snapshot: number;
+          drawdown_s: number | null;
+          ey_pct: number | null;
+          flavours: string[];
+          id: string;
+          is_others_recipe: boolean;
+          next_change: string | null;
+          notes: string | null;
+          overall: number;
+          recipe_id: string | null;
+          recipe_name_snapshot: string;
+          recipe_version_id: string | null;
+          source: Database['public']['Enums']['brew_source'];
+          sweetness: number | null;
+          tasted_after_min: number | null;
+          tasted_temp: Database['public']['Enums']['tasted_temp'] | null;
+          tds_pct: number | null;
+          updated_at: string;
+          user_id: string;
+          version_no_snapshot: number;
+        };
+        SetofOptions: {
+          from: '*';
+          to: 'brews';
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       log_event: {
         Args: { p_anon_id?: string; p_name: string; p_props?: Json; p_recipe_id?: string };
         Returns: undefined;
@@ -1144,6 +1188,15 @@ export type Database = {
         Returns: undefined;
       };
       mod_set_verified: { Args: { p_user_id: string; p_verified: boolean }; Returns: undefined };
+      my_recipe_brew_stats: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          brew_count: number;
+          last_brewed_at: string;
+          recipe_id: string;
+          recipe_version_id: string;
+        }[];
+      };
       profile_stats: {
         Args: { p_user_id: string };
         Returns: {
