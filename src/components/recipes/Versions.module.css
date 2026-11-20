@@ -102,3 +102,11 @@
   margin: 0;
   font-weight: var(--type-label-weight);
 }
+
+/* Versions: two cards across once there is room. */
+@media (min-width: 1024px) {
+  .list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}

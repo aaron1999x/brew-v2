@@ -45,16 +45,23 @@ export function useDiffFormatter() {
   };
 }
 
-function FromTo({ before, after }: { before: string; after: string }) {
+/** Names the two sides of a comparison ("v1", "v2"); they show as column heads from 768 px. */
+export type SideLabels = Readonly<{ before: string; after: string }>;
+
+function FromTo({ before, after, labels }: { before: string; after: string; labels?: SideLabels }) {
   return (
     <span className={styles.fromTo}>
       <span className={styles.before}>
         <VisuallyHidden>From </VisuallyHidden>
+        {labels ? <span className={styles.sideLabel}>{labels.before}</span> : null}
         {before}
       </span>
-      <Icon icon={ArrowRight} size="sm" />
+      <span className={styles.arrow}>
+        <Icon icon={ArrowRight} size="sm" />
+      </span>
       <span className={styles.after}>
         <VisuallyHidden>to </VisuallyHidden>
+        {labels ? <span className={styles.sideLabel}>{labels.after}</span> : null}
         {after}
       </span>
     </span>
@@ -62,7 +69,13 @@ function FromTo({ before, after }: { before: string; after: string }) {
 }
 
 /** Changed fields: the name, a "Changed" marker (icon and word) and old → new. */
-export function FieldChanges({ fields }: { fields: readonly FieldChange[] }) {
+export function FieldChanges({
+  fields,
+  labels,
+}: {
+  fields: readonly FieldChange[];
+  labels?: SideLabels;
+}) {
   const format = useDiffFormatter();
   return (
     <ul className={styles.list}>
@@ -70,7 +83,11 @@ export function FieldChanges({ fields }: { fields: readonly FieldChange[] }) {
         <li key={f.key} className={styles.item} data-changed={f.key}>
           <span className={styles.name}>{f.label}</span>
           <ChangedPill />
-          <FromTo before={format(f.type, f.before)} after={format(f.type, f.after)} />
+          <FromTo
+            before={format(f.type, f.before)}
+            after={format(f.type, f.after)}
+            labels={labels}
+          />
         </li>
       ))}
     </ul>
@@ -93,7 +110,13 @@ function stepSentence(change: StepChange): string {
 }
 
 /** Changed steps, matched by id: added, removed, moved, and field-level changes ("Weight 100 g → 110 g"). */
-export function StepChanges({ steps }: { steps: readonly StepChange[] }) {
+export function StepChanges({
+  steps,
+  labels,
+}: {
+  steps: readonly StepChange[];
+  labels?: SideLabels;
+}) {
   const format = useDiffFormatter();
   return (
     <ul className={styles.list}>
@@ -107,7 +130,11 @@ export function StepChanges({ steps }: { steps: readonly StepChange[] }) {
               {s.fields.map((f) => (
                 <li key={f.key} className={styles.nestedItem}>
                   <span className={styles.nestedName}>{f.label}</span>
-                  <FromTo before={format(f.type, f.before)} after={format(f.type, f.after)} />
+                  <FromTo
+                    before={format(f.type, f.before)}
+                    after={format(f.type, f.after)}
+                    labels={labels}
+                  />
                 </li>
               ))}
             </ul>
@@ -132,9 +159,16 @@ const SECTION_ORDER: readonly DiffSection[] = [
  * Every section of a diff in the recipe page's order. A changed section lists what changed; an
  * unchanged one is collapsed to "No changes".
  */
-export function DiffSections({ diff }: { diff: VersionDiff }) {
+export function DiffSections({
+  diff,
+  labels,
+}: {
+  diff: VersionDiff;
+  /** On the compare page: name the two versions so a wide screen shows them side by side. */
+  labels?: SideLabels;
+}) {
   return (
-    <div className={styles.sections}>
+    <div className={labels ? `${styles.sections} ${styles.side}` : styles.sections}>
       {SECTION_ORDER.map((section) => {
         const info = diff.sections[section];
         const title = DIFF_SECTION_LABELS[section];
@@ -153,9 +187,12 @@ export function DiffSections({ diff }: { diff: VersionDiff }) {
               {title} <span className={styles.count}>{info.count} changed</span>
             </h3>
             {section === 'steps' ? (
-              <StepChanges steps={diff.steps} />
+              <StepChanges steps={diff.steps} labels={labels} />
             ) : (
-              <FieldChanges fields={diff.fields.filter((f) => f.section === section)} />
+              <FieldChanges
+                fields={diff.fields.filter((f) => f.section === section)}
+                labels={labels}
+              />
             )}
           </section>
         );

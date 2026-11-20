@@ -83,7 +83,10 @@ function Compare({
   const same = versionA.id === versionB.id;
   const drawdownOf = (v: typeof versionB) =>
     v.drawdown_min_s != null || v.drawdown_max_s != null
-      ? { from: v.drawdown_min_s ?? v.drawdown_max_s ?? 0, to: v.drawdown_max_s ?? v.drawdown_min_s ?? 0 }
+      ? {
+          from: v.drawdown_min_s ?? v.drawdown_max_s ?? 0,
+          to: v.drawdown_max_s ?? v.drawdown_min_s ?? 0,
+        }
       : null;
 
   return (
@@ -140,7 +143,7 @@ function Compare({
                   drawdown={drawdownOf(versionB)}
                 />
               ) : null}
-              <DiffSections diff={diff} />
+              <DiffSections diff={diff} labels={{ before: `v${aNo}`, after: `v${bNo}` }} />
             </>
           )}
         </>
