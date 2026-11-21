@@ -242,3 +242,131 @@
     grid-column: 1 / -1;
   }
 }
+
+/* "More options": rarely used fields behind a button (particle size, retention). */
+.more {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.moreToggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: var(--size-target-min);
+  padding: var(--space-2) var(--space-4);
+  border: var(--border-width-hairline) solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-weight: var(--type-label-weight);
+  text-align: start;
+  cursor: pointer;
+}
+
+.moreClosed,
+.moreOpen {
+  display: inline-flex;
+}
+
+.moreOpen {
+  transform: rotate(180deg);
+}
+
+.moreFields {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.moreFields[hidden] {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .moreFields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+
+/*
+ * The Numbers grid (the prototype's Parameters card): two across on phones, four from 768 px.
+ * Row 1 dose, water, bypass, temperature; row 2 grind, water hardness, bloom (two wide).
+ */
+.numberGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  align-items: start;
+  min-width: 0;
+}
+
+.cell {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.compact {
+  min-width: 0;
+}
+
+/* The two bypass timings sit as a small segmented control under the bypass field. */
+.compact > * {
+  gap: var(--space-1);
+}
+
+.bloomCell {
+  display: grid;
+  grid-column: span 2;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.bloomLabel {
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
+  line-height: var(--type-label-line-height);
+}
+
+.bloomValue {
+  display: flex;
+  align-items: center;
+  min-height: var(--size-target-min);
+  margin: 0;
+  padding: 0 var(--space-3);
+  border: var(--border-width-hairline) solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-inset);
+  font-variant-numeric: tabular-nums;
+}
+
+.bloomHint {
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-small-size);
+  line-height: var(--type-body-small-line-height);
+}
+
+@media (min-width: 768px) {
+  .numberGrid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* In a narrow cell the two timings share the width and wrap rather than overflow. */
+.compact [data-primary-control] {
+  flex: 1 1 0;
+  min-width: 0;
+  padding-inline: var(--space-2);
+  text-align: center;
+  line-height: var(--type-label-line-height);
+}
+
+.compact [role='radiogroup'] > div {
+  display: flex;
+  width: 100%;
+  border-radius: var(--radius-lg);
+}

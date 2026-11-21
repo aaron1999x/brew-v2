@@ -8,11 +8,15 @@ import { Combobox } from '@/components/ui/Combobox/Combobox';
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog/ConfirmDialog';
 import { DateField } from '@/components/ui/DateField/DateField';
 import { FormErrorSummary } from '@/components/ui/FormErrorSummary/FormErrorSummary';
-import { NumberField } from '@/components/ui/NumberField/NumberField';
+import { TypedNumberField } from '@/components/ui/NumberField/TypedNumberField';
 import { Notice } from '@/components/ui/Notice/Notice';
 import { useOnlineStatus } from '@/components/ui/OfflineBanner/OfflineBanner';
 import { SegmentedControl } from '@/components/ui/SegmentedControl/SegmentedControl';
 import { Select } from '@/components/ui/Select/Select';
+import { ChevronDown } from 'lucide-react';
+import { GRIND_INPUT_PROPS } from '@/components/brews/QuickChangePanel';
+import { Icon } from '@/components/ui/Icon/Icon';
+import { Switch } from '@/components/ui/Switch/Switch';
 import { TextField } from '@/components/ui/TextField/TextField';
 import { Textarea } from '@/components/ui/Textarea/Textarea';
 import { toast } from '@/components/ui/Toast/toast';
@@ -69,8 +73,10 @@ import {
   storedDiffInput,
   type EditorMode,
 } from '@/lib/recipes/save';
-import { LIMITS } from '@/lib/recipes/schema';
+import { LIMITS, type NumberHelpKey } from '@/lib/recipes/schema';
+import { pourTemperatureTrail, setVaryTemperature } from '@/lib/recipes/steps';
 import { useUnits } from '@/lib/settings/useSettings';
+import { formatClock } from '@/lib/units/format';
 import { useMediaQuery } from '@/lib/ui/useMediaQuery';
 import { DiffSections } from '../Changes';
 import { LazyPourCurve } from '../LazyPourCurve';
@@ -134,35 +140,37 @@ function Section({
   );
 }
 
-type PlainNumberProps = {
-  id: string;
-  label: string;
-  description?: string;
-  value: number | null;
-  decimals?: number;
-  onChange: (value: number | null) => void;
-  error?: string;
-};
+type MoreOptionsProps = Readonly<{
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  children: ReactNode;
+}>;
 
-/** A number with no unit of its own (altitude, grind size, TDS…). Empty is null. */
-function PlainNumber({ id, label, description, value, decimals = 0, onChange, error }: PlainNumberProps) {
+/**
+ * Rarely used fields behind a "More options" button. It opens by itself when one of them has an
+ * error, so the error summary can always take you to the field.
+ */
+function MoreOptions({ open, onOpenChange, children }: MoreOptionsProps) {
+  const panelId = useId();
   return (
-    <NumberField
-      id={id}
-      label={label}
-      description={description}
-      value={value ?? Number.NaN}
-      formatOptions={{ maximumFractionDigits: decimals, useGrouping: false }}
-      onChange={(next) => {
-        if (Number.isNaN(next)) {
-          if (value != null) onChange(null);
-          return;
-        }
-        if (next !== value) onChange(next);
-      }}
-      isInvalid={Boolean(error)}
-      errorMessage={error}
-    />
+    <div className={styles.more}>
+      <button
+        type="button"
+        className={styles.moreToggle}
+        aria-expanded={open}
+        aria-controls={panelId}
+        onClick={() => onOpenChange(!open)}
+        data-primary-control=""
+      >
+        <span>More options</span>
+        <span className={open ? styles.moreOpen : styles.moreClosed}>
+          <Icon icon={ChevronDown} size="md" />
+        </span>
+      </button>
+      <div id={panelId} hidden={!open} className={styles.moreFields}>
+        {children}
+      </div>
+    </div>
   );
 }
 
@@ -216,7 +224,7 @@ function EditorForm({
 }>) {
   const queryClient = useQueryClient();
   const online = useOnlineStatus();
-  const { weight, duration } = useUnits();
+  const { weight, duration, temp } = useUnits();
   const catalog = useGearCatalog();
   const profile = useProfileMe();
   const { user } = useSession();
@@ -236,6 +244,10 @@ function EditorForm({
   );
   const [initialSignature] = useState(() => draftSignature(initialDraft));
   const [draft, setDraft] = useState<RecipeDraft>(initialDraft);
+  // "More options" (particle size, retention) starts open when it already holds something.
+  const [moreUserOpen, setMoreUserOpen] = useState(
+    () => initialDraft.grind_microns != null || initialDraft.retention_ratio != null,
+  );
   const dirty = draftSignature(draft) !== initialSignature;
 
   // ---- the copy on this device ----
@@ -251,6 +263,9 @@ function EditorForm({
       if (saved && draftSignature(saved) !== initialSignature) {
         setDraft(saved);
         setRestored(true);
+        if (saved.grind_microns != null || saved.retention_ratio != null || saved.typed?.grind_microns !== undefined) {
+          setMoreUserOpen(true);
+        }
         setFormKey((k) => k + 1);
       }
       setReady(true);
@@ -283,11 +298,51 @@ function EditorForm({
       : Object.fromEntries(parsed.errors.map((e) => [e.fieldId, e.message]));
   }, [submitted, draft]);
   const error = (key: string) => live[fieldId(key)];
+  // It opens by itself for an error in one of its fields, so the error summary can reach the field.
+  const moreOpen = moreUserOpen || Boolean(error('grind_microns') || error('retention_ratio'));
 
   const set = <K extends keyof RecipeDraft>(key: K, value: RecipeDraft[K]) =>
     setDraft((d) => ({ ...d, [key]: value }));
   const setText = (key: keyof RecipeDraft) => (value: string) =>
     setDraft((d) => ({ ...d, [key]: value }));
+
+  /**
+   * The props of a plain-number field: its number, the text kept when it isn't a number, how to
+   * change them, and its message. Typing never gets refused; saving says what is wrong.
+   */
+  const numberProps = (key: NumberHelpKey) => ({
+    id: fieldId(key),
+    value: draft[key],
+    typed: draft.typed[key],
+    error: error(key),
+    onChange: (value: number | null, typed?: string) =>
+      setDraft((d) => {
+        const nextTyped = { ...d.typed };
+        if (typed === undefined) delete nextTyped[key];
+        else nextTyped[key] = typed;
+        return { ...d, [key]: value, typed: nextTyped };
+      }),
+  });
+
+  // The hint under "Vary temperature by pour": what every pour uses, or the temperatures chosen.
+  const trail = pourTemperatureTrail(draft.steps, draft.temp_c);
+  const varyTempHint = draft.vary_temp
+    ? `Each pour sets its own temperature in Steps${trail.length > 0 ? ` · ${trail.map((t) => temp(t)).join(' → ')}` : ''}`
+    : draft.temp_c != null
+      ? `Every pour uses ${temp(draft.temp_c)}`
+      : 'Every pour uses the water temperature';
+
+  const hasBypass = draft.bypass_g != null && draft.bypass_g > 0;
+  // Bloom is read-only, worked out from the steps: the first pour, and when the next pour follows.
+  const firstPour = draft.steps.findIndex((st) => st.kind === 'pour' && st.target_g != null);
+  const nextPour =
+    firstPour < 0 ? undefined : draft.steps.slice(firstPour + 1).find((st) => st.kind === 'pour');
+  const bloomText =
+    firstPour < 0
+      ? 'Add a pour step'
+      : nextPour
+        ? `${weight(draft.steps[firstPour]!.target_g as number)} · next pour at +${formatClock(nextPour.at_s - draft.steps[firstPour]!.at_s)}`
+        : weight(draft.steps[firstPour]!.target_g as number);
 
   // ---- live numbers ----
   const numbers = recipeNumbers({
@@ -612,13 +667,7 @@ function EditorForm({
                   errorMessage={error('varietal')}
                   isInvalid={Boolean(error('varietal'))}
                 />
-                <PlainNumber
-                  id={fieldId('altitude_m')}
-                  label="Altitude (metres)"
-                  value={draft.altitude_m}
-                  onChange={(v) => set('altitude_m', v)}
-                  error={error('altitude_m')}
-                />
+                <TypedNumberField label="Altitude (metres)" {...numberProps('altitude_m')} />
                 <Select
                   id={fieldId('roast_level')}
                   label="Roast level"
@@ -636,14 +685,7 @@ function EditorForm({
                   isInvalid={Boolean(error('roast_date'))}
                   errorMessage={error('roast_date')}
                 />
-                <PlainNumber
-                  id={fieldId('colour_reading')}
-                  label="Roast colour reading"
-                  decimals={1}
-                  value={draft.colour_reading}
-                  onChange={(v) => set('colour_reading', v)}
-                  error={error('colour_reading')}
-                />
+                <TypedNumberField label="Roast colour reading" {...numberProps('colour_reading')} />
                 <Combobox
                   id={fieldId('colour_scale')}
                   label="Colour scale"
@@ -657,8 +699,8 @@ function EditorForm({
                 />
               </Section>
 
-              <Section title="Numbers" layout="three">
-                <div className={styles.pair}>
+              <Section title="Numbers">
+                <div className={styles.numberGrid} data-testid="numbers-grid">
                   <WeightField
                     id={fieldId('dose_g')}
                     label="Coffee dose"
@@ -679,75 +721,102 @@ function EditorForm({
                     isInvalid={Boolean(error('brew_water_g'))}
                     errorMessage={error('brew_water_g')}
                   />
+                  <div className={styles.cell}>
+                    <WeightField
+                      id={fieldId('bypass_g')}
+                      label="Bypass water"
+                      description="Added to the cup"
+                      min={0}
+                      value={draft.bypass_g}
+                      onChange={(v) =>
+                        setDraft((d) => ({
+                          ...d,
+                          bypass_g: v,
+                          // Timing only means something with bypass: none without it, "after" once set.
+                          bypass_timing: v == null || v <= 0 ? 'none' : d.bypass_timing === 'none' ? 'after' : d.bypass_timing,
+                        }))
+                      }
+                      isInvalid={Boolean(error('bypass_g'))}
+                      errorMessage={error('bypass_g')}
+                    />
+                    {hasBypass ? (
+                      <div className={styles.compact}>
+                        <SegmentedControl
+                          id={fieldId('bypass_timing')}
+                          label="Bypass goes in"
+                          segments={BYPASS_TIMINGS.filter((t) => t !== 'none').map((t) => ({
+                            value: t,
+                            label: BYPASS_TIMING_LABELS[t],
+                          }))}
+                          value={draft.bypass_timing}
+                          onChange={(value) => set('bypass_timing', value as BypassTiming)}
+                          isInvalid={Boolean(error('bypass_timing'))}
+                        />
+                        {error('bypass_timing') ? (
+                          <p className={styles.fieldError}>{error('bypass_timing')}</p>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
+                  <TemperatureField
+                    id={fieldId('temp_c')}
+                    label="Water temperature"
+                    min={0}
+                    max={LIMITS.tempC}
+                    value={draft.temp_c}
+                    onChange={(v) => set('temp_c', v)}
+                    isInvalid={Boolean(error('temp_c'))}
+                    errorMessage={error('temp_c')}
+                  />
+                  <TextField
+                    id={fieldId('grind_setting')}
+                    label="Grind setting"
+                    description="As shown on your grinder"
+                    placeholder="e.g. 7.5 or 24 clicks"
+                    maxLength={LIMITS.grindSetting}
+                    inputProps={GRIND_INPUT_PROPS}
+                    value={draft.grind_setting}
+                    onChange={setText('grind_setting')}
+                    errorMessage={error('grind_setting')}
+                    isInvalid={Boolean(error('grind_setting'))}
+                  />
+                  <TypedNumberField label="Water hardness (ppm)" {...numberProps('water_ppm')} />
+                  <div className={styles.bloomCell} data-testid="bloom-readout">
+                    <span className={styles.bloomLabel}>Bloom</span>
+                    <p className={styles.bloomValue}>{bloomText}</p>
+                    <span className={styles.bloomHint}>From your first pour</span>
+                  </div>
                 </div>
-                <WeightField
-                  id={fieldId('bypass_g')}
-                  label="Bypass water (optional)"
-                  description="Water added to the cup, not through the coffee"
-                  min={0}
-                  value={draft.bypass_g}
-                  onChange={(v) => set('bypass_g', v)}
-                  isInvalid={Boolean(error('bypass_g'))}
-                  errorMessage={error('bypass_g')}
-                />
+                {/* As in the prototype's Parameters card: under the grid, about the temperature. */}
                 <div className={styles.wide}>
-                  <SegmentedControl
-                    id={fieldId('bypass_timing')}
-                    label="Bypass goes in"
-                    segments={BYPASS_TIMINGS.map((t) => ({ value: t, label: BYPASS_TIMING_LABELS[t] }))}
-                    value={draft.bypass_timing}
-                    onChange={(value) => set('bypass_timing', value as BypassTiming)}
-                    isInvalid={Boolean(error('bypass_timing'))}
-                  />
-                  {error('bypass_timing') ? (
-                    <p className={styles.fieldError}>{error('bypass_timing')}</p>
-                  ) : null}
+                  <Switch
+                    isSelected={draft.vary_temp}
+                    onChange={(on) =>
+                      setDraft((d) => ({
+                        ...d,
+                        vary_temp: on,
+                        steps: setVaryTemperature(d.steps, on, d.temp_c),
+                      }))
+                    }
+                  >
+                    Vary temperature by pour
+                  </Switch>
+                  <p className={styles.note}>{varyTempHint}</p>
                 </div>
-                <TemperatureField
-                  id={fieldId('temp_c')}
-                  label="Water temperature"
-                  min={0}
-                  max={LIMITS.tempC}
-                  value={draft.temp_c}
-                  onChange={(v) => set('temp_c', v)}
-                  isInvalid={Boolean(error('temp_c'))}
-                  errorMessage={error('temp_c')}
-                />
-                <TextField
-                  id={fieldId('grind_setting')}
-                  label="Grind setting"
-                  placeholder="e.g. 24 clicks"
-                  maxLength={LIMITS.grindSetting}
-                  value={draft.grind_setting}
-                  onChange={setText('grind_setting')}
-                  errorMessage={error('grind_setting')}
-                  isInvalid={Boolean(error('grind_setting'))}
-                />
-                <div className={styles.pair}>
-                  <PlainNumber
-                    id={fieldId('grind_microns')}
-                    label="Grind size (µm)"
-                    value={draft.grind_microns}
-                    onChange={(v) => set('grind_microns', v)}
-                    error={error('grind_microns')}
-                  />
-                  <PlainNumber
-                    id={fieldId('water_ppm')}
-                    label="Water hardness (ppm)"
-                    value={draft.water_ppm}
-                    onChange={(v) => set('water_ppm', v)}
-                    error={error('water_ppm')}
-                  />
+                <div className={styles.wide}>
+                  <MoreOptions open={moreOpen} onOpenChange={setMoreUserOpen}>
+                    <TypedNumberField
+                      label="Particle size (µm)"
+                      description="Optional. Whole microns, e.g. 750"
+                      {...numberProps('grind_microns')}
+                    />
+                    <TypedNumberField
+                      label="Retention (g water per g coffee)"
+                      description="Leave empty to use 2.0"
+                      {...numberProps('retention_ratio')}
+                    />
+                  </MoreOptions>
                 </div>
-                <PlainNumber
-                  id={fieldId('retention_ratio')}
-                  label="Retention (g water per g coffee)"
-                  description="Leave empty to use 2.0"
-                  decimals={1}
-                  value={draft.retention_ratio}
-                  onChange={(v) => set('retention_ratio', v)}
-                  error={error('retention_ratio')}
-                />
 
                 <div className={styles.numbers}>
                   <h3 className={styles.numbersTitle}>Calculated</h3>
@@ -763,7 +832,6 @@ function EditorForm({
                   steps={draft.steps}
                   onChange={(steps) => set('steps', steps)}
                   varyTemp={draft.vary_temp}
-                  onVaryTempChange={(on) => set('vary_temp', on)}
                   context={{ dose_g: draft.dose_g, brew_water_g: draft.brew_water_g }}
                   errors={live}
                 />
@@ -795,40 +863,12 @@ function EditorForm({
                   />
                 </div>
                 <div className={styles.pair}>
-                  <PlainNumber
-                    id={fieldId('tds_min')}
-                    label="TDS % lowest"
-                    decimals={2}
-                    value={draft.tds_min}
-                    onChange={(v) => set('tds_min', v)}
-                    error={error('tds_min')}
-                  />
-                  <PlainNumber
-                    id={fieldId('tds_max')}
-                    label="TDS % highest"
-                    decimals={2}
-                    value={draft.tds_max}
-                    onChange={(v) => set('tds_max', v)}
-                    error={error('tds_max')}
-                  />
+                  <TypedNumberField label="TDS % lowest" {...numberProps('tds_min')} />
+                  <TypedNumberField label="TDS % highest" {...numberProps('tds_max')} />
                 </div>
                 <div className={styles.pair}>
-                  <PlainNumber
-                    id={fieldId('ey_min')}
-                    label="Extraction % lowest"
-                    decimals={1}
-                    value={draft.ey_min}
-                    onChange={(v) => set('ey_min', v)}
-                    error={error('ey_min')}
-                  />
-                  <PlainNumber
-                    id={fieldId('ey_max')}
-                    label="Extraction % highest"
-                    decimals={1}
-                    value={draft.ey_max}
-                    onChange={(v) => set('ey_max', v)}
-                    error={error('ey_max')}
-                  />
+                  <TypedNumberField label="Extraction % lowest" {...numberProps('ey_min')} />
+                  <TypedNumberField label="Extraction % highest" {...numberProps('ey_max')} />
                 </div>
               </Section>
 

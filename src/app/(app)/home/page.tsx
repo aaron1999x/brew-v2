@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Coffee } from 'lucide-react';
+import { UnfinishedSessions } from '@/components/brews/UnfinishedSessions';
 import { FinishProfileCard } from '@/components/onboarding/FinishProfileCard';
 import { TopBar } from '@/components/shell/TopBar';
 import { ButtonLink } from '@/components/ui/ButtonLink/ButtonLink';
@@ -13,6 +14,7 @@ export default function HomePage() {
     <>
       <TopBar title="Home" unreadNotices={0} />
       <div className={styles.body}>
+        <UnfinishedSessions />
         <FinishProfileCard />
         <EmptyState
           icon={Coffee}

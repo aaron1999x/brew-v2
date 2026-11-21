@@ -4,7 +4,7 @@
 -- meant for logged-out visitors, add it to the allowlist below and say why.
 begin;
 \ir 00_helpers.sql
-select plan(10);
+select plan(12);
 
 select is(
   coalesce((
@@ -46,7 +46,8 @@ select ok(
    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.proname in (
      'create_recipe', 'create_version', 'save_recipe', 'copy_recipe', 'gear_set_default',
-     'make_slug', 'steps_shape_ok', 'email_is_verified', 'merge_onboarding')),
+     'make_slug', 'steps_shape_ok', 'email_is_verified', 'merge_onboarding',
+     'log_brew', 'my_recipe_brew_stats', 'brews_flavours_ok')),
   'members can execute the member-only RPCs and their helpers');
 
 -- Behaviour, not just catalogue: a visitor calling a member RPC is refused outright.
@@ -57,6 +58,8 @@ select throws_ok($$select public.create_recipe('X', 'pour_over', null, '{"dose_g
   '42501', null, 'anon cannot call create_recipe');
 select throws_ok($$select public.copy_recipe(gen_random_uuid())$$, '42501', null, 'anon cannot call copy_recipe');
 select throws_ok($$select public.make_slug(gen_random_uuid(), 'x')$$, '42501', null, 'anon cannot call make_slug');
+select throws_ok($$select public.log_brew('{}'::jsonb)$$, '42501', null, 'anon cannot call log_brew');
+select throws_ok($$select * from public.my_recipe_brew_stats()$$, '42501', null, 'anon cannot call my_recipe_brew_stats');
 select lives_ok($$select public.can_sign_up('nobody@test.invalid')$$, 'anon can still call can_sign_up');
 select lives_ok($$select count(*) from public.recipes$$, 'anon can still read recipes (policies call the helpers)');
 

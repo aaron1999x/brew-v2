@@ -100,6 +100,55 @@ describe('toUserMessage', () => {
     );
   });
 
+  it('maps the M4 brew errors', () => {
+    const named = (message: string) => toUserMessage({ code: 'P0001', message });
+    expect(named('version_not_found')).toBe("This recipe version isn't available any more.");
+    expect(named('brew_not_found')).toBe("This brew isn't available any more.");
+    expect(named('quick_change_invalid')).toBe(
+      "This change can't be saved. Check grind, temperature, dose and water.",
+    );
+    expect(named('brew_conflict')).toBe("This brew couldn't be saved. Try again.");
+    expect(named('overall_required')).toBe('Give the brew an overall score before saving.');
+    for (const code of ['brew_not_found', 'quick_change_invalid', 'brew_conflict', 'overall_required']) {
+      expect(isUnexpectedError({ code: 'P0001', message: code }), code).toBe(false);
+    }
+  });
+
+  it('maps the brew check constraints by name', () => {
+    const violation = (name: string) => ({
+      code: '23514',
+      message: `new row for relation "brews" violates check constraint "${name}"`,
+    });
+    expect(toUserMessage(violation('brews_flavours_valid'))).toBe(
+      'Use up to 12 flavour tags of 30 characters or fewer, each added once.',
+    );
+    expect(toUserMessage(violation('brews_brewed_at_not_future'))).toBe("The brew time can't be in the future.");
+    expect(toUserMessage(violation('brews_tds_pct_check'))).toBe('TDS is between 0 and 20%.');
+    expect(toUserMessage(violation('brews_sweetness_check'))).toBe('Scores go from 0 to 10 in steps of 0.5.');
+    expect(toUserMessage(violation('brews_overall_check'))).toBe('Scores go from 0 to 10 in steps of 0.5.');
+    for (const name of [
+      'brews_flavours_valid',
+      'brews_brewed_at_not_future',
+      'brews_tds_pct_check',
+      'brews_beverage_g_check',
+      'brews_drawdown_s_check',
+      'brews_tasted_after_min_check',
+      'brews_notes_check',
+      'brews_next_change_check',
+      'brews_sweetness_check',
+      'brews_acidity_check',
+      'brews_brightness_check',
+      'brews_body_check',
+      'brews_clarity_check',
+      'brews_balance_check',
+      'brews_aftertaste_check',
+      'brews_overall_check',
+    ]) {
+      expect(toConstraintName(violation(name)), name).toBe(name);
+      expect(isUnexpectedError(violation(name)), name).toBe(false);
+    }
+  });
+
   it('maps every named constraint from a Postgres violation message', () => {
     for (const [name, message] of Object.entries(CONSTRAINT_MESSAGES)) {
       const err = {

@@ -1,6 +1,8 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useState } from 'react';
+import { ChoiceSheet } from '@/components/brews/ChoiceSheet';
 import { NotAvailable } from '@/components/feedback/NotAvailable';
 import { QueryBoundary } from '@/components/feedback/QueryBoundary';
 import { Button } from '@/components/ui/Button/Button';
@@ -59,14 +61,20 @@ function OwnerRecipe({
   versionNo,
 }: Readonly<{ data: RecipeWithVersion; handle: string; slug: string; versionNo: number | null }>) {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const archive = useArchiveRecipe();
   const online = useOnlineStatus();
+  // `?brew=1` opens the choice sheet: every "Brew again" link and a timer link with no session land here.
+  const [brewOpen, setBrewOpen] = useState(searchParams.get('brew') === '1');
   const version = versionByNo(data.versions, versionNo);
   if (!version) return <NotAvailable />;
   const latestNo = data.version.version_no;
   const count = data.versions.length;
+  const archived = data.recipe.archived_at !== null;
 
   return (
+    <>
     <RecipeView
       recipe={data.recipe}
       version={version}
@@ -85,6 +93,9 @@ function OwnerRecipe({
       }
       actions={
         <div className={styles.actions}>
+          {archived ? null : (
+            <Button onPress={() => setBrewOpen(true)}>Brew this version</Button>
+          )}
           <ButtonLink href={editPath(handle, slug, version.version_no)} variant="secondary">
             Edit
           </ButtonLink>
@@ -136,6 +147,18 @@ function OwnerRecipe({
         ) : null
       }
     />
+    <ChoiceSheet
+      isOpen={brewOpen}
+      onOpenChange={(open) => {
+        setBrewOpen(open);
+        // Drop ?brew=1 so Back doesn't reopen the sheet.
+        if (!open && searchParams.get('brew') === '1') router.replace(pathname);
+      }}
+      handle={handle}
+      slug={slug}
+      versionNo={version.version_no}
+    />
+    </>
   );
 }
 

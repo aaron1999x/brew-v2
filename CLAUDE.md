@@ -57,6 +57,7 @@ Next.js App Router · TypeScript strict · CSS Modules + CSS custom properties �
 11. Tests: unit tests for logic, pgTAP for policies, Playwright (iPhone project) for flows. Don't finish a stage with failing checks.
 12. Use the `test-runner` subagent for checks and the `reviewer` subagent at the end of a milestone.
 13. End every milestone by updating `docs/progress.md`. Don't rename, move or reformat the planning docs; when a doc is wrong, note it in `docs/progress.md` instead.
+14. For screens the prototype also has, the prototype (`aaron1999x/Brew-Recipe`) is the reference for layout, wording and interaction; differences must be listed.
 
 ## Product rules worth remembering
 

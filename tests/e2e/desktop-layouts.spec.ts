@@ -117,14 +117,14 @@ test.describe('every width fits', () => {
 });
 
 test.describe('recipe page', () => {
-  test('one column on a phone and tablet, two columns from 1024 px, six key numbers from 1280 px', async ({
+  test('one column on a phone and tablet, two columns from 1024 px, four primary key numbers in a row from tablet', async ({
     page,
     users,
   }) => {
     const { base } = await setup(page, users, 'view', 390);
     const steps = () => page.getByRole('region', { name: 'Steps' });
     const gear = () => page.getByRole('region', { name: 'Gear' });
-    const keys = () => page.locator('dl[aria-label="Key numbers"] > div');
+    const keys = () => page.locator('[data-testid="key-numbers"] dl > div');
     const key = (label: RegExp) => keys().filter({ has: page.locator('dt', { hasText: label }) });
 
     await page.goto(base);
@@ -135,8 +135,8 @@ test.describe('recipe page', () => {
     expect((await box(gear())).y).toBeGreaterThan((await box(steps())).y);
 
     await page.setViewportSize({ width: 800, height: 900 });
-    expect(await sameRow(keys().nth(0), keys().nth(2))).toBe(true); // three to a row
-    expect(await sameRow(keys().nth(0), keys().nth(3))).toBe(false);
+    expect(await sameRow(keys().nth(0), keys().nth(3))).toBe(true); // the four primary numbers in a row
+    expect(await sameRow(keys().nth(0), keys().nth(4))).toBe(false); // the supporting tier is below
     const stepsTablet = await box(steps());
     expect((await box(gear())).y).toBeGreaterThan(stepsTablet.y + stepsTablet.height - 1);
 
@@ -147,16 +147,10 @@ test.describe('recipe page', () => {
       expect(g.x).toBeGreaterThanOrEqual(s.x + s.width); // the side column is to the right
       expect(g.y).toBeLessThan(s.y + s.height); // and starts beside the steps, not below them
       const dose = key(/^Dose$/);
-      const core = [/^Brew water$/, /^Ratio$/, /^Temperature$/, /^Grind$/, /^Total time$/];
-      if (width >= 1280) {
-        // Six key numbers in a row; the seventh (expected volume) wraps.
-        for (const label of core) expect(await sameRow(dose, key(label))).toBe(true);
-      } else {
-        // Three to a row until the main column is wide enough for six.
-        expect(await sameRow(dose, key(/^Ratio$/))).toBe(true);
-        expect(await sameRow(dose, key(/^Temperature$/))).toBe(false);
+      for (const label of [/^Brew water$/, /^Ratio$/, /^Temperature$/]) {
+        expect(await sameRow(dose, key(label))).toBe(true);
       }
-      expect(await sameRow(dose, key(/^Expected volume$/))).toBe(false);
+      expect(await sameRow(dose, key(/^Grind$/))).toBe(false); // the second tier
       await expectColumnsFit(page);
     }
   });

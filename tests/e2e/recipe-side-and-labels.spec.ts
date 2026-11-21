@@ -244,7 +244,7 @@ test.describe('recipe page side column', () => {
       await page.goto(base);
       await expect(page.getByRole('img', { name: /^Pour curve\./ })).toBeVisible();
 
-      const key = page.locator('dl[aria-label="Key numbers"]');
+      const key = page.locator('[data-testid="key-numbers"]');
       const cards = ['Coffee', 'Gear', 'Targets', 'Notes'].map((name) =>
         page.getByRole('region', { name, exact: true }),
       );
@@ -310,7 +310,7 @@ test.describe('recipe page side column', () => {
         await expect(page.getByRole('region', { name, exact: true })).toHaveCount(0);
       }
       const gear = await box(page.getByRole('region', { name: 'Gear', exact: true }));
-      const key = await box(page.locator('dl[aria-label="Key numbers"]'));
+      const key = await box(page.locator('[data-testid="key-numbers"]'));
       const steps = await box(page.getByRole('region', { name: 'Steps', exact: true }));
       expect(Math.abs(gear.y - key.y)).toBeLessThan(2);
       expect(gear.x).toBeGreaterThanOrEqual(steps.x + steps.width); // beside the steps, not under them
