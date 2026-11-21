@@ -368,6 +368,11 @@ test.describe('the guided timer', () => {
     expect(timer?.phase).toBe('done');
     expect(timer?.drawdownS).toBeGreaterThanOrEqual(159);
     expect(timer?.drawdownS).toBeLessThanOrEqual(162);
+
+    // The log opens with the drawdown filled in (2:40 to 2:42), against the 2:45–3:15 target.
+    await expect(page.getByRole('heading', { level: 1, name: 'Log brew' })).toBeVisible();
+    await expect(page.getByLabel('Drawdown')).toHaveValue(/^2:4[0-2]$/);
+    await expect(page.getByRole('region', { name: 'Extraction' })).toContainText('Below (2:45–3:15)');
   });
 
   test('a French press ends with "Done", with no drawdown', async ({ page, users }) => {
@@ -375,6 +380,9 @@ test.describe('the guided timer', () => {
     const recipe = await createRecipe(users, user, 'Press', {
       method: 'french_press',
       version: {
+        // No drawdown target, so the log has no drawdown field.
+        drawdown_min_s: null,
+        drawdown_max_s: null,
         steps: [
           { id: 'a', kind: 'pour', at_s: 0, target_g: 250 },
           { id: 'b', kind: 'wait', at_s: 15, duration_s: 240 },
@@ -399,6 +407,8 @@ test.describe('the guided timer', () => {
       return raw ? JSON.parse(raw)[0].timer.drawdownS : undefined;
     }, user.id);
     expect(drawdown).toBeNull();
+    await expect(page.getByRole('heading', { level: 1, name: 'Log brew' })).toBeVisible();
+    await expect(page.getByLabel('Drawdown')).toHaveCount(0);
   });
 
   test('End brew can keep brewing, or discard and take nothing with it', async ({ page, users }) => {

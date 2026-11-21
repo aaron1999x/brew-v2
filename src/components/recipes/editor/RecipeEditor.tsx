@@ -79,6 +79,7 @@ import { formatClock } from '@/lib/units/format';
 import { useMediaQuery } from '@/lib/ui/useMediaQuery';
 import { DiffSections } from '../Changes';
 import { LazyPourCurve } from '../LazyPourCurve';
+import { PinnedBrewNote, type PinnedBrew } from './PinnedBrewNote';
 import { RecipeGearPicker } from './RecipeGearPicker';
 import { StepsEditor } from './StepsEditor';
 import { useUnsavedGuard } from './useUnsavedGuard';
@@ -182,7 +183,12 @@ export type EditorBase = {
   latestNo: number;
 };
 
-type EditorProps = Readonly<{ mode?: EditorMode; base?: EditorBase }>;
+type EditorProps = Readonly<{
+  mode?: EditorMode;
+  base?: EditorBase;
+  /** A new version started from a brew: its "next time" note is pinned at the top. */
+  fromBrew?: PinnedBrew | null;
+}>;
 
 /**
  * The recipe editor: a new recipe, an edit of one version, or the next version started from a
@@ -191,7 +197,7 @@ type EditorProps = Readonly<{ mode?: EditorMode; base?: EditorBase }>;
  * focus and each entry jumps to its field. A copy is kept on this device, and leaving with unsaved
  * changes asks first.
  */
-export function RecipeEditor({ mode = 'create', base }: EditorProps) {
+export function RecipeEditor({ mode = 'create', base, fromBrew = null }: EditorProps) {
   const gear = useGear();
   const waiting = gear.isPending && gear.fetchStatus !== 'paused';
   return (
@@ -201,7 +207,7 @@ export function RecipeEditor({ mode = 'create', base }: EditorProps) {
       isError={false}
       onRetry={() => void gear.refetch()}
     >
-      <EditorForm myGear={gear.data ?? []} mode={mode} base={base} />
+      <EditorForm myGear={gear.data ?? []} mode={mode} base={base} fromBrew={fromBrew} />
     </QueryBoundary>
   );
 }
@@ -216,10 +222,12 @@ function EditorForm({
   myGear,
   mode,
   base,
+  fromBrew,
 }: Readonly<{
   myGear: NonNullable<ReturnType<typeof useGear>['data']>;
   mode: EditorMode;
   base?: EditorBase;
+  fromBrew: PinnedBrew | null;
 }>) {
   const queryClient = useQueryClient();
   const online = useOnlineStatus();
@@ -561,6 +569,7 @@ function EditorForm({
           ) : null}
 
           <FormErrorSummary errors={summary} />
+          {fromBrew ? <PinnedBrewNote brew={fromBrew} /> : null}
 
           <div className={styles.columns}>
             <div className={styles.formColumn}>

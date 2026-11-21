@@ -8,6 +8,7 @@ import {
   Line,
   ReferenceArea,
   ReferenceDot,
+  ReferenceLine,
   Tooltip,
   XAxis,
   YAxis,
@@ -45,6 +46,8 @@ type Props = Readonly<{
   series: readonly CurveSeries[];
   /** Target drawdown window in seconds. */
   drawdown?: { from: number; to: number } | null;
+  /** A logged drawdown (a brew's), drawn as a vertical line: when the water finished draining. */
+  marker?: { atS: number; label: string } | null;
   title?: string;
 }>;
 
@@ -66,7 +69,7 @@ const SNAP_SHARE = 0.015;
  * dashed line without a fill. The picture is one image to assistive technology, with the same data
  * as a table behind "Show data table". Loaded on demand (see LazyPourCurve).
  */
-export function PourCurveChart({ series, drawdown, title = 'Pour curve' }: Props) {
+export function PourCurveChart({ series, drawdown, marker, title = 'Pour curve' }: Props) {
   const { units, duration } = useUnits();
   const reduced = useReducedMotion();
   const gradientId = `pour-fill-${useId().replaceAll(':', '')}`;
@@ -77,7 +80,11 @@ export function PourCurveChart({ series, drawdown, title = 'Pour curve' }: Props
     `${new Intl.NumberFormat(undefined, { maximumFractionDigits: WEIGHT_DECIMALS[unit] }).format(value)} ${unitLabel}`;
 
   const model = useMemo(() => {
-    const endS = Math.max(...series.map((s) => curveEnd(s.steps)), drawdown ? drawdown.to : 0);
+    const endS = Math.max(
+      ...series.map((s) => curveEnd(s.steps)),
+      drawdown ? drawdown.to : 0,
+      marker ? marker.atS : 0,
+    );
     const lines = series.map((s) => ({
       ...s,
       line: curveLine(s.steps, endS),
@@ -102,7 +109,7 @@ export function PourCurveChart({ series, drawdown, title = 'Pour curve' }: Props
     });
     const top = Math.max(0, ...data.flatMap((p) => lines.map((_, i) => p[`w${i}`] ?? p[`pre${i}`] ?? 0)));
     return { endS, lines, data, y: weightTicks(top, unit), xTicks: timeTicks(endS) };
-  }, [series, drawdown, unit]);
+  }, [series, drawdown, marker, unit]);
 
   const multiple = series.length > 1;
   const kindsPresent = [...new Set(model.lines.flatMap((l) => l.markers.map((m) => m.kind)))] as Exclude<
@@ -128,16 +135,22 @@ export function PourCurveChart({ series, drawdown, title = 'Pour curve' }: Props
     ...(drawdown
       ? [{ label: 'Target drawdown', color: 'var(--color-chart-target-band)', kind: 'area' as const }]
       : []),
+    ...(marker
+      ? [{ label: marker.label, color: 'var(--color-text-primary)', kind: 'line' as const, dash: '2 3' }]
+      : []),
   ];
 
-  const tableRows = model.lines.flatMap((l) =>
-    l.rows.map((r) => [
-      ...(multiple ? [l.label] : []),
-      r.label,
-      duration(r.t),
-      formatWeight(toDisplay(r.g)),
-    ]),
-  );
+  const tableRows = [
+    ...model.lines.flatMap((l) =>
+      l.rows.map((r) => [
+        ...(multiple ? [l.label] : []),
+        r.label,
+        duration(r.t),
+        formatWeight(toDisplay(r.g)),
+      ]),
+    ),
+    ...(marker ? [[...(multiple ? [''] : []), marker.label, duration(marker.atS), '']] : []),
+  ];
 
   const describeEnd = model.lines
     .map((l) => {
@@ -153,7 +166,7 @@ export function PourCurveChart({ series, drawdown, title = 'Pour curve' }: Props
         drawdown
           ? ` Target drawdown between ${duration(drawdown.from)} and ${duration(drawdown.to)}.`
           : ''
-      } The data is in the table below.`}
+      }${marker ? ` ${marker.label} at ${duration(marker.atS)}.` : ''} The data is in the table below.`}
       size="lg"
       table={{
         caption: `Steps: time and cumulative water in ${unitLabel === 'g' ? 'grams' : 'ounces'}`,
@@ -207,6 +220,15 @@ export function PourCurveChart({ series, drawdown, title = 'Pour curve' }: Props
             fillOpacity={0.25}
             stroke="var(--color-chart-target-band)"
             strokeDasharray="4 3"
+          />
+        ) : null}
+        {marker ? (
+          <ReferenceLine
+            x={marker.atS}
+            stroke="var(--color-text-primary)"
+            strokeDasharray="2 3"
+            strokeWidth={1.5}
+            ifOverflow="visible"
           />
         ) : null}
         {model.lines.map((line, i) => {

@@ -21,6 +21,8 @@ export const queryKeys = {
     mine: (filters: BrewFilters = {}) => ['brews', 'mine', filters] as const,
   },
   brew: (id: string) => ['brew', id] as const,
+  /** My recent custom flavour tags (worked out from my latest brews). */
+  flavourTags: () => ['flavour-tags', 'recent'] as const,
   /** Brew counts and last-brewed dates per recipe version (`my_recipe_brew_stats`). */
   brewStats: () => ['brew-stats'] as const,
   profile: (handle: string) => ['profile', handle] as const,
