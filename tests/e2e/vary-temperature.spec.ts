@@ -2,11 +2,11 @@ import { expectNoAxeViolations } from './helpers/axe';
 import { createRecipe } from './helpers/recipes';
 import { expect, signIn, test, waitForApp } from './helpers/test-users';
 
-// "Vary temperature by pour" sits in the Numbers section, directly under the water temperature, as
+// "Vary temperature by pour" sits in the Numbers section, under the numbers grid with its hint, as
 // in the prototype's Parameters card (it used to be at the top of Steps). Metric units (en-GB).
 test.use({ serviceWorkers: 'block', locale: 'en-GB', timezoneId: 'Europe/London' });
 
-test('the switch is right under the temperature, says what every pour uses, and fills in the pours', async ({
+test('the switch is under the numbers grid, says what every pour uses, and fills in the pours', async ({
   page,
   users,
 }) => {
@@ -21,14 +21,14 @@ test('the switch is right under the temperature, says what every pour uses, and 
   await expect(vary).not.toBeChecked();
   await expect(page.getByText('Every pour uses 93 °C')).toBeVisible();
 
-  // Directly under Water temperature, before Grind setting; nothing about it left at the top of Steps.
+  // Under the whole grid (after Water temperature and Grind setting); nothing about it left at the top of Steps.
   const [t, v, g] = await Promise.all([
     temperature.boundingBox(),
     vary.locator('xpath=ancestor::label').boundingBox(),
     grind.boundingBox(),
   ]);
   expect(v!.y).toBeGreaterThan(t!.y);
-  expect(v!.y).toBeLessThan(g!.y);
+  expect(v!.y).toBeGreaterThan(g!.y);
   await expect(page.getByRole('switch', { name: 'Vary temperature by pour' })).toHaveCount(1);
 
   // Off: pours have no temperature field.

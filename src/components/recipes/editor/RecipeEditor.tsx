@@ -76,6 +76,7 @@ import {
 import { LIMITS, type NumberHelpKey } from '@/lib/recipes/schema';
 import { pourTemperatureTrail, setVaryTemperature } from '@/lib/recipes/steps';
 import { useUnits } from '@/lib/settings/useSettings';
+import { formatClock } from '@/lib/units/format';
 import { useMediaQuery } from '@/lib/ui/useMediaQuery';
 import { DiffSections } from '../Changes';
 import { LazyPourCurve } from '../LazyPourCurve';
@@ -330,6 +331,18 @@ function EditorForm({
     : draft.temp_c != null
       ? `Every pour uses ${temp(draft.temp_c)}`
       : 'Every pour uses the water temperature';
+
+  const hasBypass = draft.bypass_g != null && draft.bypass_g > 0;
+  // Bloom is read-only, worked out from the steps: the first pour, and when the next pour follows.
+  const firstPour = draft.steps.findIndex((st) => st.kind === 'pour' && st.target_g != null);
+  const nextPour =
+    firstPour < 0 ? undefined : draft.steps.slice(firstPour + 1).find((st) => st.kind === 'pour');
+  const bloomText =
+    firstPour < 0
+      ? 'Add a pour step'
+      : nextPour
+        ? `${weight(draft.steps[firstPour]!.target_g as number)} · next pour at +${formatClock(nextPour.at_s - draft.steps[firstPour]!.at_s)}`
+        : weight(draft.steps[firstPour]!.target_g as number);
 
   // ---- live numbers ----
   const numbers = recipeNumbers({
@@ -686,8 +699,8 @@ function EditorForm({
                 />
               </Section>
 
-              <Section title="Numbers" layout="three">
-                <div className={styles.pair}>
+              <Section title="Numbers">
+                <div className={styles.numberGrid} data-testid="numbers-grid">
                   <WeightField
                     id={fieldId('dose_g')}
                     label="Coffee dose"
@@ -708,41 +721,73 @@ function EditorForm({
                     isInvalid={Boolean(error('brew_water_g'))}
                     errorMessage={error('brew_water_g')}
                   />
-                </div>
-                <WeightField
-                  id={fieldId('bypass_g')}
-                  label="Bypass water (optional)"
-                  description="Water added to the cup, not through the coffee"
-                  min={0}
-                  value={draft.bypass_g}
-                  onChange={(v) => set('bypass_g', v)}
-                  isInvalid={Boolean(error('bypass_g'))}
-                  errorMessage={error('bypass_g')}
-                />
-                <div className={styles.wide}>
-                  <SegmentedControl
-                    id={fieldId('bypass_timing')}
-                    label="Bypass goes in"
-                    segments={BYPASS_TIMINGS.map((t) => ({ value: t, label: BYPASS_TIMING_LABELS[t] }))}
-                    value={draft.bypass_timing}
-                    onChange={(value) => set('bypass_timing', value as BypassTiming)}
-                    isInvalid={Boolean(error('bypass_timing'))}
+                  <div className={styles.cell}>
+                    <WeightField
+                      id={fieldId('bypass_g')}
+                      label="Bypass water"
+                      description="Added to the cup"
+                      min={0}
+                      value={draft.bypass_g}
+                      onChange={(v) =>
+                        setDraft((d) => ({
+                          ...d,
+                          bypass_g: v,
+                          // Timing only means something with bypass: none without it, "after" once set.
+                          bypass_timing: v == null || v <= 0 ? 'none' : d.bypass_timing === 'none' ? 'after' : d.bypass_timing,
+                        }))
+                      }
+                      isInvalid={Boolean(error('bypass_g'))}
+                      errorMessage={error('bypass_g')}
+                    />
+                    {hasBypass ? (
+                      <div className={styles.compact}>
+                        <SegmentedControl
+                          id={fieldId('bypass_timing')}
+                          label="Bypass goes in"
+                          segments={BYPASS_TIMINGS.filter((t) => t !== 'none').map((t) => ({
+                            value: t,
+                            label: BYPASS_TIMING_LABELS[t],
+                          }))}
+                          value={draft.bypass_timing}
+                          onChange={(value) => set('bypass_timing', value as BypassTiming)}
+                          isInvalid={Boolean(error('bypass_timing'))}
+                        />
+                        {error('bypass_timing') ? (
+                          <p className={styles.fieldError}>{error('bypass_timing')}</p>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
+                  <TemperatureField
+                    id={fieldId('temp_c')}
+                    label="Water temperature"
+                    min={0}
+                    max={LIMITS.tempC}
+                    value={draft.temp_c}
+                    onChange={(v) => set('temp_c', v)}
+                    isInvalid={Boolean(error('temp_c'))}
+                    errorMessage={error('temp_c')}
                   />
-                  {error('bypass_timing') ? (
-                    <p className={styles.fieldError}>{error('bypass_timing')}</p>
-                  ) : null}
+                  <TextField
+                    id={fieldId('grind_setting')}
+                    label="Grind setting"
+                    description="As shown on your grinder"
+                    placeholder="e.g. 7.5 or 24 clicks"
+                    maxLength={LIMITS.grindSetting}
+                    inputProps={GRIND_INPUT_PROPS}
+                    value={draft.grind_setting}
+                    onChange={setText('grind_setting')}
+                    errorMessage={error('grind_setting')}
+                    isInvalid={Boolean(error('grind_setting'))}
+                  />
+                  <TypedNumberField label="Water hardness (ppm)" {...numberProps('water_ppm')} />
+                  <div className={styles.bloomCell} data-testid="bloom-readout">
+                    <span className={styles.bloomLabel}>Bloom</span>
+                    <p className={styles.bloomValue}>{bloomText}</p>
+                    <span className={styles.bloomHint}>From your first pour</span>
+                  </div>
                 </div>
-                <TemperatureField
-                  id={fieldId('temp_c')}
-                  label="Water temperature"
-                  min={0}
-                  max={LIMITS.tempC}
-                  value={draft.temp_c}
-                  onChange={(v) => set('temp_c', v)}
-                  isInvalid={Boolean(error('temp_c'))}
-                  errorMessage={error('temp_c')}
-                />
-                {/* As in the prototype's Parameters card: right under the temperature it varies. */}
+                {/* As in the prototype's Parameters card: under the grid, about the temperature. */}
                 <div className={styles.wide}>
                   <Switch
                     isSelected={draft.vary_temp}
@@ -758,19 +803,6 @@ function EditorForm({
                   </Switch>
                   <p className={styles.note}>{varyTempHint}</p>
                 </div>
-                <TextField
-                  id={fieldId('grind_setting')}
-                  label="Grind setting"
-                  description="As shown on your grinder"
-                  placeholder="e.g. 7.5 or 24 clicks"
-                  maxLength={LIMITS.grindSetting}
-                  inputProps={GRIND_INPUT_PROPS}
-                  value={draft.grind_setting}
-                  onChange={setText('grind_setting')}
-                  errorMessage={error('grind_setting')}
-                  isInvalid={Boolean(error('grind_setting'))}
-                />
-                <TypedNumberField label="Water hardness (ppm)" {...numberProps('water_ppm')} />
                 <div className={styles.wide}>
                   <MoreOptions open={moreOpen} onOpenChange={setMoreUserOpen}>
                     <TypedNumberField
