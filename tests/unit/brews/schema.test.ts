@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   BREW_LIMITS,
   PRESET_FLAVOURS,
+  ATTRIBUTE_KEYS,
   TASTE_KEYS,
   addFlavour,
   emptyBrewLogForm,
@@ -42,13 +43,19 @@ describe('the log form', () => {
     });
   });
 
-  it('starts with nothing scored', () => {
+  it('starts with the seven attributes at 5.0 and overall not scored', () => {
     const empty = emptyBrewLogForm(BREWED);
-    for (const key of TASTE_KEYS) expect(empty[key]).toBeNull();
+    for (const key of ATTRIBUTE_KEYS) expect(empty[key]).toBe(5);
+    expect(empty.overall).toBeNull();
     expect(empty.flavours).toEqual([]);
   });
 
-  it('has the eight taste scores in the prototype order', () => {
+  it('every attribute is required: a missing one is refused, not saved as empty', () => {
+    expect(issuesFor({ sweetness: null as unknown as number })).toEqual(['sweetness']);
+  });
+
+  it('has the seven attributes in the prototype order, then overall', () => {
+    expect(ATTRIBUTE_KEYS).toEqual(['sweetness', 'acidity', 'brightness', 'body', 'clarity', 'balance', 'aftertaste']);
     expect(TASTE_KEYS).toEqual([
       'sweetness',
       'acidity',
@@ -208,12 +215,12 @@ describe('toLogBrewPayload', () => {
       beverage_g: 215,
       tds_pct: 1.39,
       sweetness: 7,
-      acidity: null,
-      brightness: null,
-      body: null,
+      acidity: 5,
+      brightness: 5,
+      body: 5,
       clarity: 6.5,
-      balance: null,
-      aftertaste: null,
+      balance: 5,
+      aftertaste: 5,
       overall: 7.5,
       flavours: ['Peach', 'floral'],
       tasted_temp: 'warm',
@@ -228,9 +235,10 @@ describe('toLogBrewPayload', () => {
     expect(base({ timerUsed: false }).brew.source).toBe('manual');
   });
 
-  it('saves with only the overall score', () => {
+  it('saves all seven attributes and overall, even when only overall was set', () => {
     const { brew } = base();
     expect(brew.overall).toBe(7.5);
+    for (const key of ATTRIBUTE_KEYS) expect(brew[key]).toBe(5);
     expect(brew.flavours).toEqual([]);
     expect(brew.notes).toBeNull();
   });

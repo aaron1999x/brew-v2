@@ -108,7 +108,7 @@ describe('toUserMessage', () => {
       "This change can't be saved. Check grind, temperature, dose and water.",
     );
     expect(named('brew_conflict')).toBe("This brew couldn't be saved. Try again.");
-    expect(named('overall_required')).toBe('Give the brew an overall score before saving.');
+    expect(named('overall_required')).toBe('Score the cup overall before saving');
     for (const code of ['brew_not_found', 'quick_change_invalid', 'brew_conflict', 'overall_required']) {
       expect(isUnexpectedError({ code: 'P0001', message: code }), code).toBe(false);
     }

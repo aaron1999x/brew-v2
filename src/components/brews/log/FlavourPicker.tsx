@@ -39,7 +39,7 @@ export function FlavourPicker({
   return (
     <div className={styles.flavours}>
       <TagChips
-        label="Flavour notes"
+        label="Flavours"
         tags={tags}
         selectedKeys={selected}
         onSelectionChange={(keys) => {

@@ -26,24 +26,29 @@ export function TastedAt({
 }>) {
   return (
     <div className={styles.tasted}>
-      <div role="group" aria-label="Tasted at (temperature)" className={styles.toggleGroup}>
-        {TASTED_TEMPS.map((t) => (
-          <button
-            key={t}
-            type="button"
-            className={cx(styles.toggle, temp === t && styles.toggleOn)}
-            aria-pressed={temp === t}
-            onClick={() => onTempChange(temp === t ? null : t)}
-            data-primary-control=""
-          >
-            {LABELS[t]}
-          </button>
-        ))}
+      <div role="group" aria-labelledby="tasted-at-label" className={styles.tastedBlock}>
+        <span id="tasted-at-label" className={styles.fieldLabel}>
+          Tasted at
+        </span>
+        <div className={styles.toggleGroup}>
+          {TASTED_TEMPS.map((t) => (
+            <button
+              key={t}
+              type="button"
+              className={cx(styles.toggle, temp === t && styles.toggleOn)}
+              aria-pressed={temp === t}
+              onClick={() => onTempChange(temp === t ? null : t)}
+              data-primary-control=""
+            >
+              {LABELS[t]}
+            </button>
+          ))}
+        </div>
       </div>
       <TypedNumberField
         id={brewFieldId('tastedAfterMin')}
         label="Minutes after brewing"
-        description="Optional, 0 to 240"
+        description="0 to 240"
         value={minutes}
         typed={typedMinutes}
         error={minutesError}

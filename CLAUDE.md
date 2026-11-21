@@ -59,6 +59,10 @@ Next.js App Router · TypeScript strict · CSS Modules + CSS custom properties �
 13. End every milestone by updating `docs/progress.md`. Don't rename, move or reformat the planning docs; when a doc is wrong, note it in `docs/progress.md` instead.
 14. For screens the prototype also has, the prototype (`aaron1999x/Brew-Recipe`) is the reference for layout, wording and interaction; differences must be listed.
 
+## Layout conventions
+
+- New pages use the wide layout unless they are auth or settings. Auth is 28rem, settings and gear are 40rem, the timer screens are a centred phone-width column.
+
 ## Product rules worth remembering
 
 - A recipe version locks once a brew references it; changes then create a new version.

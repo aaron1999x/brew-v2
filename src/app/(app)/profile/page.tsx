@@ -16,7 +16,7 @@ export default async function ProfilePage() {
   return (
     <>
       <TopBar title="Profile" />
-      <div className={styles.body}>
+      <div className={styles.bodyReading}>
         <ProfileSummary />
         <EmptyState
           icon={Bookmark}

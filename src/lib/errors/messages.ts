@@ -13,7 +13,7 @@ export const ERROR_MESSAGES = {
   brew_not_found: "This brew isn't available any more.",
   quick_change_invalid: "This change can't be saved. Check grind, temperature, dose and water.",
   brew_conflict: "This brew couldn't be saved. Try again.",
-  overall_required: 'Give the brew an overall score before saving.',
+  overall_required: 'Score the cup overall before saving',
   handle_reserved: "That handle isn't available. Try another.",
   handle_recently_used: "That handle isn't available. Try another.",
   moderator_only: "You don't have permission to do that.",

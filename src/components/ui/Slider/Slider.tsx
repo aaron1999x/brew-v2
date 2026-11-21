@@ -23,7 +23,7 @@ export type SliderProps = {
   name?: string;
 };
 
-const format = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 });
+const format = new Intl.NumberFormat(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 
 /**
  * Label on the left and value on the right above a thin track. React Aria positions the thumb
@@ -48,7 +48,7 @@ export function Slider({
   useEffect(() => {
     inputRef.current?.setAttribute(
       'aria-valuetext',
-      `${format.format(current)} out of ${format.format(maxValue)}`,
+      `${format.format(current)} out of ${maxValue}`,
     );
   }, [current, maxValue]);
 

@@ -29,6 +29,8 @@ type Props = Readonly<{
   onChange: (change: QuickChange | null) => void;
   /** The number the changed version would get: "Saves as v4 when you log this brew." */
   nextVersionNo: number;
+  /** Start open (the log's "Brewed with a change?" link opens it). */
+  defaultOpen?: boolean;
 }>;
 
 /** The change with one field set (or removed when `value` is undefined); null when nothing is left. */
@@ -48,8 +50,8 @@ function withField<K extends keyof QuickChange>(
  * the change becomes the next version. Closed until opened. Values that match the version again
  * are no change at all (no new version).
  */
-export function QuickChangePanel({ base, change, onChange, nextVersionNo }: Props) {
-  const [open, setOpen] = useState(false);
+export function QuickChangePanel({ base, change, onChange, nextVersionNo, defaultOpen = false }: Props) {
+  const [open, setOpen] = useState(defaultOpen);
   const panelId = useId();
   const { units } = useUnits();
   const changed = !isNoChange(base, change);

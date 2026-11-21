@@ -22,6 +22,7 @@ import { useBrewSession } from '@/lib/brews/useBrewSessions';
 import { toUserMessage } from '@/lib/errors/messages';
 import { useUnits } from '@/lib/settings/useSettings';
 import { BrewLogFormView } from './BrewLogForm';
+import formStyles from './BrewLogForm.module.css';
 import styles from './BrewScreens.module.css';
 
 export const OFFLINE_SAVE_MESSAGE =
@@ -43,6 +44,7 @@ export function NewBrewScreen({ sessionId }: Readonly<{ sessionId: string | null
   const logBrew = useLogBrew();
   const leaving = useRef(false);
   const [askKeep, setAskKeep] = useState(false);
+  const [showChange, setShowChange] = useState(false);
   const [askDiscard, setAskDiscard] = useState(false);
 
   // The form starts from what the session holds, and does not follow its own saved copy.
@@ -190,18 +192,21 @@ export function NewBrewScreen({ sessionId }: Readonly<{ sessionId: string | null
         }}
         isSaving={logBrew.isPending}
         saveLabel="Save"
-        notices={
-          <>
-            {!online ? <Notice>{OFFLINE_SAVE_MESSAGE}</Notice> : null}
-            {session.entry === 'log' ? (
-              <QuickChangePanel
-                base={base}
-                change={session.quickChange}
-                onChange={setChange}
-                nextVersionNo={nextVersionNo(session)}
-              />
-            ) : null}
-          </>
+        notices={!online ? <Notice>{OFFLINE_SAVE_MESSAGE}</Notice> : null}
+        setupExtra={
+          session.entry !== 'log' ? null : showChange || changed ? (
+            <QuickChangePanel
+              base={base}
+              change={session.quickChange}
+              onChange={setChange}
+              nextVersionNo={nextVersionNo(session)}
+              defaultOpen
+            />
+          ) : (
+            <button type="button" className={formStyles.linkButton} onClick={() => setShowChange(true)}>
+              Brewed with a change?
+            </button>
+          )
         }
         onChange={keepDraft}
         onSave={save}

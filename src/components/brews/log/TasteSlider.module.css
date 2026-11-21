@@ -1,19 +1,6 @@
-/* A taste slider with its Clear button beside it. */
 .row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: end;
-  column-gap: var(--space-2);
   min-width: 0;
-}
-
-.side {
-  display: flex;
-  align-items: center;
-  /* Keeps the row the same height whether or not Clear shows. */
-  min-width: 4.5rem;
-  min-height: var(--size-target-min);
-  justify-content: flex-end;
 }
 
 .required {
@@ -21,15 +8,14 @@
   font-weight: normal;
 }
 
-/* Not scored: an empty ring, so it reads without colour. */
-.hollow::after {
+/* Empty: no knob shows. The thumb is still there for the keyboard, and shows its focus ring. */
+.hidden::after {
   background: transparent;
-  border-style: dashed;
+  border-color: transparent;
   box-shadow: none;
 }
 
 .error {
-  grid-column: 1 / -1;
   margin: var(--space-1) 0 0;
   color: var(--color-status-danger);
   font-size: var(--type-body-small-size);

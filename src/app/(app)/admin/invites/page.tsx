@@ -12,7 +12,7 @@ export default async function InvitesPage() {
   return (
     <>
       <TopBar title="Invites" backHref="/settings" />
-      <div className={styles.body}>
+      <div className={styles.bodyReading}>
         <InvitesManager />
       </div>
     </>

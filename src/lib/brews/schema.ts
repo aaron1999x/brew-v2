@@ -33,8 +33,11 @@ export const BREW_LIMITS = {
   futureToleranceMs: 60_000,
 } as const;
 
-/** The eight taste scores in the prototype's order. */
-export const TASTE_KEYS = [
+/**
+ * The seven attribute scores in the prototype's order. They start at 5.0 and every brew saves all
+ * seven; the radar shows these only. Overall is separate (below): it starts empty and is required.
+ */
+export const ATTRIBUTE_KEYS = [
   'sweetness',
   'acidity',
   'brightness',
@@ -42,9 +45,15 @@ export const TASTE_KEYS = [
   'clarity',
   'balance',
   'aftertaste',
-  'overall',
 ] as const;
+export type AttributeKey = (typeof ATTRIBUTE_KEYS)[number];
+
+/** The attributes and then overall: for tables and text alternatives. */
+export const TASTE_KEYS = [...ATTRIBUTE_KEYS, 'overall'] as const;
 export type TasteKey = (typeof TASTE_KEYS)[number];
+
+/** Where every attribute slider starts. */
+export const DEFAULT_ATTRIBUTE_SCORE = 5;
 
 export const TASTE_LABELS: Record<TasteKey, string> = {
   sweetness: 'Sweetness',
@@ -140,12 +149,12 @@ export type QuickChange = z.infer<typeof quickChangeSchema>;
 
 // ---- the log form ---------------------------------------------------------------------------
 
-const score = z
+const attribute = z
   .number()
   .min(0, 'Scores go from 0 to 10')
   .max(10, 'Scores go from 0 to 10')
-  .refine((n) => Number.isInteger(n * 2), 'Scores go in steps of 0.5')
-  .nullable();
+  .refine((n) => Number.isInteger(n * 2), 'Scores go in steps of 0.5');
+const score = attribute.nullable();
 
 /** All values are metric. `overall` is null until scored; saving needs it. */
 export function brewLogFormSchema(now: number = Date.now()) {
@@ -166,13 +175,13 @@ export function brewLogFormSchema(now: number = Date.now()) {
       .nullable(),
     beverageG: z.number().min(0).max(BREW_LIMITS.beverageMaxG, 'That beverage weight is too high').nullable(),
     tdsPct: z.number().min(0, 'TDS is between 0 and 20%').max(BREW_LIMITS.tdsMaxPct, 'TDS is between 0 and 20%').nullable(),
-    sweetness: score,
-    acidity: score,
-    brightness: score,
-    body: score,
-    clarity: score,
-    balance: score,
-    aftertaste: score,
+    sweetness: attribute,
+    acidity: attribute,
+    brightness: attribute,
+    body: attribute,
+    clarity: attribute,
+    balance: attribute,
+    aftertaste: attribute,
     // An explicit boolean return, so TypeScript doesn't infer a type guard that narrows overall to number.
     overall: score.refine((n): boolean => n != null, ERROR_MESSAGES.overall_required),
     flavours: flavoursSchema,
@@ -193,20 +202,20 @@ export type BrewLogForm = z.infer<ReturnType<typeof brewLogFormSchema>>;
 
 export const FORM_FIELDS = Object.keys(brewLogFormSchema().shape) as (keyof BrewLogForm)[];
 
-/** A fresh form: nothing scored, nothing filled in. */
+/** A fresh form: the seven attributes at 5.0, overall not scored, nothing else filled in. */
 export function emptyBrewLogForm(brewedAt: string): BrewLogForm {
   return {
     brewedAt,
     drawdownS: null,
     beverageG: null,
     tdsPct: null,
-    sweetness: null,
-    acidity: null,
-    brightness: null,
-    body: null,
-    clarity: null,
-    balance: null,
-    aftertaste: null,
+    sweetness: DEFAULT_ATTRIBUTE_SCORE,
+    acidity: DEFAULT_ATTRIBUTE_SCORE,
+    brightness: DEFAULT_ATTRIBUTE_SCORE,
+    body: DEFAULT_ATTRIBUTE_SCORE,
+    clarity: DEFAULT_ATTRIBUTE_SCORE,
+    balance: DEFAULT_ATTRIBUTE_SCORE,
+    aftertaste: DEFAULT_ATTRIBUTE_SCORE,
     overall: null,
     flavours: [],
     tastedTemp: null,

@@ -64,7 +64,13 @@ describe('form from a draft and from a saved brew', () => {
     expect(form.brewedAt).toBe('2026-11-21T09:00:00Z');
     expect(form.drawdownS).toBe(175);
     expect(form.overall).toBeNull();
-    expect(tasteValues(form)).toEqual(Array(8).fill(null));
+    expect(tasteValues(form)).toEqual(Array(7).fill(5));
+  });
+
+  it('an older draft with an unscored attribute starts it at 5.0', () => {
+    const form = formFromDraft({ sweetness: null as unknown as number, overall: 8 }, { brewedAt: '2026-11-21T09:00:00Z' });
+    expect(form.sweetness).toBe(5);
+    expect(form.overall).toBe(8);
   });
 
   it('a saved draft wins over the defaults, and a missing field keeps its default', () => {
@@ -101,7 +107,9 @@ describe('form from a draft and from a saved brew', () => {
     expect(form.overall).toBe(8);
     expect(form.notes).toBe('');
     expect(form.nextChange).toBe('Grind finer');
-    expect(tasteValues(form)).toEqual([7, null, null, 6.5, null, null, null, 8]);
+    // Attributes a brew never had start at 5.0 when it is edited; overall is the headline, not an axis.
+    expect(tasteValues(form)).toEqual([7, 5, 5, 6.5, 5, 5, 5]);
+    expect(tasteValues({ sweetness: 7, acidity: null })).toEqual([7, null, null, null, null, null, null]);
   });
 });
 

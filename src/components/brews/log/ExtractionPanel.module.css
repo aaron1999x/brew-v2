@@ -7,13 +7,13 @@
 
 @media (min-width: 768px) {
   .panel {
-    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
   }
 }
 
 .cell {
   min-width: 0;
-  padding: var(--space-3);
+  padding: var(--space-2) var(--space-3);
   border: var(--border-width-hairline) solid var(--color-border-subtle);
   border-radius: var(--radius-md);
   background: var(--color-bg-inset);
@@ -27,9 +27,9 @@
 
 .value {
   margin: 0;
-  font-size: var(--type-h3-size);
+  font-size: var(--type-body-size);
   font-weight: var(--type-label-weight);
-  line-height: var(--type-h3-line-height);
+  line-height: var(--type-body-line-height);
   font-variant-numeric: tabular-nums;
 }
 

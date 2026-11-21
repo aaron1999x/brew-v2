@@ -1,5 +1,5 @@
 .form {
-  max-width: var(--layout-form);
+  max-width: var(--layout-wide);
   margin: 0 auto;
 }
 

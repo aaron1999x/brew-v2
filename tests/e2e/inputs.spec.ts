@@ -40,10 +40,10 @@ test('the slider reads "7.5 out of 10" and moves in half steps with the arrow ke
   await expect(slider).toHaveAttribute('aria-valuetext', '7.5 out of 10');
   await slider.focus();
   await page.keyboard.press('ArrowRight');
-  await expect(slider).toHaveAttribute('aria-valuetext', '8 out of 10');
+  await expect(slider).toHaveAttribute('aria-valuetext', '8.0 out of 10');
   await page.keyboard.press('ArrowLeft');
   await page.keyboard.press('ArrowLeft');
-  await expect(slider).toHaveAttribute('aria-valuetext', '7 out of 10');
+  await expect(slider).toHaveAttribute('aria-valuetext', '7.0 out of 10');
 });
 
 test('the number field puts its unit in the accessible description', async ({ page }) => {

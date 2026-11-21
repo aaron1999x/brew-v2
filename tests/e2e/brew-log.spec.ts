@@ -44,56 +44,60 @@ const tag = (page: Page, name: string) => page.getByRole('row', { name });
 
 const save = (page: Page) => page.getByRole('button', { name: 'Save', exact: true }).first().click();
 
-test('the form is in the prototype’s order, and axe passes', async ({ page, users }) => {
+test('the cards are in the prototype’s order, and axe passes', async ({ page, users }) => {
   const user = await signIn(page, users, 'log-order');
   const recipe = await createRecipe(users, user, 'Morning V60', { version: TARGETS });
   await openLog(page, user, recipe.slug);
 
   const headings = await page.getByRole('heading', { level: 2 }).allTextContents();
   expect(headings.filter((h) => !/^Change|^Fix/.test(h))).toEqual([
-    'Morning V60',
+    'Setup',
     'Results',
-    'Extraction',
-    'Taste',
-    'Flavours',
-    'Tasted at',
+    'Sensory',
+    'Flavour notes',
     'Notes',
-    'Next time I’ll change…',
   ]);
   await expect(page.getByLabel('Drawdown')).toBeVisible(); // a pour-over
+  // One Drawdown tile, inside Results; no separate Extraction section.
+  await expect(page.getByRole('region', { name: 'Results' }).getByText('Target 2:45–3:15')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Extraction' })).toHaveCount(0);
   await expectNoAxeViolations(page);
 });
 
-test('every slider starts not scored; the first arrow sets 5.0; Clear puts it back', async ({ page, users }) => {
+test('attributes start at 5.0; overall starts empty, with no Clear buttons', async ({ page, users }) => {
   const user = await signIn(page, users, 'log-sliders');
   const recipe = await createRecipe(users, user);
   await openLog(page, user, recipe.slug);
 
-  const sweetness = slider(page, 'Sweetness');
-  await expect(sweetness).toHaveAttribute('aria-valuetext', 'not scored');
-  for (const label of ['Sweetness', 'Acidity', 'Brightness', 'Body', 'Clarity', 'Balance', 'Aftertaste', 'Overall']) {
-    await expect(slider(page, label)).toHaveAttribute('aria-valuetext', 'not scored');
+  for (const label of ['Sweetness', 'Acidity', 'Brightness', 'Body', 'Clarity', 'Balance', 'Aftertaste']) {
+    await expect(slider(page, label)).toHaveAttribute('aria-valuetext', '5.0 out of 10');
   }
+  await expect(page.getByRole('button', { name: /^Clear/ })).toHaveCount(0);
 
+  const sweetness = slider(page, 'Sweetness');
   await sweetness.focus();
-  await page.keyboard.press('ArrowUp');
-  await expect(sweetness).toHaveAttribute('aria-valuetext', '5.0 out of 10');
   await page.keyboard.press('ArrowRight');
   await expect(sweetness).toHaveAttribute('aria-valuetext', '5.5 out of 10');
-  await page.getByRole('button', { name: 'Clear Sweetness' }).click();
-  await expect(sweetness).toHaveAttribute('aria-valuetext', 'not scored');
-
-  const acidity = slider(page, 'Acidity');
-  await acidity.focus();
   await page.keyboard.press('End');
-  await expect(acidity).toHaveAttribute('aria-valuetext', '10.0 out of 10');
-  await page.getByRole('button', { name: 'Clear Acidity' }).click();
-  await acidity.focus();
-  await page.keyboard.press('Home');
-  await expect(acidity).toHaveAttribute('aria-valuetext', '0.0 out of 10');
+  await expect(sweetness).toHaveAttribute('aria-valuetext', '10.0 out of 10');
 
-  // The radar has a table alternative.
-  await expect(page.getByRole('img', { name: /^Taste\./ })).toBeVisible();
+  // Overall: empty, the first arrow sets 5.0, Home and End set 0 and 10.
+  const overall = slider(page, 'Overall');
+  const big = page.getByTestId('overall-score');
+  await expect(overall).toHaveAttribute('aria-valuetext', 'not scored');
+  await expect(big).toHaveText('Not scored');
+  await overall.focus();
+  await page.keyboard.press('ArrowUp');
+  await expect(overall).toHaveAttribute('aria-valuetext', '5.0 out of 10');
+  await expect(big).toHaveText('5.0 / 10');
+  await page.keyboard.press('ArrowRight');
+  await expect(big).toHaveText('5.5 / 10');
+
+  // The radar shows the seven attributes; its text alternative lists them and overall.
+  const chart = page.getByRole('img', { name: /^Taste\./ });
+  await expect(chart).toBeVisible();
+  await expect(chart).toHaveAccessibleName(/sweetness 10\.0, acidity 5\.0.*aftertaste 5\.0, overall 5\.5/);
+  await expect(chart).not.toHaveAccessibleName(/eight axes/);
 });
 
 test('saving without overall focuses the summary and links to the slider', async ({ page, users }) => {
@@ -104,7 +108,7 @@ test('saving without overall focuses the summary and links to the slider', async
   await save(page);
   await expect(page.locator(SUMMARY)).toBeFocused();
   await expect(page.getByRole('heading', { name: 'Fix 1 thing to continue' })).toBeVisible();
-  await page.locator(SUMMARY).getByRole('link', { name: 'Give the brew an overall score before saving.' }).click();
+  await page.locator(SUMMARY).getByRole('link', { name: 'Score the cup overall before saving' }).click();
   await expect(slider(page, 'Overall')).toBeFocused();
   await expectNoAxeViolations(page);
 
@@ -117,7 +121,7 @@ test('EY and the target flags: in range, below and above', async ({ page, users 
   const recipe = await createRecipe(users, user, 'Morning V60', { version: TARGETS });
   await openLog(page, user, recipe.slug);
 
-  const extraction = page.getByRole('region', { name: 'Extraction' });
+  const extraction = page.getByLabel('Extraction', { exact: true });
   await page.getByLabel('Beverage weight').fill('210');
   await page.getByLabel('Beverage weight').blur();
   await page.getByLabel('TDS (%)').fill('1.4');
@@ -167,7 +171,7 @@ test('log, detail, edit, delete and undo, next version with the pinned note, and
 
   await scoreOverall(page);
   await slider(page, 'Sweetness').focus();
-  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight'); // 5.0 to 5.5
   await tag(page, 'peach').click();
   await page.getByLabel('Add your own').fill('toasted almond');
   await page.getByRole('button', { name: 'Add', exact: true }).click();
@@ -188,12 +192,12 @@ test('log, detail, edit, delete and undo, next version with the pinned note, and
   await expect(page.getByLabel('Overall score 5.5 out of 10')).toBeVisible();
   await expect(page.getByLabel('Extraction results')).toContainText('19.6%');
   await expect(page.getByText('toasted almond')).toBeVisible();
-  await expect(page.getByText('Tasted warm, 10 min after brewing')).toBeVisible();
+  await expect(page.getByText('warm, 10 min after brewing')).toBeVisible();
   await expect(page.getByText('Grind a touch finer')).toBeVisible();
   await expect(page.getByRole('img', { name: /^Pour curve\./ })).toBeVisible();
 
   const { data: row } = await users.admin.from('brews').select('*').eq('id', id).single();
-  expect(row).toMatchObject({ overall: 5.5, sweetness: 5, source: 'manual', ey_pct: 19.6 });
+  expect(row).toMatchObject({ overall: 5.5, sweetness: 5.5, acidity: 5, brightness: 5, body: 5, clarity: 5, balance: 5, aftertaste: 5, source: 'manual', ey_pct: 19.6 });
   expect(row?.flavours).toEqual(['peach', 'toasted almond']);
   const { data: version } = await users.admin.from('recipe_versions').select('locked_at').eq('id', recipe.v1Id).single();
   expect(version?.locked_at).not.toBeNull();
@@ -264,7 +268,7 @@ test('a quick change saves as the next version with its change note, once', asyn
   const recipe = await createRecipe(users, user, 'Morning V60');
   await openLog(page, user, recipe.slug);
 
-  await page.getByRole('button', { name: /Change for this brew/ }).click();
+  await page.getByRole('button', { name: 'Brewed with a change?' }).click();
   await page.getByLabel('Grind setting', { exact: true }).fill('22 clicks');
   await expect(page.getByText('Saves as v2 when you log this brew.').first()).toBeVisible();
   await expect(page.getByText('Changed: grind 24 clicks → 22 clicks')).toBeVisible();
@@ -308,7 +312,7 @@ test('the draft comes back after a reload, and Keep leaves the session on Home',
   await page.reload();
   await waitForApp(page);
   await expect(notesField(page)).toHaveValue('half done');
-  await expect(slider(page, 'Body')).toHaveAttribute('aria-valuetext', '5.0 out of 10');
+  await expect(slider(page, 'Body')).toHaveAttribute('aria-valuetext', '5.5 out of 10');
   await expect(tag(page, 'cocoa')).toHaveAttribute('aria-selected', 'true');
 
   // Cancel asks; Keep goes Home where the brew is waiting.

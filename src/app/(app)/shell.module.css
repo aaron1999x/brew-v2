@@ -13,22 +13,22 @@
   outline: none;
 }
 
+/* Wide is the default: the page uses the app's width (main caps it at --layout-wide). */
 .body {
-  max-width: var(--layout-reading);
   margin-inline: auto;
   padding: var(--space-4);
 }
 
-/* Settings and gear keep a form width. */
+/* Settings and gear keep a form width. Auth pages use their own 28rem card. */
 .bodyForm {
   composes: body;
   max-width: var(--layout-form);
 }
 
-/* Pages that use the full app width (the recipes list). */
-.bodyWide {
+/* The few pages that are one short column of text (profile, admin, verified). */
+.bodyReading {
   composes: body;
-  max-width: none;
+  max-width: var(--layout-reading);
 }
 
 @media (min-width: 768px) {

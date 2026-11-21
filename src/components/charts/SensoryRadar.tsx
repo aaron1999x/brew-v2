@@ -28,12 +28,14 @@ type Props = {
   attributes: readonly string[];
   /** One to three series. With several, each gets its own line style and marker. */
   series: readonly RadarSeries[];
+  /** Rows added under the attribute rows of the text table (e.g. a headline score that isn't an axis). */
+  extraRows?: readonly (string | number)[][];
   /** Hide the legend when there is a single series. */
   showLegend?: boolean;
 };
 
 /** 0–10 radar. Up to three series, told apart by colour, line style and marker. */
-export function SensoryRadar({ title, description, attributes, series, showLegend }: Props) {
+export function SensoryRadar({ title, description, attributes, series, extraRows = [], showLegend }: Props) {
   const reduced = useReducedMotion();
   const data = attributes.map((attribute, i) => {
     const row: Record<string, string | number> = { attribute };
@@ -53,7 +55,10 @@ export function SensoryRadar({ title, description, attributes, series, showLegen
       table={{
         caption: `${title}: score out of 10 for each attribute`,
         columns: ['Attribute', ...series.map((s) => s.name)],
-        rows: attributes.map((a, i) => [a, ...series.map((s) => s.values[i] ?? 'Not scored')]),
+        rows: [
+          ...attributes.map((a, i) => [a, ...series.map((s) => s.values[i] ?? 'Not scored')]),
+          ...extraRows,
+        ],
       }}
       legend={
         (showLegend ?? multiple) ? (

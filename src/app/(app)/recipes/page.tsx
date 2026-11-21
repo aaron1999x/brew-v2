@@ -14,7 +14,7 @@ export default async function RecipesPage() {
   return (
     <>
       <TopBar title="Recipes" actions={<ButtonLink href="/recipes/new">New recipe</ButtonLink>} />
-      <div className={styles.bodyWide}>
+      <div className={styles.body}>
         <Suspense
           fallback={
             <LoadingRegion label="recipes">

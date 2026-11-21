@@ -1,12 +1,13 @@
 import { parseTypedNumber } from '@/lib/ui/typedNumber';
 import {
-  TASTE_KEYS,
+  ATTRIBUTE_KEYS,
+  DEFAULT_ATTRIBUTE_SCORE,
   emptyBrewLogForm,
   validateBrewLog,
   type BrewIssue,
   type BrewLogDraft,
   type BrewLogForm,
-  type TasteKey,
+  type AttributeKey,
 } from './schema';
 
 /** The text of a number field that isn't a number, kept as typed so saving can say what is wrong. */
@@ -56,6 +57,8 @@ export function formFromDraft(
   for (const [key, value] of Object.entries(draft)) {
     if (value !== undefined) merged[key] = value;
   }
+  // An older draft may hold an unscored attribute: it starts at 5.0 like a new one.
+  for (const key of ATTRIBUTE_KEYS) merged[key] ??= DEFAULT_ATTRIBUTE_SCORE;
   return merged as BrewLogForm;
 }
 
@@ -64,13 +67,9 @@ export function draftFromForm(form: BrewLogForm): BrewLogDraft {
   return { ...form };
 }
 
-/** The scores in the radar's order. Null = not scored. */
-export function tasteValues(form: Pick<BrewLogForm, TasteKey>): (number | null)[] {
-  return TASTE_KEYS.map((key) => form[key]);
-}
-
-export function hasAnyScore(form: Pick<BrewLogForm, TasteKey>): boolean {
-  return tasteValues(form).some((v) => v != null);
+/** The seven attribute scores in the radar's order. Null = not scored (an older brew). Overall is not among them. */
+export function tasteValues(scores: Partial<Record<AttributeKey, number | null>>): (number | null)[] {
+  return ATTRIBUTE_KEYS.map((key) => scores[key] ?? null);
 }
 
 /**
@@ -134,13 +133,14 @@ export function formFromBrewRow(row: {
     drawdownS: row.drawdown_s,
     beverageG: row.beverage_g,
     tdsPct: row.tds_pct,
-    sweetness: row.sweetness,
-    acidity: row.acidity,
-    brightness: row.brightness,
-    body: row.body,
-    clarity: row.clarity,
-    balance: row.balance,
-    aftertaste: row.aftertaste,
+    // A brew saved before attributes always had a value starts these at 5.0 when edited.
+    sweetness: row.sweetness ?? DEFAULT_ATTRIBUTE_SCORE,
+    acidity: row.acidity ?? DEFAULT_ATTRIBUTE_SCORE,
+    brightness: row.brightness ?? DEFAULT_ATTRIBUTE_SCORE,
+    body: row.body ?? DEFAULT_ATTRIBUTE_SCORE,
+    clarity: row.clarity ?? DEFAULT_ATTRIBUTE_SCORE,
+    balance: row.balance ?? DEFAULT_ATTRIBUTE_SCORE,
+    aftertaste: row.aftertaste ?? DEFAULT_ATTRIBUTE_SCORE,
     overall: row.overall,
     flavours: row.flavours,
     tastedTemp: row.tasted_temp,

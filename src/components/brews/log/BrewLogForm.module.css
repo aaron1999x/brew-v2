@@ -1,6 +1,6 @@
+/* The brew log form (cards come from BrewCards.module.css). Compact, like the prototype. */
 .form {
-  max-width: var(--layout-form);
-  margin: 0 auto;
+  min-width: 0;
 }
 
 /* Cancel and Save stay in reach while the form scrolls. */
@@ -28,21 +28,14 @@
 
 .body {
   display: grid;
-  gap: var(--space-6);
-  padding: var(--space-4) 0 var(--space-8);
-}
-
-.section {
-  display: grid;
   gap: var(--space-3);
-  min-width: 0;
+  padding: var(--space-3) 0 var(--space-8);
 }
 
-.sectionTitle {
+.recipeName {
   margin: 0;
-  font-size: var(--type-h2-size);
   font-weight: var(--type-label-weight);
-  line-height: var(--type-h2-line-height);
+  overflow-wrap: anywhere;
 }
 
 .chips {
@@ -60,6 +53,7 @@
 }
 
 .counter {
+  margin-top: calc(var(--space-2) * -1);
   text-align: right;
 }
 
@@ -70,38 +64,81 @@
   font-weight: var(--type-label-weight);
 }
 
+/* The result inputs: as many as fit, never narrower than a weight field needs. */
 .grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
   gap: var(--space-3);
   align-items: start;
 }
 
-.taste {
+/* Sliders on the left, the overall score and the radar on the right, when the card is wide enough. */
+.sensory {
   display: grid;
-  gap: var(--space-4);
+  gap: var(--space-3);
   min-width: 0;
 }
 
 .sliders {
   display: grid;
-  gap: var(--space-2);
+  gap: var(--space-1);
   min-width: 0;
 }
 
 .radar {
+  display: grid;
+  gap: var(--space-2);
+  align-content: start;
   min-width: 0;
+}
+
+@container (min-width: 34rem) {
+  .sensory {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+    align-items: start;
+  }
+}
+
+.overallBig {
+  margin: 0;
+  text-align: center;
+  line-height: 1;
+}
+
+.overallValue {
+  font-size: var(--type-h1-size);
+  font-weight: var(--type-label-weight);
+  font-variant-numeric: tabular-nums;
+}
+
+.overallOf {
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-size);
 }
 
 .flavours {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-3);
+  min-width: 0;
 }
 
 .tasted {
   display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
   gap: var(--space-3);
   align-items: start;
+}
+
+.tastedBlock {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.fieldLabel {
+  font-size: var(--type-label-size);
+  font-weight: var(--type-label-weight);
+  line-height: var(--type-label-line-height);
 }
 
 .toggleGroup {
@@ -112,7 +149,7 @@
 .toggle {
   flex: 1;
   min-height: var(--size-target-min);
-  padding: 0 var(--space-4);
+  padding: 0 var(--space-3);
   border: var(--border-width-default) solid var(--color-border-strong);
   border-radius: var(--radius-full);
   background: var(--color-bg-surface);
@@ -137,22 +174,22 @@
   padding-top: var(--space-2);
 }
 
-@media (min-width: 768px) {
-  .grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
+/* "Brewed with a change?": a small link-style button in the Setup card. */
+.linkButton {
+  justify-self: start;
+  min-height: var(--size-target-min);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-accent-on-inset);
+  font: inherit;
+  font-weight: var(--type-label-weight);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+}
 
-  .tasted {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  }
-
-  .taste {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    align-items: start;
-  }
-
-  .radar {
-    position: sticky;
-    top: calc(var(--size-target-min) + var(--space-4));
-  }
+.linkButton:focus-visible {
+  outline: var(--border-width-focus) solid var(--color-focus-ring);
+  outline-offset: 2px;
 }

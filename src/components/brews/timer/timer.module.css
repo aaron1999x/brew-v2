@@ -550,3 +550,17 @@
   white-space: nowrap;
   border: 0;
 }
+
+/*
+ * On a desktop the timer stays a centred phone-width column (it is a brew-bar tool), with a bigger
+ * split-flap clock: the same rule with a higher ceiling.
+ */
+@media (min-width: 768px) {
+  .clockSize {
+    font-size: clamp(2rem, min(calc((100cqh - var(--reserve)) / 1.32), 29cqw), 12rem);
+  }
+
+  .clockSizeLong {
+    font-size: clamp(2rem, min(calc((100cqh - var(--reserve)) / 1.32), 19cqw), 12rem);
+  }
+}

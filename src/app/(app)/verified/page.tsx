@@ -10,7 +10,7 @@ export default function VerifiedPage() {
   return (
     <>
       <TopBar title="Verified" />
-      <div className={styles.body}>
+      <div className={styles.bodyReading}>
         <EmptyState
           icon={BadgeCheck}
           title="Nothing here yet."

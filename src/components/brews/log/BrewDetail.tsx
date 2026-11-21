@@ -17,16 +17,17 @@ import { Notice } from '@/components/ui/Notice/Notice';
 import { useOnlineStatus } from '@/components/ui/OfflineBanner/OfflineBanner';
 import { toast } from '@/components/ui/Toast/toast';
 import { NO_TARGETS, extractionModel } from '@/lib/brews/extraction';
-import { formFromBrewRow, tasteValues, tastedAtText } from '@/lib/brews/form';
+import { tasteValues, tastedAtText } from '@/lib/brews/form';
 import { brewChoicePath } from '@/lib/brews/paths';
 import { useBrew, useDeleteBrew, type BrewDetailData } from '@/lib/brews/queries';
 import { CHANGE_NOTE_PREFIX } from '@/lib/brews/change-note';
-import { TASTE_KEYS, TASTE_LABELS } from '@/lib/brews/schema';
+import { ATTRIBUTE_KEYS, TASTE_LABELS } from '@/lib/brews/schema';
 import { toUserMessage } from '@/lib/errors/messages';
 import { newVersionPath, recipePath, versionPath } from '@/lib/recipes/paths';
 import { useUnits } from '@/lib/settings/useSettings';
 import { ExtractionPanel } from './ExtractionPanel';
 import { LazyTasteRadar } from './LazyTasteRadar';
+import cards from './BrewCards.module.css';
 import styles from './BrewDetail.module.css';
 
 const OFFLINE_DELETE = 'Deleting a brew needs a connection';
@@ -51,7 +52,7 @@ export function BrewDetail({ id }: Readonly<{ id: string }>) {
 function Detail({ data }: Readonly<{ data: BrewDetailData }>) {
   const router = useRouter();
   const online = useOnlineStatus();
-  const { dateTime } = useUnits();
+  const { dateTime, weight, duration } = useUnits();
   const { remove, restore } = useDeleteBrew();
   const [confirming, setConfirming] = useState(false);
   const { brew, recipe, version } = data;
@@ -59,7 +60,6 @@ function Detail({ data }: Readonly<{ data: BrewDetailData }>) {
   const handle = brew.author_handle_snapshot;
   // The recipe and version are still there: links and the version's own numbers. Otherwise the snapshots.
   const alive = Boolean(recipe && version && handle);
-  const form = formFromBrewRow(brew);
   const note = version?.change_note?.startsWith(CHANGE_NOTE_PREFIX) ? version.change_note : null;
   const targets = version
     ? {
@@ -84,7 +84,7 @@ function Detail({ data }: Readonly<{ data: BrewDetailData }>) {
     storedEy: brew.ey_pct,
   });
   const tasted = tastedAtText(brew.tasted_temp, brew.tasted_after_min);
-  const scores = tasteValues(form);
+  const scores = tasteValues(brew);
   const overall = brew.overall.toFixed(1);
 
   function del() {
@@ -112,7 +112,7 @@ function Detail({ data }: Readonly<{ data: BrewDetailData }>) {
   }
 
   return (
-    <article className={styles.article} aria-labelledby="brew-title">
+    <article className={cards.wrap} aria-labelledby="brew-title">
       <header className={styles.header}>
         <Link
           href={alive && handle && recipe ? recipePath(handle, recipe.slug) : '/home'}
@@ -184,90 +184,106 @@ function Detail({ data }: Readonly<{ data: BrewDetailData }>) {
         </div>
       )}
 
-      <section aria-labelledby="d-results" className={styles.section}>
-        <h2 id="d-results" className={styles.sectionTitle}>
-          Results
-        </h2>
-        <ExtractionPanel model={model} showDrawdown={showDrawdown} label="Extraction results" />
-        {brew.beverage_g != null ? <BeverageLine grams={brew.beverage_g} /> : null}
-      </section>
-
-      <section aria-labelledby="d-taste" className={styles.section}>
-        <h2 id="d-taste" className={styles.sectionTitle}>
-          Taste
-        </h2>
-        <ul className={styles.scores} aria-label="Scores">
-          {TASTE_KEYS.map((key, i) => (
-            <li key={key} className={styles.score}>
-              <span>{TASTE_LABELS[key]}</span>
-              <span className="num">{scores[i] == null ? 'Not scored' : scores[i]!.toFixed(1)}</span>
-            </li>
-          ))}
-        </ul>
-        <LazyTasteRadar series={[{ key: 'brew', name: 'This brew', values: scores }]} />
-      </section>
-
-      {brew.flavours.length > 0 ? (
-        <section aria-labelledby="d-flavours" className={styles.section}>
-          <h2 id="d-flavours" className={styles.sectionTitle}>
-            Flavours
+      <div className={cards.cards}>
+        <section aria-labelledby="d-setup" className={cards.card}>
+          <h2 id="d-setup" className={cards.cardTitle}>
+            Setup
           </h2>
-          <ul className={styles.tags} aria-label="Flavours">
-            {brew.flavours.map((f) => (
-              <li key={f}>
-                <Badge tone="accent">{f}</Badge>
+          <dl className={styles.facts}>
+            <Fact label="Brewed at" value={dateTime(brew.brewed_at)} />
+            <Fact label="Version" value={`v${brew.version_no_snapshot}`} />
+            {tasted ? <Fact label="Tasted at" value={tasted.replace(/^Tasted /, '')} /> : null}
+            {note ? <Fact label="Changes" value={note.replace(CHANGE_NOTE_PREFIX, '')} /> : null}
+          </dl>
+        </section>
+
+        <section aria-labelledby="d-results" className={cards.card}>
+          <h2 id="d-results" className={cards.cardTitle}>
+            Results
+          </h2>
+          <dl className={styles.facts}>
+            {brew.drawdown_s != null ? <Fact label="Drawdown" value={duration(brew.drawdown_s)} /> : null}
+            {brew.beverage_g != null ? <Fact label="Beverage weight" value={weight(brew.beverage_g)} /> : null}
+            {brew.tds_pct != null ? <Fact label="TDS" value={`${brew.tds_pct}%`} /> : null}
+          </dl>
+          <ExtractionPanel model={model} showDrawdown={showDrawdown} label="Extraction results" />
+        </section>
+
+        <section aria-labelledby="d-sensory" className={cards.card}>
+          <h2 id="d-sensory" className={cards.cardTitle}>
+            Sensory
+          </h2>
+          <div className={styles.sensory}>
+            <ul className={styles.scores} aria-label="Scores">
+              {ATTRIBUTE_KEYS.map((key, i) => (
+                <li key={key} className={styles.score}>
+                  <span>{TASTE_LABELS[key]}</span>
+                  <span className="num">{scores[i] == null ? 'Not scored' : scores[i]!.toFixed(1)}</span>
+                </li>
+              ))}
+              <li className={`${styles.score} ${styles.scoreOverall}`}>
+                <span>Overall</span>
+                <span className="num">{overall}</span>
               </li>
-            ))}
-          </ul>
+            </ul>
+            <div className={styles.radar}>
+              <LazyTasteRadar series={[{ key: 'brew', name: 'This brew', values: scores, overall: brew.overall }]} />
+            </div>
+          </div>
         </section>
-      ) : null}
 
-      {tasted ? (
-        <section aria-labelledby="d-tasted" className={styles.section}>
-          <h2 id="d-tasted" className={styles.sectionTitle}>
-            Tasted at
-          </h2>
-          <p className={styles.text}>{tasted}</p>
-        </section>
-      ) : null}
+        <div className={cards.stack}>
+          {brew.flavours.length > 0 ? (
+            <section aria-labelledby="d-flavours" className={cards.card}>
+              <h2 id="d-flavours" className={cards.cardTitle}>
+                Flavour notes
+              </h2>
+              <ul className={styles.tags} aria-label="Flavours">
+                {brew.flavours.map((f) => (
+                  <li key={f}>
+                    <Badge tone="accent">{f}</Badge>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
 
-      {brew.notes ? (
-        <section aria-labelledby="d-notes" className={styles.section}>
-          <h2 id="d-notes" className={styles.sectionTitle}>
-            Notes
-          </h2>
-          <p className={styles.text}>{brew.notes}</p>
-        </section>
-      ) : null}
+          {brew.notes || brew.next_change ? (
+            <section aria-labelledby="d-notes" className={cards.card}>
+              <h2 id="d-notes" className={cards.cardTitle}>
+                Notes
+              </h2>
+              {brew.notes ? <p className={styles.text}>{brew.notes}</p> : null}
+              {brew.next_change ? (
+                <div className={styles.nextChange}>
+                  <h3 className={styles.subTitle}>Next time I’ll change…</h3>
+                  <p className={styles.text}>{brew.next_change}</p>
+                </div>
+              ) : null}
+            </section>
+          ) : null}
+        </div>
 
-      {brew.next_change ? (
-        <section aria-labelledby="d-next" className={styles.section}>
-          <h2 id="d-next" className={styles.sectionTitle}>
-            Next time I’ll change…
-          </h2>
-          <p className={styles.text}>{brew.next_change}</p>
-        </section>
-      ) : null}
-
-      {version && version.steps.length > 0 ? (
-        <section aria-labelledby="d-curve" className={styles.section}>
-          <h2 id="d-curve" className={styles.sectionTitle}>
-            Pour curve
-          </h2>
-          <LazyPourCurve
-            series={[{ id: version.id, label: `v${version.version_no}`, steps: version.steps }]}
-            drawdown={
-              version.drawdown_min_s != null || version.drawdown_max_s != null
-                ? {
-                    from: version.drawdown_min_s ?? version.drawdown_max_s ?? 0,
-                    to: version.drawdown_max_s ?? version.drawdown_min_s ?? 0,
-                  }
-                : null
-            }
-            marker={brew.drawdown_s != null ? { atS: brew.drawdown_s, label: 'Logged drawdown' } : null}
-          />
-        </section>
-      ) : null}
+        {version && version.steps.length > 0 ? (
+          <section aria-labelledby="d-curve" className={`${cards.card} ${styles.wide}`}>
+            <h2 id="d-curve" className={cards.cardTitle}>
+              Pour curve
+            </h2>
+            <LazyPourCurve
+              series={[{ id: version.id, label: `v${version.version_no}`, steps: version.steps }]}
+              drawdown={
+                version.drawdown_min_s != null || version.drawdown_max_s != null
+                  ? {
+                      from: version.drawdown_min_s ?? version.drawdown_max_s ?? 0,
+                      to: version.drawdown_max_s ?? version.drawdown_min_s ?? 0,
+                    }
+                  : null
+              }
+              marker={brew.drawdown_s != null ? { atS: brew.drawdown_s, label: 'Logged drawdown' } : null}
+            />
+          </section>
+        ) : null}
+      </div>
 
       <ConfirmDialog
         isOpen={confirming}
@@ -284,7 +300,11 @@ function Detail({ data }: Readonly<{ data: BrewDetailData }>) {
   );
 }
 
-function BeverageLine({ grams }: Readonly<{ grams: number }>) {
-  const { weight } = useUnits();
-  return <p className={styles.text}>Beverage weight {weight(grams)}</p>;
+function Fact({ label, value }: Readonly<{ label: string; value: string }>) {
+  return (
+    <div className={styles.fact}>
+      <dt>{label}</dt>
+      <dd>{value}</dd>
+    </div>
+  );
 }

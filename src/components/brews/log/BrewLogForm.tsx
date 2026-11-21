@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/Badge/Badge';
 import { Button } from '@/components/ui/Button/Button';
 import { FormErrorSummary } from '@/components/ui/FormErrorSummary/FormErrorSummary';
 import { TypedNumberField } from '@/components/ui/NumberField/TypedNumberField';
+import { Slider } from '@/components/ui/Slider/Slider';
 import { TextField } from '@/components/ui/TextField/TextField';
 import { Textarea } from '@/components/ui/Textarea/Textarea';
 import { DurationField } from '@/components/ui/UnitFields/DurationField';
@@ -20,12 +21,13 @@ import {
   type TypedText,
 } from '@/lib/brews/form';
 import { useRecentFlavourTags } from '@/lib/brews/queries';
-import { BREW_LIMITS, TASTE_KEYS, TASTE_LABELS, type BrewLogForm } from '@/lib/brews/schema';
+import { ATTRIBUTE_KEYS, BREW_LIMITS, TASTE_LABELS, type BrewLogForm } from '@/lib/brews/schema';
 import { ExtractionPanel } from './ExtractionPanel';
 import { FlavourPicker } from './FlavourPicker';
 import { LazyTasteRadar } from './LazyTasteRadar';
 import { TastedAt } from './TastedAt';
-import { TasteSlider } from './TasteSlider';
+import { OverallSlider } from './TasteSlider';
+import cards from './BrewCards.module.css';
 import styles from './BrewLogForm.module.css';
 
 export type BrewFormContext = {
@@ -50,6 +52,8 @@ type Props = Readonly<{
   saveLabel?: string;
   /** Shown above the form: offline, restored, and so on. */
   notices?: ReactNode;
+  /** In the Setup card under the version chips (Log only: "Brewed with a change?"). */
+  setupExtra?: ReactNode;
   /** Called whenever the form changes (the parent keeps the draft, debounced). */
   onChange?: (form: BrewLogForm, typed: TypedText) => void;
   onSave: (form: BrewLogForm) => void;
@@ -72,6 +76,7 @@ export function BrewLogFormView({
   isSaving,
   saveLabel = 'Save',
   notices,
+  setupExtra,
   onChange,
   onSave,
   onCancel,
@@ -144,195 +149,194 @@ export function BrewLogFormView({
   const scores = tasteValues(form);
   const nowLocal = toLocalInput(new Date().toISOString());
 
+  const overallText = form.overall == null ? 'Not scored' : form.overall.toFixed(1);
   return (
-    <form id="brew-form" onSubmit={submit} noValidate aria-label={title} className={styles.form}>
-      <header className={styles.bar}>
-        <Button variant="ghost" onPress={onCancel} isDisabled={isSaving}>
-          Cancel
-        </Button>
-        <h1 className={styles.title}>{title}</h1>
-        <Button type="submit" isPending={isSaving} pendingLabel="Saving…">
-          {saveLabel}
-        </Button>
-      </header>
-
-      <div className={styles.body}>
-        {notices}
-        <FormErrorSummary errors={summary} />
-
-        <section aria-labelledby="brew-head" className={styles.section}>
-          <h2 id="brew-head" className={styles.sectionTitle}>
-            {header.recipeName}
-          </h2>
-          <div className={styles.chips}>
-            <Badge>{header.versionLabel}</Badge>
-            {header.changes.map((c) => (
-              <Badge key={c} tone="changed" icon={Pencil}>
-                {`Changed: ${c}`}
-              </Badge>
-            ))}
-          </div>
-          {header.note ? <p className={styles.note}>{header.note}</p> : null}
-          <TextField
-            id={brewFieldId('brewedAt')}
-            label="Brewed at"
-            isRequired
-            value={brewedText}
-            onChange={(text) => {
-              setBrewedText(text);
-              set('brewedAt', fromLocalInput(text));
-            }}
-            isInvalid={Boolean(errorOf('brewedAt'))}
-            errorMessage={errorOf('brewedAt')}
-            inputProps={{ type: 'datetime-local', max: nowLocal }}
-          />
-        </section>
-
-        <section aria-labelledby="brew-results" className={styles.section}>
-          <h2 id="brew-results" className={styles.sectionTitle}>
-            Results
-          </h2>
-          <div className={styles.grid}>
-            {context.showDrawdown ? (
-              <DurationField
-                id={brewFieldId('drawdownS')}
-                label="Drawdown"
-                description="When the water finished draining"
-                value={form.drawdownS}
-                onChange={(v) => set('drawdownS', v)}
-                maxSeconds={BREW_LIMITS.drawdownMaxS}
-                errorMessage={errorOf('drawdownS')}
-              />
-            ) : null}
-            <WeightField
-              id={brewFieldId('beverageG')}
-              label="Beverage weight"
-              description="What came out, before any bypass"
-              min={0}
-              value={form.beverageG}
-              onChange={(v) => set('beverageG', v)}
-              isInvalid={Boolean(errorOf('beverageG'))}
-              errorMessage={errorOf('beverageG')}
-            />
-            <TypedNumberField
-              id={brewFieldId('tdsPct')}
-              label="TDS (%)"
-              description="Optional, e.g. 1.38"
-              value={form.tdsPct}
-              typed={typed.tdsPct}
-              error={errorOf('tdsPct')}
-              onChange={(v, text) => {
-                set('tdsPct', v);
-                setTypedText('tdsPct', text);
-              }}
-            />
-          </div>
-        </section>
-
-        <section aria-labelledby="brew-extraction" className={styles.section}>
-          <h2 id="brew-extraction" className={styles.sectionTitle}>
-            Extraction
-          </h2>
-          <ExtractionPanel model={model} showDrawdown={context.showDrawdown} />
-        </section>
-
-        <section aria-labelledby="brew-taste" className={styles.section}>
-          <h2 id="brew-taste" className={styles.sectionTitle}>
-            Taste
-          </h2>
-          <p className={styles.note}>Score what you tasted. Anything you skip stays “Not scored”.</p>
-          <div className={styles.taste}>
-            <div className={styles.sliders}>
-              {TASTE_KEYS.map((key) => (
-                <TasteSlider
-                  key={key}
-                  id={brewFieldId(key)}
-                  label={TASTE_LABELS[key]}
-                  isRequired={key === 'overall'}
-                  value={form[key]}
-                  onChange={(v) => set(key, v)}
-                  isInvalid={key === 'overall' && Boolean(errorOf('overall'))}
-                  errorMessage={key === 'overall' ? errorOf('overall') : undefined}
-                />
-              ))}
-            </div>
-            <div className={styles.radar}>
-              <LazyTasteRadar series={[{ key: 'brew', name: 'This brew', values: scores }]} />
-            </div>
-          </div>
-        </section>
-
-        <section aria-labelledby="brew-flavours" className={styles.section}>
-          <h2 id="brew-flavours" className={styles.sectionTitle}>
-            Flavours
-          </h2>
-          <FlavourPicker
-            value={form.flavours}
-            recent={recent.data ?? []}
-            onChange={(tags) => set('flavours', tags)}
-          />
-          {errorOf('flavours') ? <p className={styles.hintError}>{errorOf('flavours')}</p> : null}
-        </section>
-
-        <section aria-labelledby="brew-tasted" className={styles.section}>
-          <h2 id="brew-tasted" className={styles.sectionTitle}>
-            Tasted at
-          </h2>
-          <TastedAt
-            temp={form.tastedTemp}
-            onTempChange={(v) => set('tastedTemp', v)}
-            minutes={form.tastedAfterMin}
-            typedMinutes={typed.tastedAfterMin}
-            onMinutesChange={(v, text) => {
-              set('tastedAfterMin', v);
-              setTypedText('tastedAfterMin', text);
-            }}
-            minutesError={errorOf('tastedAfterMin')}
-          />
-        </section>
-
-        <section aria-labelledby="brew-notes" className={styles.section}>
-          <h2 id="brew-notes" className={styles.sectionTitle}>
-            Notes
-          </h2>
-          <Textarea
-            id={brewFieldId('notes')}
-            label="Notes"
-            rows={4}
-            maxLength={BREW_LIMITS.notesMax}
-            value={form.notes}
-            onChange={(v) => set('notes', v)}
-            isInvalid={Boolean(errorOf('notes'))}
-            errorMessage={errorOf('notes')}
-          />
-          <p className={styles.counter} aria-live="polite">
-            {form.notes.length} / {BREW_LIMITS.notesMax}
-          </p>
-        </section>
-
-        <section aria-labelledby="brew-next" className={styles.section}>
-          <h2 id="brew-next" className={styles.sectionTitle}>
-            Next time I’ll change…
-          </h2>
-          <Textarea
-            id={brewFieldId('nextChange')}
-            label="Next time I’ll change…"
-            rows={3}
-            maxLength={BREW_LIMITS.nextChangeMax}
-            value={form.nextChange}
-            onChange={(v) => set('nextChange', v)}
-            isInvalid={Boolean(errorOf('nextChange'))}
-            errorMessage={errorOf('nextChange')}
-          />
-          <p className={styles.counter} aria-live="polite">
-            {form.nextChange.length} / {BREW_LIMITS.nextChangeMax}
-          </p>
-        </section>
-
-        <div className={styles.footer}>
-          <Button type="submit" isPending={isSaving} pendingLabel="Saving…" fullWidth>
+    <form id="brew-form" onSubmit={submit} noValidate aria-label={title} className={cards.wrap}>
+      <div className={styles.form}>
+        <header className={styles.bar}>
+          <Button variant="ghost" onPress={onCancel} isDisabled={isSaving}>
+            Cancel
+          </Button>
+          <h1 className={styles.title}>{title}</h1>
+          <Button type="submit" isPending={isSaving} pendingLabel="Saving…">
             {saveLabel}
           </Button>
+        </header>
+
+        <div className={styles.body}>
+          {notices}
+          <FormErrorSummary errors={summary} />
+
+          <div className={cards.cards}>
+            <section aria-labelledby="brew-setup" className={cards.card}>
+              <h2 id="brew-setup" className={cards.cardTitle}>
+                Setup
+              </h2>
+              <p className={styles.recipeName}>{header.recipeName}</p>
+              <div className={styles.chips}>
+                <Badge>{header.versionLabel}</Badge>
+                {header.changes.map((c) => (
+                  <Badge key={c} tone="changed" icon={Pencil}>
+                    {`Changed: ${c}`}
+                  </Badge>
+                ))}
+              </div>
+              {header.note ? <p className={styles.note}>{header.note}</p> : null}
+              {setupExtra}
+              <TextField
+                id={brewFieldId('brewedAt')}
+                label="Brewed at"
+                isRequired
+                value={brewedText}
+                onChange={(text) => {
+                  setBrewedText(text);
+                  set('brewedAt', fromLocalInput(text));
+                }}
+                isInvalid={Boolean(errorOf('brewedAt'))}
+                errorMessage={errorOf('brewedAt')}
+                inputProps={{ type: 'datetime-local', max: nowLocal }}
+              />
+              <TastedAt
+                temp={form.tastedTemp}
+                onTempChange={(v) => set('tastedTemp', v)}
+                minutes={form.tastedAfterMin}
+                typedMinutes={typed.tastedAfterMin}
+                onMinutesChange={(v, text) => {
+                  set('tastedAfterMin', v);
+                  setTypedText('tastedAfterMin', text);
+                }}
+                minutesError={errorOf('tastedAfterMin')}
+              />
+            </section>
+
+            <section aria-labelledby="brew-results" className={cards.card}>
+              <h2 id="brew-results" className={cards.cardTitle}>
+                Results
+              </h2>
+              <div className={styles.grid}>
+                {context.showDrawdown ? (
+                  <DurationField
+                    id={brewFieldId('drawdownS')}
+                    label="Drawdown"
+                    value={form.drawdownS}
+                    onChange={(v) => set('drawdownS', v)}
+                    maxSeconds={BREW_LIMITS.drawdownMaxS}
+                    errorMessage={errorOf('drawdownS')}
+                  />
+                ) : null}
+                <WeightField
+                  id={brewFieldId('beverageG')}
+                  label="Beverage weight"
+                  description="Before bypass"
+                  min={0}
+                  value={form.beverageG}
+                  onChange={(v) => set('beverageG', v)}
+                  isInvalid={Boolean(errorOf('beverageG'))}
+                  errorMessage={errorOf('beverageG')}
+                />
+                <TypedNumberField
+                  id={brewFieldId('tdsPct')}
+                  label="TDS (%)"
+                  description="e.g. 1.38"
+                  value={form.tdsPct}
+                  typed={typed.tdsPct}
+                  error={errorOf('tdsPct')}
+                  onChange={(v, text) => {
+                    set('tdsPct', v);
+                    setTypedText('tdsPct', text);
+                  }}
+                />
+              </div>
+              <ExtractionPanel model={model} showDrawdown={context.showDrawdown} />
+            </section>
+
+            <section aria-labelledby="brew-sensory" className={cards.card}>
+              <h2 id="brew-sensory" className={cards.cardTitle}>
+                Sensory
+              </h2>
+              <div className={styles.sensory}>
+                <div className={styles.sliders}>
+                  {ATTRIBUTE_KEYS.map((key) => (
+                    <Slider
+                      key={key}
+                      label={TASTE_LABELS[key]}
+                      value={form[key]}
+                      onChange={(v) => set(key, v)}
+                    />
+                  ))}
+                  <OverallSlider
+                    id={brewFieldId('overall')}
+                    label="Overall"
+                    value={form.overall}
+                    onChange={(v) => set('overall', v)}
+                    isInvalid={Boolean(errorOf('overall'))}
+                    errorMessage={errorOf('overall')}
+                  />
+                </div>
+                <div className={styles.radar}>
+                  <p className={styles.overallBig} data-testid="overall-score">
+                    <span className={styles.overallValue}>{overallText}</span>
+                    {form.overall == null ? null : <span className={styles.overallOf}> / 10</span>}
+                  </p>
+                  <LazyTasteRadar
+                    series={[{ key: 'brew', name: 'This brew', values: scores, overall: form.overall }]}
+                  />
+                </div>
+              </div>
+            </section>
+
+            <div className={cards.stack}>
+              <section aria-labelledby="brew-flavours" className={cards.card}>
+                <h2 id="brew-flavours" className={cards.cardTitle}>
+                  Flavour notes
+                </h2>
+                <FlavourPicker
+                  value={form.flavours}
+                  recent={recent.data ?? []}
+                  onChange={(tags) => set('flavours', tags)}
+                />
+                {errorOf('flavours') ? <p className={styles.hintError}>{errorOf('flavours')}</p> : null}
+              </section>
+
+              <section aria-labelledby="brew-notes" className={cards.card}>
+                <h2 id="brew-notes" className={cards.cardTitle}>
+                  Notes
+                </h2>
+                <Textarea
+                  id={brewFieldId('notes')}
+                  label="Notes"
+                  rows={3}
+                  maxLength={BREW_LIMITS.notesMax}
+                  value={form.notes}
+                  onChange={(v) => set('notes', v)}
+                  isInvalid={Boolean(errorOf('notes'))}
+                  errorMessage={errorOf('notes')}
+                />
+                <p className={styles.counter} aria-live="polite">
+                  {form.notes.length} / {BREW_LIMITS.notesMax}
+                </p>
+                <Textarea
+                  id={brewFieldId('nextChange')}
+                  label="Next time I’ll change…"
+                  rows={2}
+                  maxLength={BREW_LIMITS.nextChangeMax}
+                  value={form.nextChange}
+                  onChange={(v) => set('nextChange', v)}
+                  isInvalid={Boolean(errorOf('nextChange'))}
+                  errorMessage={errorOf('nextChange')}
+                />
+                <p className={styles.counter} aria-live="polite">
+                  {form.nextChange.length} / {BREW_LIMITS.nextChangeMax}
+                </p>
+              </section>
+            </div>
+          </div>
+
+          <div className={styles.footer}>
+            <Button type="submit" isPending={isSaving} pendingLabel="Saving…" fullWidth>
+              {saveLabel}
+            </Button>
+          </div>
         </div>
       </div>
     </form>

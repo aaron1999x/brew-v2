@@ -8,7 +8,6 @@ import {
   SliderThumb,
   SliderTrack,
 } from 'react-aria-components';
-import { Button } from '@/components/ui/Button/Button';
 import sliderStyles from '@/components/ui/Slider/Slider.module.css';
 import { cx } from '@/lib/cx';
 import styles from './TasteSlider.module.css';
@@ -17,11 +16,9 @@ type Props = Readonly<{
   /** The input's id, so the error summary can focus it. */
   id: string;
   label: string;
-  /** 0–10 in half steps, or null while not scored. */
+  /** 0–10 in half steps, or null while empty. */
   value: number | null;
-  onChange: (value: number | null) => void;
-  /** The overall score is the one required score. */
-  isRequired?: boolean;
+  onChange: (value: number) => void;
   isInvalid?: boolean;
   errorMessage?: string;
 }>;
@@ -32,26 +29,27 @@ const format = new Intl.NumberFormat(undefined, { minimumFractionDigits: 1, maxi
 const STEP_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown']);
 
 /**
- * A taste score from 0 to 10 in half steps that starts "Not scored" (hollow thumb). The first tap or
- * drag sets a value; with a keyboard the first arrow key sets 5.0 and Home and End set 0 and 10.
- * Clear puts it back to not scored.
+ * The overall score: a slider from 0 to 10 in half steps that starts empty, with no thumb showing.
+ * The first tap or drag scores it; with a keyboard the first arrow key sets 5.0 (Home and End set
+ * 0 and 10). It is the one required score.
  */
-export function TasteSlider({ id, label, value, onChange, isRequired, isInvalid, errorMessage }: Props) {
+export function OverallSlider({ id, label, value, onChange, isInvalid, errorMessage }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const unscored = value == null;
+  const empty = value == null;
 
   // The input's id (for the error summary's link) and the phrase a screen reader says for the value.
   useEffect(() => {
     const input = inputRef.current;
     if (!input) return;
     input.id = id;
-    input.setAttribute('aria-valuetext', unscored ? 'not scored' : `${format.format(value)} out of 10`);
+    input.setAttribute('aria-valuetext', empty ? 'not scored' : `${format.format(value)} out of 10`);
+    input.setAttribute('aria-required', 'true');
     if (isInvalid) input.setAttribute('aria-invalid', 'true');
     else input.removeAttribute('aria-invalid');
-  }, [id, unscored, value, isInvalid]);
+  }, [id, empty, value, isInvalid]);
 
   return (
-    <div className={styles.row} data-unscored={unscored ? '' : undefined}>
+    <div className={styles.row}>
       <AriaSlider
         className={sliderStyles.slider}
         value={value ?? 0}
@@ -64,17 +62,15 @@ export function TasteSlider({ id, label, value, onChange, isRequired, isInvalid,
         <div className={sliderStyles.header}>
           <Label className={sliderStyles.label}>
             {label}
-            {isRequired ? <span className={styles.required}> (required)</span> : null}
+            <span className={styles.required}> (required)</span>
           </Label>
           <SliderOutput className={sliderStyles.output}>
-            {({ state }) => (
-              <span className="num">{unscored ? 'Not scored' : state.getThumbValueLabel(0)}</span>
-            )}
+            {({ state }) => <span className="num">{empty ? 'Not scored' : state.getThumbValueLabel(0)}</span>}
           </SliderOutput>
         </div>
         <div
           onKeyDownCapture={(event) => {
-            if (!unscored) return;
+            if (!empty) return;
             if (STEP_KEYS.has(event.key)) onChange(5);
             else if (event.key === 'Home') onChange(0);
             else if (event.key === 'End') onChange(10);
@@ -84,19 +80,19 @@ export function TasteSlider({ id, label, value, onChange, isRequired, isInvalid,
           }}
           // A first touch or click scores it: the track then moves the value to where it was pressed.
           onPointerDownCapture={() => {
-            if (unscored) onChange(0);
+            if (empty) onChange(0);
           }}
         >
           <SliderTrack className={sliderStyles.track}>
             {({ state }) => (
               <>
                 <div className={sliderStyles.rail} />
-                {unscored ? null : (
+                {empty ? null : (
                   <div className={sliderStyles.fill} style={{ width: `${state.getThumbPercent(0) * 100}%` }} />
                 )}
                 <SliderThumb
                   inputRef={inputRef}
-                  className={cx(sliderStyles.thumb, unscored && styles.hollow)}
+                  className={cx(sliderStyles.thumb, empty && styles.hidden)}
                   data-primary-control=""
                 />
               </>
@@ -104,13 +100,6 @@ export function TasteSlider({ id, label, value, onChange, isRequired, isInvalid,
           </SliderTrack>
         </div>
       </AriaSlider>
-      <div className={styles.side}>
-        {unscored ? null : (
-          <Button variant="ghost" onPress={() => onChange(null)} aria-label={`Clear ${label}`}>
-            Clear
-          </Button>
-        )}
-      </div>
       {errorMessage ? <p className={styles.error}>{errorMessage}</p> : null}
     </div>
   );
