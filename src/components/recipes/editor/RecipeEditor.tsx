@@ -11,7 +11,6 @@ import { FormErrorSummary } from '@/components/ui/FormErrorSummary/FormErrorSumm
 import { TypedNumberField } from '@/components/ui/NumberField/TypedNumberField';
 import { Notice } from '@/components/ui/Notice/Notice';
 import { useOnlineStatus } from '@/components/ui/OfflineBanner/OfflineBanner';
-import { SegmentedControl } from '@/components/ui/SegmentedControl/SegmentedControl';
 import { Select } from '@/components/ui/Select/Select';
 import { ChevronDown } from 'lucide-react';
 import { GRIND_INPUT_PROPS } from '@/components/brews/QuickChangePanel';
@@ -341,7 +340,7 @@ function EditorForm({
     firstPour < 0
       ? 'Add a pour step'
       : nextPour
-        ? `${weight(draft.steps[firstPour]!.target_g as number)} · next pour at +${formatClock(nextPour.at_s - draft.steps[firstPour]!.at_s)}`
+        ? `${weight(draft.steps[firstPour]!.target_g as number)} · until ${formatClock(nextPour.at_s - draft.steps[firstPour]!.at_s)}`
         : weight(draft.steps[firstPour]!.target_g as number);
 
   // ---- live numbers ----
@@ -721,43 +720,23 @@ function EditorForm({
                     isInvalid={Boolean(error('brew_water_g'))}
                     errorMessage={error('brew_water_g')}
                   />
-                  <div className={styles.cell}>
-                    <WeightField
-                      id={fieldId('bypass_g')}
-                      label="Bypass water"
-                      description="Added to the cup"
-                      min={0}
-                      value={draft.bypass_g}
-                      onChange={(v) =>
-                        setDraft((d) => ({
-                          ...d,
-                          bypass_g: v,
-                          // Timing only means something with bypass: none without it, "after" once set.
-                          bypass_timing: v == null || v <= 0 ? 'none' : d.bypass_timing === 'none' ? 'after' : d.bypass_timing,
-                        }))
-                      }
-                      isInvalid={Boolean(error('bypass_g'))}
-                      errorMessage={error('bypass_g')}
-                    />
-                    {hasBypass ? (
-                      <div className={styles.compact}>
-                        <SegmentedControl
-                          id={fieldId('bypass_timing')}
-                          label="Bypass goes in"
-                          segments={BYPASS_TIMINGS.filter((t) => t !== 'none').map((t) => ({
-                            value: t,
-                            label: BYPASS_TIMING_LABELS[t],
-                          }))}
-                          value={draft.bypass_timing}
-                          onChange={(value) => set('bypass_timing', value as BypassTiming)}
-                          isInvalid={Boolean(error('bypass_timing'))}
-                        />
-                        {error('bypass_timing') ? (
-                          <p className={styles.fieldError}>{error('bypass_timing')}</p>
-                        ) : null}
-                      </div>
-                    ) : null}
-                  </div>
+                  <WeightField
+                    id={fieldId('bypass_g')}
+                    label="Bypass water (added to cup)"
+                    min={0}
+                    value={draft.bypass_g}
+                    onChange={(v) =>
+                      setDraft((d) => ({
+                        ...d,
+                        bypass_g: v,
+                        // Timing only means something with bypass: none without it, "after" once set.
+                        bypass_timing:
+                          v == null || v <= 0 ? 'none' : d.bypass_timing === 'none' ? 'after' : d.bypass_timing,
+                      }))
+                    }
+                    isInvalid={Boolean(error('bypass_g'))}
+                    errorMessage={error('bypass_g')}
+                  />
                   <TemperatureField
                     id={fieldId('temp_c')}
                     label="Water temperature"
@@ -781,9 +760,23 @@ function EditorForm({
                     isInvalid={Boolean(error('grind_setting'))}
                   />
                   <TypedNumberField label="Water hardness (ppm)" {...numberProps('water_ppm')} />
+                  {hasBypass ? (
+                    <Select
+                      id={fieldId('bypass_timing')}
+                      label="Bypass goes in"
+                      options={BYPASS_TIMINGS.filter((t) => t !== 'none').map((t) => ({
+                        id: t,
+                        label: BYPASS_TIMING_LABELS[t],
+                      }))}
+                      selectedKey={draft.bypass_timing === 'none' ? null : draft.bypass_timing}
+                      onSelectionChange={(key) => set('bypass_timing', String(key) as BypassTiming)}
+                      isInvalid={Boolean(error('bypass_timing'))}
+                      errorMessage={error('bypass_timing')}
+                    />
+                  ) : null}
                   <div className={styles.bloomCell} data-testid="bloom-readout">
                     <span className={styles.bloomLabel}>Bloom</span>
-                    <p className={styles.bloomValue}>{bloomText}</p>
+                    <p className={styles.bloomValue} data-bloom-value="">{bloomText}</p>
                     <span className={styles.bloomHint}>From your first pour</span>
                   </div>
                 </div>

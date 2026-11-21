@@ -304,24 +304,8 @@
   min-width: 0;
 }
 
-.cell {
-  display: grid;
-  gap: var(--space-2);
-  min-width: 0;
-}
-
-.compact {
-  min-width: 0;
-}
-
-/* The two bypass timings sit as a small segmented control under the bypass field. */
-.compact > * {
-  gap: var(--space-1);
-}
-
 .bloomCell {
   display: grid;
-  grid-column: span 2;
   gap: var(--space-1);
   min-width: 0;
 }
@@ -354,19 +338,4 @@
   .numberGrid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
-}
-
-/* In a narrow cell the two timings share the width and wrap rather than overflow. */
-.compact [data-primary-control] {
-  flex: 1 1 0;
-  min-width: 0;
-  padding-inline: var(--space-2);
-  text-align: center;
-  line-height: var(--type-label-line-height);
-}
-
-.compact [role='radiogroup'] > div {
-  display: flex;
-  width: 100%;
-  border-radius: var(--radius-lg);
 }

@@ -111,7 +111,10 @@ for (const fixture of fixtures) {
     if (v.temp_c != null) await fillNumber(page.getByLabel('Water temperature'), String(v.temp_c));
     if (v.bypass_g) {
       await fillNumber(page.getByLabel('Bypass water'), String(v.bypass_g));
-      await page.getByText(v.bypass_timing === 'after' ? 'After brewing' : 'Before brewing').click();
+      await page.getByRole('button', { name: /Bypass goes in/ }).click();
+      await page
+        .getByRole('option', { name: v.bypass_timing === 'after' ? 'After brewing' : 'Before brewing' })
+        .click();
     }
 
     // Steps: add each one, then set exactly what the fixture says (including a 12-hour steep).

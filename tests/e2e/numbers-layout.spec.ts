@@ -109,56 +109,93 @@ test.describe('the editor Numbers grid', () => {
     return { user, recipe };
   }
 
-  test('at 1280 px: four across, no field alone on a row except the last', async ({ page, users }) => {
+  test('at 1280 px: two rows of four, same tops, same input heights, no wrapped option', async ({
+    page,
+    users,
+  }) => {
     await open(page, users, 'numbers-1280', 1280);
     const grid = page.getByTestId('numbers-grid');
     const rows = await grid.evaluate((el) => {
-      const byTop = new Map<number, string[]>();
+      const byTop = new Map<number, { label: string; control: number }[]>();
       for (const child of Array.from(el.children)) {
         const r = child.getBoundingClientRect();
         if (r.width === 0) continue;
+        // The box the person types into (or reads): the input, the select button or the bloom value.
+        const box = child.querySelector('input, button, [data-bloom-value]') as HTMLElement | null;
         const top = Math.round(r.top);
-        byTop.set(top, [...(byTop.get(top) ?? []), (child.textContent ?? '').trim().slice(0, 24)]);
+        byTop.set(top, [
+          ...(byTop.get(top) ?? []),
+          {
+            label: (child.textContent ?? '').trim().slice(0, 24),
+            control: Math.round((box?.closest('[class*=control], [data-bloom-value]') ?? box ?? child).getBoundingClientRect().height),
+          },
+        ]);
       }
       return [...byTop.entries()].sort((a, b) => a[0] - b[0]).map(([, items]) => items);
     });
-    expect(rows).toHaveLength(2);
-    expect(rows[0]).toHaveLength(4);
-    expect(rows[1]).toHaveLength(3); // grind, water hardness, bloom (two wide)
-    rows.slice(0, -1).forEach((row) => expect(row.length).toBeGreaterThan(1));
+    // Row 1: dose, water, bypass, temperature. Row 2: grind, hardness, bypass goes in, bloom.
+    expect(rows.map((r) => r.length)).toEqual([4, 4]);
+    for (const row of rows) expect(new Set(row.map((c) => c.control)).size).toBe(1);
 
-    // Order of row one.
-    const x = async (label: string) =>
-      (await page.getByLabel(label).first().boundingBox())!.x;
+    // Every field in a row has the same top (the grid's rows are the tops found above), in order.
+    const x = async (label: string) => (await page.getByLabel(label).first().boundingBox())!.x;
     expect(await x('Coffee dose')).toBeLessThan(await x('Brew water'));
     expect(await x('Brew water')).toBeLessThan(await x('Bypass water'));
     expect(await x('Bypass water')).toBeLessThan(await x('Water temperature'));
+    // No hint line in row one.
+    for (const label of ['Coffee dose', 'Brew water', 'Bypass water', 'Water temperature']) {
+      await expect(page.getByLabel(label).first().locator('xpath=ancestor::*[contains(@class,"field")][1]')).not.toContainText('Added to the cup');
+    }
+    await expect(page.getByLabel('Bypass water (added to cup)')).toBeVisible();
 
-    // Bypass shows its timing only when there is bypass; Bloom is read-only and derived.
-    await expect(page.getByRole('radio', { name: 'After brewing' })).toBeChecked();
-    await expect(page.getByTestId('bloom-readout')).toContainText('40 g · next pour at +0:40');
+    // The timing is a one-line select; its options do not wrap.
+    const timing = page.getByRole('button', { name: /Bypass goes in/ });
+    await expect(timing).toContainText('After brewing');
+    await timing.click();
+    const options = page.getByRole('option');
+    await expect(options).toHaveText(['Before brewing', 'After brewing']);
+    const wrapped = await options.evaluateAll((els) =>
+      els.filter((e) => {
+        const label = e.querySelector('span') ?? e;
+        const style = getComputedStyle(label);
+        return label.getBoundingClientRect().height > parseFloat(style.lineHeight) * 1.5;
+      }).length,
+    );
+    expect(wrapped).toBe(0);
+    await page.keyboard.press('Escape');
+
+    await expect(page.getByTestId('bloom-readout')).toContainText('40 g · until 0:40');
+    await expect(page.getByTestId('bloom-readout')).toContainText('From your first pour');
     // The vary switch and its hint sit under the grid, then More options.
     await expect(page.getByText('Each pour sets its own temperature in Steps')).toBeVisible();
     await expect(page.getByRole('button', { name: 'More options' })).toBeVisible();
     await noSidewaysScroll(page);
   });
 
-  test('bypass timing appears only with bypass; zero clears it', async ({ page, users }) => {
+  test('bypass timing appears only with bypass, and Bloom takes its place without it', async ({
+    page,
+    users,
+  }) => {
     await open(page, users, 'numbers-bypass', 1280);
     const bypass = page.getByLabel('Bypass water');
-    await expect(page.getByRole('radio', { name: 'Before brewing' })).toBeVisible();
-    await expect(page.getByRole('radio', { name: 'None' })).toHaveCount(0);
+    const timing = page.getByRole('button', { name: /Bypass goes in/ });
+    const bloom = page.getByTestId('bloom-readout');
+    await expect(timing).toBeVisible();
+    const withTiming = (await bloom.boundingBox())!.x;
     await bypass.fill('');
     await bypass.blur();
-    await expect(page.getByRole('radio', { name: 'After brewing' })).toHaveCount(0);
+    await expect(timing).toHaveCount(0);
+    // Bloom moved into the empty cell: no gap in row two.
+    expect((await bloom.boundingBox())!.x).toBeLessThan(withTiming);
     await bypass.fill('30');
     await bypass.blur();
-    await expect(page.getByRole('radio', { name: 'After brewing' })).toBeChecked();
-    await page.getByRole('radio', { name: 'Before brewing' }).click({ force: true });
-    await expect(page.getByRole('radio', { name: 'Before brewing' })).toBeChecked();
+    await expect(timing).toContainText('After brewing');
+    await timing.click();
+    await page.getByRole('option', { name: 'Before brewing' }).click();
+    await expect(timing).toContainText('Before brewing');
     await bypass.fill('0');
     await bypass.blur();
-    await expect(page.getByRole('radio', { name: 'Before brewing' })).toHaveCount(0);
+    await expect(timing).toHaveCount(0);
   });
 
   test('values are left-aligned', async ({ page, users }) => {
