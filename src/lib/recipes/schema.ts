@@ -58,9 +58,27 @@ function ranged(what: string, rules: NumberRules, invalid: string = `Enter ${wha
     .pipe(z.number().min(rules.min, `${what} is too low`).max(rules.max, `${what} is too high`));
 }
 
+/**
+ * What a field says when its text isn't a usable number (or, for a whole-number field, has a
+ * decimal point). The editor shows the same text whether the text is unreadable ("abc") or a number
+ * that isn't allowed ("7.5" microns), through the error summary.
+ */
+export const NUMBER_HELP = {
+  altitude_m: 'Use whole metres, e.g. 1800',
+  colour_reading: 'Use a number, e.g. 58.5',
+  retention_ratio: 'Use a number, e.g. 2.0',
+  grind_microns: 'Use whole microns, e.g. 750',
+  water_ppm: 'Use whole ppm, e.g. 75',
+  tds_min: 'Use a number, e.g. 1.38',
+  tds_max: 'Use a number, e.g. 1.38',
+  ey_min: 'Use a number, e.g. 20.5',
+  ey_max: 'Use a number, e.g. 20.5',
+} as const;
+export type NumberHelpKey = keyof typeof NUMBER_HELP;
+
 /** Optional number: null/undefined become null, anything else must be in range. */
-const optNumber = (what: string, rules: NumberRules) =>
-  ranged(what, rules, `${what} must be a number`)
+const optNumber = (what: string, rules: NumberRules, invalid: string = `${what} must be a number`) =>
+  ranged(what, rules, invalid)
     .nullish()
     .transform((v): number | null => v ?? null);
 
@@ -185,7 +203,7 @@ const versionObject = z.object({
   origin: optText(LIMITS.coffeeText, 'The origin'),
   process: optText(LIMITS.process, 'The process'),
   varietal: optText(LIMITS.coffeeText, 'The varietal'),
-  altitude_m: optNumber('The altitude', { min: 0, max: LIMITS.altitudeM, dp: 0, int: true }),
+  altitude_m: optNumber('The altitude', { min: 0, max: LIMITS.altitudeM, dp: 0, int: true }, NUMBER_HELP.altitude_m),
   roast_level: z
     .enum(ROAST_LEVELS)
     .nullish()
@@ -195,7 +213,7 @@ const versionObject = z.object({
     .date({ error: 'Enter a valid date' })
     .nullish()
     .transform((v): string | null => v ?? null),
-  colour_reading: optNumber('The colour reading', { min: 0, max: 99999.9, dp: 1 }),
+  colour_reading: optNumber('The colour reading', { min: 0, max: 99999.9, dp: 1 }, NUMBER_HELP.colour_reading),
   colour_scale: optText(LIMITS.colourScale, 'The colour scale'),
   // gear
   gear: gearSnapshotSchema,
@@ -217,18 +235,18 @@ const versionObject = z.object({
     .enum(BYPASS_TIMINGS)
     .nullish()
     .transform((v) => v ?? 'none'),
-  retention_ratio: optNumber('The retention', { min: 0, max: 5, dp: 1 }),
+  retention_ratio: optNumber('The retention', { min: 0, max: 5, dp: 1 }, NUMBER_HELP.retention_ratio),
   temp_c: optNumber('The temperature', { min: 0, max: LIMITS.tempC, dp: 1 }),
   grind_setting: optText(LIMITS.grindSetting, 'The grind setting'),
-  grind_microns: optNumber('The grind size', { min: 50, max: 2000, dp: 0, int: true }),
-  water_ppm: optNumber('The water hardness', { min: 0, max: 1000, dp: 0, int: true }),
+  grind_microns: optNumber('The particle size', { min: 50, max: 2000, dp: 0, int: true }, NUMBER_HELP.grind_microns),
+  water_ppm: optNumber('The water hardness', { min: 0, max: 1000, dp: 0, int: true }, NUMBER_HELP.water_ppm),
   // targets
   drawdown_min_s: optNumber('The drawdown time', { min: 0, max: DURATION_MAX_S, dp: 0, int: true }),
   drawdown_max_s: optNumber('The drawdown time', { min: 0, max: DURATION_MAX_S, dp: 0, int: true }),
-  tds_min: optNumber('The TDS', { min: 0, max: 20, dp: 2 }),
-  tds_max: optNumber('The TDS', { min: 0, max: 20, dp: 2 }),
-  ey_min: optNumber('The extraction', { min: 0, max: 40, dp: 1 }),
-  ey_max: optNumber('The extraction', { min: 0, max: 40, dp: 1 }),
+  tds_min: optNumber('The TDS', { min: 0, max: 20, dp: 2 }, NUMBER_HELP.tds_min),
+  tds_max: optNumber('The TDS', { min: 0, max: 20, dp: 2 }, NUMBER_HELP.tds_max),
+  ey_min: optNumber('The extraction', { min: 0, max: 40, dp: 1 }, NUMBER_HELP.ey_min),
+  ey_max: optNumber('The extraction', { min: 0, max: 40, dp: 1 }, NUMBER_HELP.ey_max),
   // steps
   steps_schema: z
     .literal(1)

@@ -242,3 +242,52 @@
     grid-column: 1 / -1;
   }
 }
+
+/* "More options": rarely used fields behind a button (particle size, retention). */
+.more {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.moreToggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: var(--size-target-min);
+  padding: var(--space-2) var(--space-4);
+  border: var(--border-width-hairline) solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+  color: var(--color-text-primary);
+  font: inherit;
+  font-weight: var(--type-label-weight);
+  text-align: start;
+  cursor: pointer;
+}
+
+.moreClosed,
+.moreOpen {
+  display: inline-flex;
+}
+
+.moreOpen {
+  transform: rotate(180deg);
+}
+
+.moreFields {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.moreFields[hidden] {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .moreFields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}
