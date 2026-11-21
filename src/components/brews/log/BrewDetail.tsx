@@ -3,7 +3,7 @@
 import { ChevronLeft, Pencil, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { NotAvailable } from '@/components/feedback/NotAvailable';
 import { QueryBoundary } from '@/components/feedback/QueryBoundary';
 import { LazyPourCurve } from '@/components/recipes/LazyPourCurve';
@@ -25,7 +25,7 @@ import { ATTRIBUTE_KEYS, TASTE_LABELS } from '@/lib/brews/schema';
 import { toUserMessage } from '@/lib/errors/messages';
 import { newVersionPath, recipePath, versionPath } from '@/lib/recipes/paths';
 import { useUnits } from '@/lib/settings/useSettings';
-import { ExtractionPanel } from './ExtractionPanel';
+import { ExtractionPanel, TargetNote, targetTexts } from './ExtractionPanel';
 import { LazyTasteRadar } from './LazyTasteRadar';
 import cards from './BrewCards.module.css';
 import styles from './BrewDetail.module.css';
@@ -83,9 +83,10 @@ function Detail({ data }: Readonly<{ data: BrewDetailData }>) {
     targets,
     storedEy: brew.ey_pct,
   });
-  const tasted = tastedAtText(brew.tasted_temp, brew.tasted_after_min);
+  const tasted = tastedAtText(brew.tasted_temp);
   const scores = tasteValues(brew);
   const overall = brew.overall.toFixed(1);
+  const targetText = targetTexts(model, duration);
 
   function del() {
     remove.mutate(brew.id, {
@@ -112,7 +113,7 @@ function Detail({ data }: Readonly<{ data: BrewDetailData }>) {
   }
 
   return (
-    <article className={cards.wrap} aria-labelledby="brew-title">
+    <article className={styles.article} aria-labelledby="brew-title">
       <header className={styles.header}>
         <Link
           href={alive && handle && recipe ? recipePath(handle, recipe.slug) : '/home'}
@@ -190,8 +191,8 @@ function Detail({ data }: Readonly<{ data: BrewDetailData }>) {
             Setup
           </h2>
           <dl className={styles.facts}>
+            <Fact label="Recipe" value={`${brew.recipe_name_snapshot} · v${brew.version_no_snapshot}`} />
             <Fact label="Brewed at" value={dateTime(brew.brewed_at)} />
-            <Fact label="Version" value={`v${brew.version_no_snapshot}`} />
             {tasted ? <Fact label="Tasted at" value={tasted.replace(/^Tasted /, '')} /> : null}
             {note ? <Fact label="Changes" value={note.replace(CHANGE_NOTE_PREFIX, '')} /> : null}
           </dl>
@@ -202,14 +203,22 @@ function Detail({ data }: Readonly<{ data: BrewDetailData }>) {
             Results
           </h2>
           <dl className={styles.facts}>
-            {brew.drawdown_s != null ? <Fact label="Drawdown" value={duration(brew.drawdown_s)} /> : null}
+            {showDrawdown && brew.drawdown_s != null ? (
+              <Fact label="Drawdown" value={duration(brew.drawdown_s)}>
+                <TargetNote status={model.drawdownStatus} range={targetText.drawdown} />
+              </Fact>
+            ) : null}
             {brew.beverage_g != null ? <Fact label="Beverage weight" value={weight(brew.beverage_g)} /> : null}
-            {brew.tds_pct != null ? <Fact label="TDS" value={`${brew.tds_pct}%`} /> : null}
+            {brew.tds_pct != null ? (
+              <Fact label="TDS" value={`${brew.tds_pct}%`}>
+                <TargetNote status={model.tdsStatus} range={targetText.tds} />
+              </Fact>
+            ) : null}
           </dl>
-          <ExtractionPanel model={model} showDrawdown={showDrawdown} label="Extraction results" />
+          <ExtractionPanel model={model} label="Extraction results" />
         </section>
 
-        <section aria-labelledby="d-sensory" className={cards.card}>
+        <section aria-labelledby="d-sensory" className={`${cards.card} ${cards.full}`}>
           <h2 id="d-sensory" className={cards.cardTitle}>
             Sensory
           </h2>
@@ -227,12 +236,16 @@ function Detail({ data }: Readonly<{ data: BrewDetailData }>) {
               </li>
             </ul>
             <div className={styles.radar}>
+              <p className={styles.overallBig}>
+                <span className={styles.overallBigValue}>{overall}</span>
+                <span className={styles.overallOf}> / 10</span>
+              </p>
               <LazyTasteRadar series={[{ key: 'brew', name: 'This brew', values: scores, overall: brew.overall }]} />
             </div>
           </div>
         </section>
 
-        <div className={cards.stack}>
+        <>
           {brew.flavours.length > 0 ? (
             <section aria-labelledby="d-flavours" className={cards.card}>
               <h2 id="d-flavours" className={cards.cardTitle}>
@@ -262,7 +275,7 @@ function Detail({ data }: Readonly<{ data: BrewDetailData }>) {
               ) : null}
             </section>
           ) : null}
-        </div>
+        </>
 
         {version && version.steps.length > 0 ? (
           <section aria-labelledby="d-curve" className={`${cards.card} ${styles.wide}`}>
@@ -300,11 +313,18 @@ function Detail({ data }: Readonly<{ data: BrewDetailData }>) {
   );
 }
 
-function Fact({ label, value }: Readonly<{ label: string; value: string }>) {
+function Fact({
+  label,
+  value,
+  children,
+}: Readonly<{ label: string; value: string; children?: ReactNode }>) {
   return (
     <div className={styles.fact}>
       <dt>{label}</dt>
-      <dd>{value}</dd>
+      <dd>
+        {value}
+        {children ? <span className={styles.factNote}>{children}</span> : null}
+      </dd>
     </div>
   );
 }

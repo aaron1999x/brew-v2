@@ -38,6 +38,7 @@ export function TasteRadarChart({
         .join(' ')}`}
       attributes={ATTRIBUTES}
       series={series}
+      bare
       extraRows={[['Overall', ...series.map((s) => (s.overall == null ? 'Not scored' : s.overall))]]}
     />
   );

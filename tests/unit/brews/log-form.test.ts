@@ -28,20 +28,11 @@ describe('checkBrewForm', () => {
   });
 
   it('says what is wrong with text typed into a number field', () => {
-    const result = checkBrewForm(filled(), { tdsPct: 'abc', tastedAfterMin: '10 min' }, NOW);
+    const result = checkBrewForm(filled(), { tdsPct: 'abc' }, NOW);
     expect(result.ok).toBe(false);
     if (!result.ok) {
-      expect(result.issues).toEqual([
-        { field: 'tdsPct', message: 'Use a number, e.g. 1.38' },
-        { field: 'tastedAfterMin', message: 'Use whole minutes, e.g. 10' },
-      ]);
+      expect(result.issues).toEqual([{ field: 'tdsPct', message: 'Use a number, e.g. 1.38' }]);
     }
-  });
-
-  it('gives a fractional number of minutes the same wording', () => {
-    const result = checkBrewForm(filled({ tastedAfterMin: 7.5 }), {}, NOW);
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.issues[0]).toEqual({ field: 'tastedAfterMin', message: 'Use whole minutes, e.g. 10' });
   });
 
   it('refuses a brew time in the future and an unfinished time', () => {
@@ -127,11 +118,10 @@ describe('date-time text', () => {
 });
 
 describe('tasted at text', () => {
-  it('reads naturally with either or both', () => {
-    expect(tastedAtText('warm', 10)).toBe('Tasted warm, 10 min after brewing');
-    expect(tastedAtText('hot', null)).toBe('Tasted hot');
-    expect(tastedAtText(null, 20)).toBe('Tasted 20 min after brewing');
-    expect(tastedAtText(null, null)).toBeNull();
+  it('says the temperature; minutes after brewing is no longer shown', () => {
+    expect(tastedAtText('warm')).toBe('Tasted warm');
+    expect(tastedAtText('hot')).toBe('Tasted hot');
+    expect(tastedAtText(null)).toBeNull();
   });
 });
 

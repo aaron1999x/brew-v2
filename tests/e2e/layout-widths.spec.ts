@@ -12,11 +12,12 @@ const WIDE = 1280;
 const PHONE = 390;
 
 async function noSidewaysScroll(page: Page) {
-  const { scroll, client } = await page.evaluate(() => ({
-    scroll: document.documentElement.scrollWidth,
-    client: document.documentElement.clientWidth,
-  }));
-  expect(scroll).toBeLessThanOrEqual(client);
+  // Charts resize after a window resize, so give the layout a moment to settle.
+  await expect
+    .poll(() =>
+      page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth),
+    )
+    .toBeLessThanOrEqual(0);
 }
 
 /**
@@ -135,25 +136,66 @@ test('the brew log lays its cards out like the prototype, and starts each row at
   const card = (name: string) => page.getByRole('region', { name, exact: true });
   const [setup, results, sensory, flavour, notes] = ['Setup', 'Results', 'Sensory', 'Flavour notes', 'Notes'].map(card);
 
-  // Row 1: Setup | Results. Row 2: Sensory | the column of Flavour notes and Notes.
-  expect(await top(setup!)).toBe(await top(results!));
-  expect(await top(sensory!)).toBe(await top(flavour!));
-  const boxes = await Promise.all([setup, results, sensory, flavour, notes].map((c) => c!.boundingBox()));
-  const [bSetup, bResults, bSensory, bFlavour, bNotes] = boxes.map((b) => b!);
+  // Row 1: Setup | Results. Row 2: Sensory, the full width. Row 3: Flavour notes | Notes.
+  const [bSetup, bResults, bSensory, bFlavour, bNotes] = await Promise.all(
+    [setup, results, sensory, flavour, notes].map(async (c) => (await c!.boundingBox())!),
+  );
+  const bottom = (r: { y: number; height: number }) => Math.round(r.y + r.height);
+  // The cards in a row share the same top and the same bottom.
+  expect(Math.round(bSetup!.y)).toBe(Math.round(bResults!.y));
+  expect(bottom(bSetup!)).toBe(bottom(bResults!));
+  expect(Math.round(bFlavour!.y)).toBe(Math.round(bNotes!.y));
+  expect(bottom(bFlavour!)).toBe(bottom(bNotes!));
   expect(bResults!.x).toBeGreaterThan(bSetup!.x + bSetup!.width - 2);
-  expect(bFlavour!.x).toBeGreaterThan(bSensory!.x + bSensory!.width - 2);
+  expect(bNotes!.x).toBeGreaterThan(bFlavour!.x + bFlavour!.width - 2);
+  // Sensory has the whole row, between the two.
+  expect(bSensory!.width).toBeGreaterThan(bSetup!.width + bResults!.width - 4);
   expect(bSensory!.y).toBeGreaterThan(bSetup!.y + bSetup!.height - 2);
-  expect(bNotes!.y).toBeGreaterThan(bFlavour!.y + bFlavour!.height - 2);
+  expect(bFlavour!.y).toBeGreaterThan(bSensory!.y + bSensory!.height - 2);
 
-  // Inside Sensory: sliders on the left, the big overall score and the radar on the right.
+  // Inside Sensory: sliders on the left (about 55%), the big overall score above a radar at least
+  // 320 px wide on the right, and no heading or card of the chart's own.
+  // The sliders column: a bit over half of the card (about 55%).
+  const sliders = await page.getByText('Aftertaste', { exact: true }).locator('xpath=ancestor::div[contains(@class,"sliders")]').boundingBox();
   const slider = await page.getByRole('slider', { name: /^Sweetness/ }).boundingBox();
   const big = await page.getByTestId('overall-score').boundingBox();
   const radar = await page.getByRole('img', { name: /^Taste\./ }).boundingBox();
   expect(big!.x).toBeGreaterThan(slider!.x + slider!.width - 2);
   expect(radar!.x).toBeGreaterThan(slider!.x + slider!.width - 2);
+  expect(radar!.width).toBeGreaterThanOrEqual(320);
+  expect(big!.y).toBeLessThan(radar!.y); // the overall score is above the radar
+  expect(sliders!.width / bSensory!.width).toBeGreaterThan(0.4);
+  expect(sliders!.width / bSensory!.width).toBeLessThan(0.6);
+  await expect(page.getByRole('heading', { name: 'Taste' })).toHaveCount(0);
+  // The chart's own title is only for assistive technology: one clipped pixel, not a visible heading.
+  expect((await sensory!.getByText('Taste', { exact: true }).boundingBox())!.width).toBeLessThanOrEqual(2);
   const overallSlider = await page.getByRole('slider', { name: /^Overall/ }).boundingBox();
   const aftertaste = await page.getByRole('slider', { name: /^Aftertaste/ }).boundingBox();
   expect(overallSlider!.y).toBeGreaterThan(aftertaste!.y); // Overall is under the attributes
+
+  // Results: the three tiles are one row, with no orphan, inside the card.
+  const tiles = await page.getByLabel('Extraction', { exact: true }).locator('> div').evaluateAll((els) =>
+    els.map((e) => ({ top: Math.round(e.getBoundingClientRect().top), right: e.getBoundingClientRect().right })),
+  );
+  expect(tiles).toHaveLength(3);
+  expect(new Set(tiles.map((t) => t.top)).size).toBe(1);
+  expect(Math.max(...tiles.map((t) => t.right))).toBeLessThanOrEqual(bResults!.x + bResults!.width);
+
+  // Setup: the recipe name and version chip share a line; the chips are one size.
+  const name = await page.getByText('Morning V60', { exact: true }).first().boundingBox();
+  const version = await setup!.getByText('v1', { exact: true }).boundingBox();
+  expect(Math.abs((name!.y + name!.height / 2) - (version!.y + version!.height / 2))).toBeLessThan(12);
+  const hot = await page.getByRole('button', { name: 'Hot' }).boundingBox();
+  const peach = await page.getByRole('row', { name: 'peach' }).boundingBox();
+  expect(Math.round(hot!.height)).toBe(Math.round(peach!.height));
+
+  // Save at the end is the same size as the one in the top bar, aligned right.
+  const saves = page.getByRole('button', { name: 'Save', exact: true });
+  const first = await saves.first().boundingBox();
+  const last = await saves.last().boundingBox();
+  expect(Math.round(last!.height)).toBe(Math.round(first!.height));
+  expect(Math.round(last!.width)).toBe(Math.round(first!.width));
+  expect(last!.x + last!.width).toBeGreaterThan(bSensory!.x + bSensory!.width - 4);
 
   // The container is the wide one.
   await expectWide(page);
@@ -178,7 +220,11 @@ test('the brew detail uses the same cards, read-only', async ({ page, users }) =
 
   const card = (name: string) => page.getByRole('region', { name, exact: true });
   expect(await top(card('Setup'))).toBe(await top(card('Results')));
-  expect(await top(card('Sensory'))).toBe(await top(card('Flavour notes')));
+  expect(await top(card('Flavour notes'))).toBe(await top(card('Notes')));
+  const sensory = (await card('Sensory').boundingBox())!;
+  expect(sensory.width).toBeGreaterThan(1000);
+  expect((await page.getByRole('img', { name: /^Taste\./ }).boundingBox())!.width).toBeGreaterThanOrEqual(320);
+  await expect(page.getByText('Minutes after brewing')).toHaveCount(0);
   await expect(page.getByLabel('Overall score 8.5 out of 10')).toBeVisible();
   await expect(page.getByRole('img', { name: /^Taste\./ })).toHaveAccessibleName(/overall 8\.5/);
   await expectWide(page);

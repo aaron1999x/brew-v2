@@ -72,7 +72,23 @@
   align-items: start;
 }
 
-/* Sliders on the left, the overall score and the radar on the right, when the card is wide enough. */
+/* Recipe name and version chip on one line, as on the recipe page. */
+.nameRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* A result input with its target status directly under it. */
+.withNote {
+  display: grid;
+  gap: var(--space-1);
+  align-content: start;
+  min-width: 0;
+}
+
+/* Sliders on the left (about 55%), the overall score and a bigger radar on the right, when the card is wide enough. */
 .sensory {
   display: grid;
   gap: var(--space-3);
@@ -94,8 +110,14 @@
 
 @container (min-width: 34rem) {
   .sensory {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+    grid-template-columns: minmax(0, 55fr) minmax(0, 45fr);
+    column-gap: var(--space-8);
     align-items: start;
+  }
+
+  /* More room between the sliders, and longer tracks (the column is wider). */
+  .sliders {
+    gap: var(--space-3);
   }
 }
 
@@ -123,13 +145,6 @@
   min-width: 0;
 }
 
-.tasted {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
-  gap: var(--space-3);
-  align-items: start;
-}
-
 .tastedBlock {
   display: grid;
   gap: var(--space-1);
@@ -143,34 +158,13 @@
 
 .toggleGroup {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
 }
 
-.toggle {
-  flex: 1;
-  min-height: var(--size-target-min);
-  padding: 0 var(--space-3);
-  border: var(--border-width-default) solid var(--color-border-strong);
-  border-radius: var(--radius-full);
-  background: var(--color-bg-surface);
-  color: var(--color-text-primary);
-  font: inherit;
-  font-weight: var(--type-label-weight);
-  cursor: pointer;
-}
-
-.toggleOn {
-  border-color: var(--color-accent-default);
-  background: var(--color-accent-default);
-  color: var(--color-text-on-accent);
-}
-
-.toggle:focus-visible {
-  outline: var(--border-width-focus) solid var(--color-focus-ring);
-  outline-offset: 2px;
-}
-
 .footer {
+  display: flex;
+  justify-content: flex-end;
   padding-top: var(--space-2);
 }
 

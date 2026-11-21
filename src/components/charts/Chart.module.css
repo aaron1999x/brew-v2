@@ -147,3 +147,21 @@
 .table tbody th {
   font-weight: var(--type-body-weight);
 }
+
+/* A chart placed inside a card of its own page: no frame of its own, and the title is only for assistive technology. */
+.bare {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+
+.hiddenTitle {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

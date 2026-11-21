@@ -126,17 +126,24 @@ test('EY and the target flags: in range, below and above', async ({ page, users 
   await page.getByLabel('Beverage weight').blur();
   await page.getByLabel('TDS (%)').fill('1.4');
   // 1.4 × 210 ÷ 15 = 19.6: in range.
+  // EY is a tile (three tiles in one row); TDS shows its status directly under its input.
+  const results = page.getByRole('region', { name: 'Results', exact: true });
   await expect(extraction).toContainText('19.6%');
-  await expect(extraction).toContainText('In range (19–21%)');
-  await expect(extraction).toContainText('In range (1.3–1.5%)');
+  await expect(extraction).toContainText('In range · 19–21%');
+  await expect(results).toContainText('In range · 1.3–1.5');
 
   await page.getByLabel('TDS (%)').fill('1.2'); // 16.8%: below
-  await expect(extraction).toContainText('Below (19–21%)');
-  await expect(extraction).toContainText('Below (1.3–1.5%)');
+  await expect(extraction).toContainText('Below · 19–21%');
+  await expect(results).toContainText('Below · 1.3–1.5');
 
   await page.getByLabel('TDS (%)').fill('1.7'); // 23.8%: above
-  await expect(extraction).toContainText('Above (19–21%)');
-  await expect(extraction).toContainText('Above (1.3–1.5%)');
+  await expect(extraction).toContainText('Above · 19–21%');
+  await expect(results).toContainText('Above · 1.3–1.5');
+
+  // Drawdown (2:45–3:15 target): its status is under the input, too.
+  await page.getByLabel('Drawdown').fill('2:00');
+  await page.getByLabel('Drawdown').blur();
+  await expect(results).toContainText('Below · 2:45–3:15');
 });
 
 test('text in a number field is kept and explained when saving', async ({ page, users }) => {
@@ -147,13 +154,10 @@ test('text in a number field is kept and explained when saving', async ({ page, 
 
   await page.getByLabel('TDS (%)').pressSequentially('abc');
   await expect(page.getByLabel('TDS (%)')).toHaveValue('abc');
-  await page.getByLabel('Minutes after brewing').pressSequentially('7.5');
-  await expect(page.getByLabel('Minutes after brewing')).toHaveValue('7.5');
   await save(page);
   const summary = page.locator(SUMMARY);
   await expect(summary).toBeFocused();
-  await expect(summary.getByRole('link')).toHaveText(['Use a number, e.g. 1.38', 'Use whole minutes, e.g. 10']);
-  await page.getByLabel('Minutes after brewing').fill('10');
+  await expect(summary.getByRole('link')).toHaveText(['Use a number, e.g. 1.38']);
   await page.getByLabel('TDS (%)').fill('1.38');
   await save(page);
   await page.waitForURL(/\/brews\/[0-9a-f-]{36}$/);
@@ -176,7 +180,6 @@ test('log, detail, edit, delete and undo, next version with the pinned note, and
   await page.getByLabel('Add your own').fill('toasted almond');
   await page.getByRole('button', { name: 'Add', exact: true }).click();
   await page.getByRole('button', { name: 'Warm' }).click();
-  await page.getByLabel('Minutes after brewing').fill('10');
   await notesField(page).fill('Sweet and clean');
   await nextField(page).fill('Grind a touch finer');
   await page.getByLabel('Beverage weight').fill('210');
@@ -192,7 +195,8 @@ test('log, detail, edit, delete and undo, next version with the pinned note, and
   await expect(page.getByLabel('Overall score 5.5 out of 10')).toBeVisible();
   await expect(page.getByLabel('Extraction results')).toContainText('19.6%');
   await expect(page.getByText('toasted almond')).toBeVisible();
-  await expect(page.getByText('warm, 10 min after brewing')).toBeVisible();
+  await expect(page.getByText('Minutes after brewing')).toHaveCount(0);
+  await expect(page.getByLabel('Setup', { exact: true })).toContainText('warm');
   await expect(page.getByText('Grind a touch finer')).toBeVisible();
   await expect(page.getByRole('img', { name: /^Pour curve\./ })).toBeVisible();
 

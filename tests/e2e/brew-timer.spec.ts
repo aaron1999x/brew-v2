@@ -372,7 +372,7 @@ test.describe('the guided timer', () => {
     // The log opens with the drawdown filled in (2:40 to 2:42), against the 2:45–3:15 target.
     await expect(page.getByRole('heading', { level: 1, name: 'Log brew' })).toBeVisible();
     await expect(page.getByLabel('Drawdown')).toHaveValue(/^2:4[0-2]$/);
-    await expect(page.getByLabel('Extraction', { exact: true })).toContainText('Below (2:45–3:15)');
+    await expect(page.getByRole('region', { name: 'Results', exact: true })).toContainText('Below · 2:45–3:15');
   });
 
   test('a French press ends with "Done", with no drawdown', async ({ page, users }) => {

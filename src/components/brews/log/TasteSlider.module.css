@@ -21,3 +21,8 @@
   font-size: var(--type-body-small-size);
   font-weight: var(--type-label-weight);
 }
+
+/* As in the prototype, the Overall label is in the accent colour. */
+.accent {
+  color: var(--color-accent-on-inset);
+}

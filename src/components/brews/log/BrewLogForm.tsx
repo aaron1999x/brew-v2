@@ -11,6 +11,7 @@ import { TextField } from '@/components/ui/TextField/TextField';
 import { Textarea } from '@/components/ui/Textarea/Textarea';
 import { DurationField } from '@/components/ui/UnitFields/DurationField';
 import { WeightField } from '@/components/ui/UnitFields/WeightField';
+import { useUnits } from '@/lib/settings/useSettings';
 import { extractionModel, type BrewTargets } from '@/lib/brews/extraction';
 import {
   brewFieldId,
@@ -22,7 +23,7 @@ import {
 } from '@/lib/brews/form';
 import { useRecentFlavourTags } from '@/lib/brews/queries';
 import { ATTRIBUTE_KEYS, BREW_LIMITS, TASTE_LABELS, type BrewLogForm } from '@/lib/brews/schema';
-import { ExtractionPanel } from './ExtractionPanel';
+import { ExtractionPanel, TargetNote, targetTexts } from './ExtractionPanel';
 import { FlavourPicker } from './FlavourPicker';
 import { LazyTasteRadar } from './LazyTasteRadar';
 import { TastedAt } from './TastedAt';
@@ -149,6 +150,8 @@ export function BrewLogFormView({
   const scores = tasteValues(form);
   const nowLocal = toLocalInput(new Date().toISOString());
 
+  const { duration } = useUnits();
+  const targetText = targetTexts(model, duration);
   const overallText = form.overall == null ? 'Not scored' : form.overall.toFixed(1);
   return (
     <form id="brew-form" onSubmit={submit} noValidate aria-label={title} className={cards.wrap}>
@@ -172,9 +175,11 @@ export function BrewLogFormView({
               <h2 id="brew-setup" className={cards.cardTitle}>
                 Setup
               </h2>
-              <p className={styles.recipeName}>{header.recipeName}</p>
-              <div className={styles.chips}>
+              <div className={styles.nameRow}>
+                <p className={styles.recipeName}>{header.recipeName}</p>
                 <Badge>{header.versionLabel}</Badge>
+              </div>
+              <div className={styles.chips}>
                 {header.changes.map((c) => (
                   <Badge key={c} tone="changed" icon={Pencil}>
                     {`Changed: ${c}`}
@@ -196,17 +201,7 @@ export function BrewLogFormView({
                 errorMessage={errorOf('brewedAt')}
                 inputProps={{ type: 'datetime-local', max: nowLocal }}
               />
-              <TastedAt
-                temp={form.tastedTemp}
-                onTempChange={(v) => set('tastedTemp', v)}
-                minutes={form.tastedAfterMin}
-                typedMinutes={typed.tastedAfterMin}
-                onMinutesChange={(v, text) => {
-                  set('tastedAfterMin', v);
-                  setTypedText('tastedAfterMin', text);
-                }}
-                minutesError={errorOf('tastedAfterMin')}
-              />
+              <TastedAt temp={form.tastedTemp} onTempChange={(v) => set('tastedTemp', v)} />
             </section>
 
             <section aria-labelledby="brew-results" className={cards.card}>
@@ -215,14 +210,17 @@ export function BrewLogFormView({
               </h2>
               <div className={styles.grid}>
                 {context.showDrawdown ? (
-                  <DurationField
-                    id={brewFieldId('drawdownS')}
-                    label="Drawdown"
-                    value={form.drawdownS}
-                    onChange={(v) => set('drawdownS', v)}
-                    maxSeconds={BREW_LIMITS.drawdownMaxS}
-                    errorMessage={errorOf('drawdownS')}
-                  />
+                  <div className={styles.withNote}>
+                    <DurationField
+                      id={brewFieldId('drawdownS')}
+                      label="Drawdown"
+                      value={form.drawdownS}
+                      onChange={(v) => set('drawdownS', v)}
+                      maxSeconds={BREW_LIMITS.drawdownMaxS}
+                      errorMessage={errorOf('drawdownS')}
+                    />
+                    <TargetNote status={model.drawdownStatus} range={targetText.drawdown} />
+                  </div>
                 ) : null}
                 <WeightField
                   id={brewFieldId('beverageG')}
@@ -234,23 +232,26 @@ export function BrewLogFormView({
                   isInvalid={Boolean(errorOf('beverageG'))}
                   errorMessage={errorOf('beverageG')}
                 />
-                <TypedNumberField
-                  id={brewFieldId('tdsPct')}
-                  label="TDS (%)"
-                  description="e.g. 1.38"
-                  value={form.tdsPct}
-                  typed={typed.tdsPct}
-                  error={errorOf('tdsPct')}
-                  onChange={(v, text) => {
-                    set('tdsPct', v);
-                    setTypedText('tdsPct', text);
-                  }}
-                />
+                <div className={styles.withNote}>
+                  <TypedNumberField
+                    id={brewFieldId('tdsPct')}
+                    label="TDS (%)"
+                    description="e.g. 1.38"
+                    value={form.tdsPct}
+                    typed={typed.tdsPct}
+                    error={errorOf('tdsPct')}
+                    onChange={(v, text) => {
+                      set('tdsPct', v);
+                      setTypedText('tdsPct', text);
+                    }}
+                  />
+                  <TargetNote status={model.tdsStatus} range={targetText.tds} />
+                </div>
               </div>
-              <ExtractionPanel model={model} showDrawdown={context.showDrawdown} />
+              <ExtractionPanel model={model} />
             </section>
 
-            <section aria-labelledby="brew-sensory" className={cards.card}>
+            <section aria-labelledby="brew-sensory" className={`${cards.card} ${cards.full}`}>
               <h2 id="brew-sensory" className={cards.cardTitle}>
                 Sensory
               </h2>
@@ -285,7 +286,7 @@ export function BrewLogFormView({
               </div>
             </section>
 
-            <div className={cards.stack}>
+            <>
               <section aria-labelledby="brew-flavours" className={cards.card}>
                 <h2 id="brew-flavours" className={cards.cardTitle}>
                   Flavour notes
@@ -318,7 +319,7 @@ export function BrewLogFormView({
                 <Textarea
                   id={brewFieldId('nextChange')}
                   label="Next time I’ll change…"
-                  rows={2}
+                  rows={3}
                   maxLength={BREW_LIMITS.nextChangeMax}
                   value={form.nextChange}
                   onChange={(v) => set('nextChange', v)}
@@ -329,11 +330,11 @@ export function BrewLogFormView({
                   {form.nextChange.length} / {BREW_LIMITS.nextChangeMax}
                 </p>
               </section>
-            </div>
+            </>
           </div>
 
           <div className={styles.footer}>
-            <Button type="submit" isPending={isSaving} pendingLabel="Saving…" fullWidth>
+            <Button type="submit" isPending={isSaving} pendingLabel="Saving…">
               {saveLabel}
             </Button>
           </div>

@@ -113,13 +113,21 @@
 }
 
 .radar {
+  display: grid;
+  gap: var(--space-2);
+  align-content: start;
   min-width: 0;
 }
 
 @container (min-width: 34rem) {
   .sensory {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+    grid-template-columns: minmax(0, 55fr) minmax(0, 45fr);
+    column-gap: var(--space-8);
     align-items: start;
+  }
+
+  .scores {
+    gap: var(--space-2);
   }
 }
 
@@ -176,4 +184,28 @@
   .wide {
     grid-column: 1 / -1;
   }
+}
+
+.overallBig {
+  margin: 0;
+  text-align: center;
+  line-height: 1;
+}
+
+.overallBigValue {
+  font-size: var(--type-h1-size);
+  font-weight: var(--type-label-weight);
+  font-variant-numeric: tabular-nums;
+}
+
+.factNote {
+  display: block;
+  font-weight: normal;
+}
+
+.article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+  min-width: 0;
 }

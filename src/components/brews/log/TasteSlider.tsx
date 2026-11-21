@@ -60,7 +60,7 @@ export function OverallSlider({ id, label, value, onChange, isInvalid, errorMess
         formatOptions={{ minimumFractionDigits: 1, maximumFractionDigits: 1 }}
       >
         <div className={sliderStyles.header}>
-          <Label className={sliderStyles.label}>
+          <Label className={cx(sliderStyles.label, styles.accent)}>
             {label}
             <span className={styles.required}> (required)</span>
           </Label>

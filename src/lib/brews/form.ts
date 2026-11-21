@@ -11,7 +11,7 @@ import {
 } from './schema';
 
 /** The text of a number field that isn't a number, kept as typed so saving can say what is wrong. */
-export type TypedText = Partial<Record<'tdsPct' | 'tastedAfterMin', string>>;
+export type TypedText = Partial<Record<'tdsPct', string>>;
 
 export const BREW_FIELD_PREFIX = 'brew-field-';
 /** The id of a form field's input, so the error summary can focus it. */
@@ -19,7 +19,6 @@ export const brewFieldId = (key: keyof BrewLogForm | 'form'): string => `${BREW_
 
 export const TYPED_MESSAGES = {
   tdsPct: 'Use a number, e.g. 1.38',
-  tastedAfterMin: 'Use whole minutes, e.g. 10',
 } as const;
 
 // ---- date and time --------------------------------------------------------------------------
@@ -83,18 +82,12 @@ export function checkBrewForm(
 ): { ok: true; data: BrewLogForm } | { ok: false; issues: BrewIssue[] } {
   const result = validateBrewLog(form, now);
   const issues: BrewIssue[] = result.ok ? [] : [...result.issues];
-  for (const key of ['tdsPct', 'tastedAfterMin'] as const) {
+  for (const key of ['tdsPct'] as const) {
     const text = typed[key];
     if (text !== undefined && parseTypedNumber(text).kind === 'invalid') {
       const at = issues.findIndex((i) => i.field === key);
       if (at >= 0) issues.splice(at, 1);
       issues.push({ field: key, message: TYPED_MESSAGES[key] });
-    }
-  }
-  // A readable number that isn't allowed gets the same wording as unreadable text.
-  for (const issue of issues) {
-    if (issue.field === 'tastedAfterMin' && issue.message === 'Minutes are a whole number') {
-      issue.message = TYPED_MESSAGES.tastedAfterMin;
     }
   }
   if (issues.length === 0 && result.ok) return result;
@@ -150,10 +143,7 @@ export function formFromBrewRow(row: {
   };
 }
 
-/** "Tasted warm, 10 min after brewing", or null when neither was recorded. */
-export function tastedAtText(temp: BrewLogForm['tastedTemp'], minutes: number | null): string | null {
-  const parts: string[] = [];
-  if (temp) parts.push(`Tasted ${temp}`);
-  if (minutes != null) parts.push(`${temp ? '' : 'Tasted '}${minutes} min after brewing`);
-  return parts.length ? parts.join(', ') : null;
+/** "Tasted warm", or null when it was not recorded. (Minutes after brewing is no longer asked or shown.) */
+export function tastedAtText(temp: BrewLogForm['tastedTemp']): string | null {
+  return temp ? `Tasted ${temp}` : null;
 }
