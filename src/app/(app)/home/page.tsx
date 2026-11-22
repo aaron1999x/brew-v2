@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Coffee } from 'lucide-react';
+import { HomeBrews } from '@/components/brews/history/HomeBrews';
 import { UnfinishedSessions } from '@/components/brews/UnfinishedSessions';
 import { FinishProfileCard } from '@/components/onboarding/FinishProfileCard';
 import { TopBar } from '@/components/shell/TopBar';
@@ -17,17 +18,21 @@ export default function HomePage() {
       <div className={styles.body}>
         <UnfinishedSessions />
         <FinishProfileCard />
-        <EmptyState
-          icon={Coffee}
-          title="Your brew bar is empty"
-          text="Create your first recipe or brew one from Verified."
-          action={
-            <>
-              <ButtonLink href="/recipes/new">New recipe</ButtonLink>
-              <ButtonLink href="/verified" variant="secondary">
-                Verified
-              </ButtonLink>
-            </>
+        <HomeBrews
+          empty={
+            <EmptyState
+              icon={Coffee}
+              title="Your brew bar is empty"
+              text="Create your first recipe or brew one from Verified."
+              action={
+                <>
+                  <ButtonLink href="/recipes/new">New recipe</ButtonLink>
+                  <ButtonLink href="/verified" variant="secondary">
+                    Verified
+                  </ButtonLink>
+                </>
+              }
+            />
           }
         />
       </div>

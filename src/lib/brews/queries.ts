@@ -1,12 +1,13 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSession } from '@/lib/auth/useSession';
 import { reportUnexpected } from '@/lib/errors/report';
-import { queryKeys } from '@/lib/query/keys';
+import { queryKeys, type BrewFilters } from '@/lib/query/keys';
 import { toVersionRow, type VersionRow } from '@/lib/recipes/fetch';
 import { createClient } from '@/lib/supabase/client';
 import type { Database } from '@/types/database';
+import type { CompareBrew } from './compare';
 import { PRESET_FLAVOURS, normalizeFlavours, type BrewLogForm, type LogBrewPayload } from './schema';
 
 export type BrewRow = Database['public']['Tables']['brews']['Row'];
@@ -189,6 +190,95 @@ export function useRecentFlavourTags() {
         .limit(RECENT_BREWS);
       if (error) throw error;
       return recentCustomTags(data);
+    },
+  });
+}
+
+// ---- lists --------------------------------------------------------------------------------------
+
+/** What a row in a list of brews shows: when, which recipe, the overall score first. */
+export type BrewListRow = Pick<
+  BrewRow,
+  | 'id'
+  | 'recipe_id'
+  | 'recipe_version_id'
+  | 'recipe_name_snapshot'
+  | 'version_no_snapshot'
+  | 'brewed_at'
+  | 'overall'
+  | 'ey_pct'
+  | 'flavours'
+  | 'author_handle_snapshot'
+> & { recipe: { slug: string; deleted_at: string | null } | null };
+
+const LIST_COLUMNS =
+  'id, recipe_id, recipe_version_id, recipe_name_snapshot, version_no_snapshot, brewed_at, overall, ey_pct, flavours, author_handle_snapshot, recipe:recipes(slug, deleted_at)';
+
+export const BREWS_PAGE_SIZE = 30;
+
+/**
+ * My brews, newest first, 30 at a time ("Load more"). Optionally only one recipe's, or one version's.
+ * Soft-deleted brews never show.
+ */
+export function useMyBrews(filters: BrewFilters = {}) {
+  const { user } = useSession();
+  return useInfiniteQuery({
+    queryKey: queryKeys.brews.mine(filters),
+    enabled: Boolean(user),
+    initialPageParam: 0,
+    queryFn: async ({ pageParam }): Promise<BrewListRow[]> => {
+      let query = createClient()
+        .from('brews')
+        .select(LIST_COLUMNS)
+        .is('deleted_at', null)
+        .order('brewed_at', { ascending: false })
+        .order('id', { ascending: false })
+        .range(pageParam * BREWS_PAGE_SIZE, pageParam * BREWS_PAGE_SIZE + BREWS_PAGE_SIZE - 1);
+      if (filters.recipeId) query = query.eq('recipe_id', filters.recipeId);
+      if (filters.versionId) query = query.eq('recipe_version_id', filters.versionId);
+      const { data, error } = await query;
+      if (error) throw error;
+      return data as unknown as BrewListRow[];
+    },
+    getNextPageParam: (last, all) => (last.length === BREWS_PAGE_SIZE ? all.length : undefined),
+  });
+}
+
+/** My latest few brews (Home's "Recent brews" and "Continue"). */
+export function useRecentBrews(limit = 5) {
+  const { user } = useSession();
+  return useQuery({
+    queryKey: queryKeys.brews.recent(limit),
+    enabled: Boolean(user),
+    queryFn: async (): Promise<BrewListRow[]> => {
+      const { data, error } = await createClient()
+        .from('brews')
+        .select(LIST_COLUMNS)
+        .is('deleted_at', null)
+        .order('brewed_at', { ascending: false })
+        .order('id', { ascending: false })
+        .limit(limit);
+      if (error) throw error;
+      return data as unknown as BrewListRow[];
+    },
+  });
+}
+
+/** Two or three brews for the compare page, in the order of the ids; ones that are missing are left out. */
+export function useCompareBrews(ids: readonly string[]) {
+  const { user } = useSession();
+  return useQuery({
+    queryKey: queryKeys.brews.compare(ids),
+    enabled: Boolean(user) && ids.length >= 2,
+    queryFn: async (): Promise<CompareBrew[]> => {
+      const { data, error } = await createClient()
+        .from('brews')
+        .select('*, version:recipe_versions(brew_water_g, temp_c, grind_setting)')
+        .in('id', [...ids])
+        .is('deleted_at', null);
+      if (error) throw error;
+      const rows = data as unknown as CompareBrew[];
+      return ids.map((id) => rows.find((r) => r.id === id)).filter((r): r is CompareBrew => Boolean(r));
     },
   });
 }

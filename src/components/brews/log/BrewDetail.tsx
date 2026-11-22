@@ -128,20 +128,25 @@ function Detail({ data }: Readonly<{ data: BrewDetailData }>) {
         </Link>
         <div className={styles.headerText}>
           <div className={styles.nameRow}>
-          <h1 id="brew-title" className={styles.title}>
-            {alive && handle && recipe ? (
-              <Link href={versionPath(handle, recipe.slug, brew.version_no_snapshot)} className={styles.recipeLink}>
-                {brew.recipe_name_snapshot}
-              </Link>
-            ) : (
-              brew.recipe_name_snapshot
-            )}
-          </h1>
+            <h1 id="brew-title" className={styles.title}>
+              {alive && handle && recipe ? (
+                <Link
+                  href={versionPath(handle, recipe.slug, brew.version_no_snapshot)}
+                  className={styles.recipeLink}
+                >
+                  {brew.recipe_name_snapshot}
+                </Link>
+              ) : (
+                brew.recipe_name_snapshot
+              )}
+            </h1>
             <Badge>{`v${brew.version_no_snapshot}`}</Badge>
           </div>
           {note ? (
             <div className={styles.badges}>
-              <Badge tone="changed" icon={Pencil}>{note}</Badge>
+              <Badge tone="changed" icon={Pencil}>
+                {note}
+              </Badge>
             </div>
           ) : null}
           <p className={styles.muted}>Brewed {dateTime(brew.brewed_at)}</p>
@@ -159,8 +164,14 @@ function Detail({ data }: Readonly<{ data: BrewDetailData }>) {
           <ButtonLink href={newVersionPath(handle, recipe.slug, brew.version_no_snapshot, brew.id)}>
             Create next version
           </ButtonLink>
-          <ButtonLink href={brewChoicePath(handle, recipe.slug, brew.version_no_snapshot)} variant="secondary">
+          <ButtonLink
+            href={brewChoicePath(handle, recipe.slug, brew.version_no_snapshot)}
+            variant="secondary"
+          >
             Brew again
+          </ButtonLink>
+          <ButtonLink href={`/brews?select=${brew.id}`} variant="secondary">
+            Compare
           </ButtonLink>
           <ActionMenu
             label="More actions for this brew"
@@ -183,10 +194,16 @@ function Detail({ data }: Readonly<{ data: BrewDetailData }>) {
         </div>
       ) : (
         <div className={styles.actions}>
+          <ButtonLink href={`/brews?select=${brew.id}`} variant="secondary">
+            Compare
+          </ButtonLink>
           <ButtonLink href={`/brews/${brew.id}/edit`} variant="secondary">
             Edit
           </ButtonLink>
-          <Button variant="secondary" onPress={() => (online ? setConfirming(true) : toast.error(OFFLINE_DELETE))}>
+          <Button
+            variant="secondary"
+            onPress={() => (online ? setConfirming(true) : toast.error(OFFLINE_DELETE))}
+          >
             Delete
           </Button>
         </div>
@@ -198,7 +215,10 @@ function Detail({ data }: Readonly<{ data: BrewDetailData }>) {
             Setup
           </h2>
           <dl className={styles.facts}>
-            <Fact label="Recipe" value={`${brew.recipe_name_snapshot} · v${brew.version_no_snapshot}`} />
+            <Fact
+              label="Recipe"
+              value={`${brew.recipe_name_snapshot} · v${brew.version_no_snapshot}`}
+            />
             <Fact label="Brewed at" value={dateTime(brew.brewed_at)} />
             <Fact label="Dose" value={weight(brew.dose_g_snapshot)} />
             {version ? <Fact label="Brew water" value={weight(version.brew_water_g)} /> : null}
@@ -218,7 +238,9 @@ function Detail({ data }: Readonly<{ data: BrewDetailData }>) {
                 <TargetNote status={model.drawdownStatus} range={targetText.drawdown} />
               </Fact>
             ) : null}
-            {brew.beverage_g != null ? <Fact label="Beverage weight" value={weight(brew.beverage_g)} /> : null}
+            {brew.beverage_g != null ? (
+              <Fact label="Beverage weight" value={weight(brew.beverage_g)} />
+            ) : null}
             {brew.tds_pct != null ? (
               <Fact label="TDS" value={`${brew.tds_pct}%`}>
                 <TargetNote status={model.tdsStatus} range={targetText.tds} />
@@ -237,7 +259,9 @@ function Detail({ data }: Readonly<{ data: BrewDetailData }>) {
               {ATTRIBUTE_KEYS.map((key, i) => (
                 <li key={key} className={styles.score}>
                   <span>{TASTE_LABELS[key]}</span>
-                  <span className="num">{scores[i] == null ? 'Not scored' : scores[i]!.toFixed(1)}</span>
+                  <span className="num">
+                    {scores[i] == null ? 'Not scored' : scores[i]!.toFixed(1)}
+                  </span>
                 </li>
               ))}
               <li className={`${styles.score} ${styles.scoreOverall}`}>
@@ -250,7 +274,9 @@ function Detail({ data }: Readonly<{ data: BrewDetailData }>) {
                 <span className={styles.overallBigValue}>{overall}</span>
                 <span className={styles.overallOf}> / 10</span>
               </p>
-              <LazyTasteRadar series={[{ key: 'brew', name: 'This brew', values: scores, overall: brew.overall }]} />
+              <LazyTasteRadar
+                series={[{ key: 'brew', name: 'This brew', values: scores, overall: brew.overall }]}
+              />
             </div>
           </div>
         </section>
@@ -303,7 +329,9 @@ function Detail({ data }: Readonly<{ data: BrewDetailData }>) {
                     }
                   : null
               }
-              marker={brew.drawdown_s != null ? { atS: brew.drawdown_s, label: 'Logged drawdown' } : null}
+              marker={
+                brew.drawdown_s != null ? { atS: brew.drawdown_s, label: 'Logged drawdown' } : null
+              }
             />
           </section>
         ) : null}

@@ -18,12 +18,16 @@ const TARGETS = { tds_min: 1.3, tds_max: 1.5, ey_min: 19, ey_max: 21 };
 
 async function recipeWithBrew(ctx: ShotContext) {
   const recipe = await createRecipe(ctx.users, ctx.user, 'Morning V60', {
-    version: { ...TARGETS, grind_setting: '7.5', gear: { brewer: { name: 'Hario V60 02' }, grinder: { name: '1Zpresso K-Ultra' } } },
+    version: {
+      ...TARGETS,
+      grind_setting: '7.5',
+      gear: { brewer: { name: 'Hario V60 02' }, grinder: { name: '1Zpresso K-Ultra' } },
+    },
   });
   return recipe;
 }
 
-async function logBrew(ctx: ShotContext, versionId: string) {
+async function logBrew(ctx: ShotContext, versionId: string, over: Record<string, unknown> = {}) {
   const client = await ctx.users.clientFor(ctx.user);
   const { data, error } = await client.rpc('log_brew', {
     p_brew: {
@@ -46,6 +50,7 @@ async function logBrew(ctx: ShotContext, versionId: string) {
       drawdown_s: 172,
       beverage_g: 212,
       tds_pct: 1.4,
+      ...over,
     } as never,
   });
   expect(error).toBeNull();
@@ -60,7 +65,10 @@ export const SHOT_SCREENS: Record<string, ShotScreen> = {
       const recipe = await recipeWithBrew(ctx);
       await page.goto(`/@${user.handle}/${recipe.slug}?brew=1`);
       await waitForApp(page);
-      await page.getByRole('dialog', { name: 'Brew this recipe' }).getByRole('button', { name: 'Log only' }).click();
+      await page
+        .getByRole('dialog', { name: 'Brew this recipe' })
+        .getByRole('button', { name: 'Log only' })
+        .click();
       await page.waitForURL('**/brews/new?session=*');
       await expect(page.getByRole('img', { name: /^Taste\./ })).toBeVisible();
       // Filled in the way a real log is.
@@ -91,9 +99,11 @@ export const SHOT_SCREENS: Record<string, ShotScreen> = {
     prototype: 'src/components/SpecView.tsx',
     open: async (ctx) => {
       const recipe = await recipeWithBrew(ctx);
+      await logBrew(ctx, recipe.v1Id);
       await ctx.page.goto(`/@${ctx.user.handle}/${recipe.slug}`);
       await waitForApp(ctx.page);
       await expect(ctx.page.getByRole('img', { name: /^Pour curve\./ })).toBeVisible();
+      await expect(ctx.page.getByRole('heading', { name: 'My brews' })).toBeVisible();
     },
   },
   editor: {
@@ -109,7 +119,12 @@ export const SHOT_SCREENS: Record<string, ShotScreen> = {
     prototype: null,
     open: async (ctx) => {
       const recipe = await recipeWithBrew(ctx);
-      await saveNextVersion(ctx.users, ctx.user, recipe, baseVersion({ ...TARGETS, temp_c: 92, change_note: 'cooler' }));
+      await saveNextVersion(
+        ctx.users,
+        ctx.user,
+        recipe,
+        baseVersion({ ...TARGETS, temp_c: 92, change_note: 'cooler' }),
+      );
       await ctx.page.goto(`/@${ctx.user.handle}/${recipe.slug}/compare`);
       await waitForApp(ctx.page);
       await expect(ctx.page.getByRole('heading', { level: 1 })).toBeVisible();
@@ -118,8 +133,59 @@ export const SHOT_SCREENS: Record<string, ShotScreen> = {
   home: {
     prototype: 'src/pages/Dashboard.tsx',
     open: async (ctx) => {
+      const recipe = await recipeWithBrew(ctx);
+      await logBrew(ctx, recipe.v1Id);
+      await logBrew(ctx, recipe.v1Id, {
+        overall: 7,
+        brewed_at: new Date(Date.now() - 86_400_000).toISOString(),
+      });
       await ctx.page.goto('/home');
       await waitForApp(ctx.page);
+      await expect(ctx.page.getByRole('heading', { name: 'Recent brews' })).toBeVisible();
+    },
+  },
+  brews: {
+    prototype: null,
+    open: async (ctx) => {
+      const recipe = await recipeWithBrew(ctx);
+      for (let i = 0; i < 4; i++) {
+        await logBrew(ctx, recipe.v1Id, {
+          overall: 6 + i * 0.5,
+          brewed_at: new Date(Date.now() - (i + 1) * 86_400_000).toISOString(),
+        });
+      }
+      await ctx.page.goto('/brews');
+      await waitForApp(ctx.page);
+      await expect(ctx.page.getByRole('list', { name: 'Brews' })).toBeVisible();
+      await ctx.page
+        .locator('label')
+        .filter({ has: ctx.page.getByRole('checkbox') })
+        .nth(0)
+        .click();
+      await ctx.page
+        .locator('label')
+        .filter({ has: ctx.page.getByRole('checkbox') })
+        .nth(1)
+        .click();
+    },
+  },
+  'brew-compare': {
+    prototype: 'src/pages/Compare.tsx',
+    open: async (ctx) => {
+      const recipe = await recipeWithBrew(ctx);
+      const a = await logBrew(ctx, recipe.v1Id);
+      const b = await logBrew(ctx, recipe.v1Id, {
+        overall: 7,
+        sweetness: 6,
+        acidity: 7.5,
+        body: 6,
+        drawdown_s: 190,
+        flavours: ['peach', 'cocoa'],
+        brewed_at: new Date(Date.now() - 86_400_000).toISOString(),
+      });
+      await ctx.page.goto(`/brews/compare?ids=${a},${b}`);
+      await waitForApp(ctx.page);
+      await expect(ctx.page.getByRole('img', { name: /^Taste, compared\./ })).toBeVisible();
     },
   },
   recipes: {
@@ -147,7 +213,10 @@ export const SHOT_SCREENS: Record<string, ShotScreen> = {
       const recipe = await recipeWithBrew(ctx);
       await ctx.page.goto(`/@${ctx.user.handle}/${recipe.slug}?brew=1`);
       await waitForApp(ctx.page);
-      await ctx.page.getByRole('dialog', { name: 'Brew this recipe' }).getByRole('button', { name: 'Guided timer' }).click();
+      await ctx.page
+        .getByRole('dialog', { name: 'Brew this recipe' })
+        .getByRole('button', { name: 'Guided timer' })
+        .click();
       await ctx.page.waitForURL('**/brew?session=*');
       await expect(ctx.page.getByRole('button', { name: /^Start/ })).toBeVisible();
     },

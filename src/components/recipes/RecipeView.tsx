@@ -21,13 +21,7 @@ import styles from './RecipePage.module.css';
 /** The side column's distance from the top of the window while it sticks (matches the CSS). */
 const STICKY_GAP_PX = 16;
 
-function Row({
-  label,
-  children,
-}: {
-  label: string;
-  children: ReactNode;
-}) {
+function Row({ label, children }: { label: string; children: ReactNode }) {
   if (children == null || children === '') return null;
   return (
     <div className={styles.row}>
@@ -59,6 +53,10 @@ type Props = Readonly<{
   actions?: ReactNode;
   /** A line above the details, e.g. "You're looking at v2; the latest is v5". */
   notice?: ReactNode;
+  /** The owner's brews of this recipe, shown under the header: "6 brews". Left out on a public page. */
+  brewCount?: number | null;
+  /** Owner-only sections after the recipe (My brews). */
+  after?: ReactNode;
   /** Move focus to the heading on arrival (a page reached after saving or by navigation). */
   focusHeading?: boolean;
 }>;
@@ -75,6 +73,8 @@ export function RecipeView({
   switcher,
   actions,
   notice,
+  brewCount = null,
+  after,
   focusHeading = true,
 }: Props) {
   const { date } = useUnits();
@@ -136,7 +136,10 @@ export function RecipeView({
               </Badge>
             ) : null}
           </div>
-          <p className={styles.muted}>Last edited {date(recipe.edited_at)}</p>
+          <p className={styles.muted}>
+            Last edited {date(recipe.edited_at)}
+            {brewCount != null ? ` · ${brewCount === 1 ? '1 brew' : `${brewCount} brews`}` : ''}
+          </p>
         </div>
       </header>
 
@@ -190,6 +193,7 @@ export function RecipeView({
           ) : null}
         </div>
       </div>
+      {after}
     </div>
   );
 }

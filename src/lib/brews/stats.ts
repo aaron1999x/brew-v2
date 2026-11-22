@@ -46,3 +46,17 @@ export function useBrewStats() {
 export function brewCountText(count: number | undefined): string {
   return count ? `Brewed ${count}×` : 'Not brewed yet';
 }
+
+/** Per version: how many brews it has (soft-deleted ones don't count). */
+export function countsByVersion(rows: readonly BrewStatRow[]): Map<string, number> {
+  const out = new Map<string, number>();
+  for (const row of rows)
+    out.set(row.recipe_version_id, (out.get(row.recipe_version_id) ?? 0) + row.brew_count);
+  return out;
+}
+
+/** "6 brews", "1 brew" or "No brews yet". */
+export function brewsText(count: number | undefined): string {
+  if (!count) return 'No brews yet';
+  return `${count} ${count === 1 ? 'brew' : 'brews'}`;
+}

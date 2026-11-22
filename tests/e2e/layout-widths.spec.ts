@@ -89,6 +89,7 @@ const SKIP: Record<string, string> = {
 /** Pages that need a query string to show anything (`/brews/new` and the timer need a session). */
 const QUERY: Record<string, (d: Data) => string> = {
   '/brews/new': (d) => `?session=${d.logSession}`,
+  '/brews/compare': (d) => `?ids=${d.brewId},${d.brewId2}`,
   '/u/[handle]/[slug]/v/[n]/brew': (d) => `?session=${d.timerSession}`,
 };
 
@@ -96,6 +97,7 @@ type Data = {
   handle: string;
   slug: string;
   brewId: string;
+  brewId2: string;
   logSession: string;
   timerSession: string;
 };
@@ -176,6 +178,7 @@ test('every page under src/app uses its width at 1280 and 390 px and never scrol
   const recipe = await createRecipe(users, user, 'Morning V60');
   await saveNextVersion(users, user, recipe, baseVersion({ temp_c: 92, change_note: 'cooler' }));
   const brewId = await logBrewRpc(users, user, recipe.v1Id);
+  const brewId2 = await logBrewRpc(users, user, recipe.v1Id, { overall: 7, sweetness: 6 });
   const session = async (button: 'Log only' | 'Guided timer', pattern: string) => {
     await page.goto(`/@${user.handle}/${recipe.slug}?brew=1`);
     await waitForApp(page);
@@ -188,7 +191,14 @@ test('every page under src/app uses its width at 1280 and 390 px and never scrol
   };
   const logSession = await session('Log only', '**/brews/new?session=*');
   const timerSession = await session('Guided timer', '**/brew?session=*');
-  const data: Data = { handle: user.handle, slug: recipe.slug, brewId, logSession, timerSession };
+  const data: Data = {
+    handle: user.handle,
+    slug: recipe.slug,
+    brewId,
+    brewId2,
+    logSession,
+    timerSession,
+  };
 
   // Signed-out pages in a clean context, the rest as the member.
   const anon = await (await browser.newContext({ serviceWorkers: 'block' })).newPage();

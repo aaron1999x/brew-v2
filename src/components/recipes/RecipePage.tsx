@@ -22,6 +22,8 @@ import {
   versionOrLatestPath,
   versionsPath,
 } from '@/lib/recipes/paths';
+import { MyBrews } from '@/components/brews/history/MyBrews';
+import { useBrewStats } from '@/lib/brews/stats';
 import { RecipeActions } from './RecipeActions';
 import { RecipeView } from './RecipeView';
 import styles from './RecipePage.module.css';
@@ -64,6 +66,10 @@ function OwnerRecipe({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const archive = useArchiveRecipe();
+  const stats = useBrewStats();
+  const brewCount = stats.data
+    ? stats.data.filter((r) => r.recipe_id === data.recipe.id).reduce((n, r) => n + r.brew_count, 0)
+    : null;
   const online = useOnlineStatus();
   // `?brew=1` opens the choice sheet: every "Brew again" link and a timer link with no session land here.
   const [brewOpen, setBrewOpen] = useState(searchParams.get('brew') === '1');
@@ -75,89 +81,99 @@ function OwnerRecipe({
 
   return (
     <>
-    <RecipeView
-      recipe={data.recipe}
-      version={version}
-      versionCount={count}
-      backHref="/recipes"
-      switcher={
-        count > 1 ? (
-          <VersionSwitcher
-            handle={handle}
-            slug={slug}
-            current={version.version_no}
-            latest={latestNo}
-            numbers={data.versions.map((v) => v.version_no)}
+      <RecipeView
+        recipe={data.recipe}
+        version={version}
+        versionCount={count}
+        brewCount={brewCount}
+        after={
+          <MyBrews
+            recipeId={data.recipe.id}
+            versionId={version.id}
+            onBrew={archived ? undefined : () => setBrewOpen(true)}
           />
-        ) : null
-      }
-      actions={
-        <div className={styles.actions}>
-          {archived ? null : (
-            <Button onPress={() => setBrewOpen(true)}>Brew this version</Button>
-          )}
-          <ButtonLink href={editPath(handle, slug, version.version_no)} variant="secondary">
-            Edit
-          </ButtonLink>
-          <ButtonLink href={newVersionPath(handle, slug, version.version_no)} variant="secondary">
-            New version
-          </ButtonLink>
-          <ButtonLink href={versionsPath(handle, slug)} variant="secondary">
-            Versions
-          </ButtonLink>
-          {count > 1 ? (
-            <ButtonLink
-              href={comparePath(handle, slug, ...defaultCompare(data.versions.map((v) => v.version_no)))}
-              variant="secondary"
-            >
-              Compare
+        }
+        backHref="/recipes"
+        switcher={
+          count > 1 ? (
+            <VersionSwitcher
+              handle={handle}
+              slug={slug}
+              current={version.version_no}
+              latest={latestNo}
+              numbers={data.versions.map((v) => v.version_no)}
+            />
+          ) : null
+        }
+        actions={
+          <div className={styles.actions}>
+            {archived ? null : <Button onPress={() => setBrewOpen(true)}>Brew this version</Button>}
+            <ButtonLink href={editPath(handle, slug, version.version_no)} variant="secondary">
+              Edit
             </ButtonLink>
-          ) : null}
-          {data.recipe.archived_at ? (
-            <Button
-              variant="secondary"
-              onPress={() => {
-                if (!online) {
-                  toast.error(RECIPE_OFFLINE_MESSAGE);
-                  return;
-                }
-                archive.mutate({ id: data.recipe.id, name: data.recipe.name, archived: false });
-              }}
-            >
-              Restore
-            </Button>
-          ) : null}
-          <RecipeActions
-            id={data.recipe.id}
-            name={data.recipe.name}
-            handle={handle}
-            slug={slug}
-            archived={data.recipe.archived_at !== null}
-            versionNo={version.version_no}
-            onDeleted={() => router.replace('/recipes')}
-          />
-        </div>
-      }
-      notice={
-        version.version_no !== latestNo ? (
-          <p className={styles.muted}>
-            You&apos;re looking at v{version.version_no}.{' '}
-            <a href={recipePath(handle, slug)}>See the latest, v{latestNo}</a>
-          </p>
-        ) : null
-      }
-    />
-    <ChoiceSheet
-      isOpen={brewOpen}
-      onOpenChange={(open) => {
-        setBrewOpen(open);
-        // Drop ?brew=1 so Back doesn't reopen the sheet.
-        if (!open && searchParams.get('brew') === '1') router.replace(pathname);
-      }}
-      handle={handle}
-      slug={slug}
-      versionNo={version.version_no}
-    />
+            <ButtonLink href={newVersionPath(handle, slug, version.version_no)} variant="secondary">
+              New version
+            </ButtonLink>
+            <ButtonLink href={versionsPath(handle, slug)} variant="secondary">
+              Versions
+            </ButtonLink>
+            {count > 1 ? (
+              <ButtonLink
+                href={comparePath(
+                  handle,
+                  slug,
+                  ...defaultCompare(data.versions.map((v) => v.version_no)),
+                )}
+                variant="secondary"
+              >
+                Compare
+              </ButtonLink>
+            ) : null}
+            {data.recipe.archived_at ? (
+              <Button
+                variant="secondary"
+                onPress={() => {
+                  if (!online) {
+                    toast.error(RECIPE_OFFLINE_MESSAGE);
+                    return;
+                  }
+                  archive.mutate({ id: data.recipe.id, name: data.recipe.name, archived: false });
+                }}
+              >
+                Restore
+              </Button>
+            ) : null}
+            <RecipeActions
+              id={data.recipe.id}
+              name={data.recipe.name}
+              handle={handle}
+              slug={slug}
+              archived={data.recipe.archived_at !== null}
+              versionNo={version.version_no}
+              onDeleted={() => router.replace('/recipes')}
+            />
+          </div>
+        }
+        notice={
+          version.version_no !== latestNo ? (
+            <p className={styles.muted}>
+              You&apos;re looking at v{version.version_no}.{' '}
+              <a href={recipePath(handle, slug)}>See the latest, v{latestNo}</a>
+            </p>
+          ) : null
+        }
+      />
+      <ChoiceSheet
+        isOpen={brewOpen}
+        onOpenChange={(open) => {
+          setBrewOpen(open);
+          // Drop ?brew=1 so Back doesn't reopen the sheet.
+          if (!open && searchParams.get('brew') === '1') router.replace(pathname);
+        }}
+        handle={handle}
+        slug={slug}
+        versionNo={version.version_no}
+      />
     </>
   );
 }

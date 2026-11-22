@@ -1,0 +1,61 @@
+.home {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+/* Continue beside Recent brews when the page container has room. */
+@container (min-width: 56rem) {
+  .home {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    /* The two cards share a top and a height. */
+    align-items: stretch;
+  }
+}
+
+.card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2);
+  align-content: start;
+  min-width: 0;
+  padding: var(--space-3);
+  border: var(--border-width-hairline) solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--type-h3-size);
+  font-weight: var(--type-label-weight);
+  line-height: var(--type-h3-line-height);
+}
+
+.name {
+  margin: 0;
+  font-weight: var(--type-label-weight);
+  overflow-wrap: anywhere;
+}
+
+.meta {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-small-size);
+}
+
+.seeAll {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--size-target-min);
+  color: var(--color-accent-on-inset);
+  font-weight: var(--type-label-weight);
+}
