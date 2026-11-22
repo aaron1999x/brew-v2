@@ -17,7 +17,7 @@ import { Notice } from '@/components/ui/Notice/Notice';
 import { useOnlineStatus } from '@/components/ui/OfflineBanner/OfflineBanner';
 import { toast } from '@/components/ui/Toast/toast';
 import { NO_TARGETS, extractionModel } from '@/lib/brews/extraction';
-import { tasteValues, tastedAtText } from '@/lib/brews/form';
+import { showsDrawdown, tasteValues, tastedAtText } from '@/lib/brews/form';
 import { brewChoicePath } from '@/lib/brews/paths';
 import { useBrew, useDeleteBrew, type BrewDetailData } from '@/lib/brews/queries';
 import { CHANGE_NOTE_PREFIX } from '@/lib/brews/change-note';
@@ -71,8 +71,11 @@ function Detail({ data }: Readonly<{ data: BrewDetailData }>) {
         drawdownMaxS: version.drawdown_max_s,
       }
     : NO_TARGETS;
-  const showDrawdown =
-    brew.drawdown_s != null || (version ? version.drawdown_min_s != null || version.drawdown_max_s != null : false);
+  const showDrawdown = showsDrawdown({
+    method: recipe?.method,
+    hasTarget: version ? version.drawdown_min_s != null || version.drawdown_max_s != null : false,
+    drawdownS: brew.drawdown_s,
+  });
   const model = extractionModel({
     doseG: brew.dose_g_snapshot,
     brewWaterG: version?.brew_water_g ?? null,

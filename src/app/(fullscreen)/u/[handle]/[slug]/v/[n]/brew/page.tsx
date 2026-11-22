@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { BrewTimerScreen } from '@/components/brews/timer/BrewTimerScreen';
 import { parseVersionNo, versionByNo } from '@/lib/recipes/fetch';
 import { getOwnedRecipe } from '@/lib/recipes/server';
+import { PageShell } from '@/components/shell/PageShell';
 
 type Params = { handle: string; slug: string; n: string };
 type Search = { session?: string | string[] };
@@ -28,12 +29,14 @@ export default async function BrewTimerRoute({
   if (!version) notFound();
   const session = Array.isArray(search.session) ? search.session[0] : search.session;
   return (
-    <BrewTimerScreen
-      handle={data.owner.handle}
-      slug={data.recipe.slug}
-      versionNo={version.version_no}
-      versionId={version.id}
-      sessionId={session ?? null}
-    />
+    <PageShell width="timer">
+      <BrewTimerScreen
+        handle={data.owner.handle}
+        slug={data.recipe.slug}
+        versionNo={version.version_no}
+        versionId={version.id}
+        sessionId={session ?? null}
+      />
+    </PageShell>
   );
 }

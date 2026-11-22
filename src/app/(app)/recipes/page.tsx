@@ -6,13 +6,14 @@ import { ButtonLink } from '@/components/ui/ButtonLink/ButtonLink';
 import { LoadingRegion, SkeletonRow } from '@/components/ui/Skeleton/Skeleton';
 import { requireUser } from '@/lib/auth/server';
 import styles from '../shell.module.css';
+import { PageShell } from '@/components/shell/PageShell';
 
 export const metadata: Metadata = { title: 'Recipes' };
 
 export default async function RecipesPage() {
   await requireUser('/recipes');
   return (
-    <>
+    <PageShell>
       <TopBar title="Recipes" actions={<ButtonLink href="/recipes/new">New recipe</ButtonLink>} />
       <div className={styles.body}>
         <Suspense
@@ -27,6 +28,6 @@ export default async function RecipesPage() {
           <MyRecipes />
         </Suspense>
       </div>
-    </>
+    </PageShell>
   );
 }

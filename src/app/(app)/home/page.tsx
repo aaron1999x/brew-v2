@@ -6,12 +6,13 @@ import { TopBar } from '@/components/shell/TopBar';
 import { ButtonLink } from '@/components/ui/ButtonLink/ButtonLink';
 import { EmptyState } from '@/components/ui/EmptyState/EmptyState';
 import styles from '../shell.module.css';
+import { PageShell } from '@/components/shell/PageShell';
 
 export const metadata: Metadata = { title: 'Home' };
 
 export default function HomePage() {
   return (
-    <>
+    <PageShell>
       <TopBar title="Home" unreadNotices={0} />
       <div className={styles.body}>
         <UnfinishedSessions />
@@ -30,6 +31,6 @@ export default function HomePage() {
           }
         />
       </div>
-    </>
+    </PageShell>
   );
 }

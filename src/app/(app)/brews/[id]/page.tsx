@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { BrewDetail } from '@/components/brews/log/BrewDetail';
 import { requireOwnBrew } from '@/lib/brews/server';
+import { PageShell } from '@/components/shell/PageShell';
 
 export const metadata: Metadata = { title: 'Brew', robots: { index: false, follow: false } };
 
@@ -8,5 +9,9 @@ export const metadata: Metadata = { title: 'Brew', robots: { index: false, follo
 export default async function BrewRoute({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   await requireOwnBrew(id);
-  return <BrewDetail id={id} />;
+  return (
+    <PageShell>
+      <BrewDetail id={id} />
+    </PageShell>
+  );
 }

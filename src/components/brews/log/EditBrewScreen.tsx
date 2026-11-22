@@ -11,7 +11,7 @@ import { useOnlineStatus } from '@/components/ui/OfflineBanner/OfflineBanner';
 import { toast } from '@/components/ui/Toast/toast';
 import { CHANGE_NOTE_PREFIX } from '@/lib/brews/change-note';
 import { NO_TARGETS } from '@/lib/brews/extraction';
-import { formFromBrewRow } from '@/lib/brews/form';
+import { formFromBrewRow, showsDrawdown } from '@/lib/brews/form';
 import { useBrew, useUpdateBrew, type BrewDetailData } from '@/lib/brews/queries';
 import type { BrewLogForm } from '@/lib/brews/schema';
 import { toUserMessage } from '@/lib/errors/messages';
@@ -41,14 +41,16 @@ function Editor({ data }: Readonly<{ data: BrewDetailData }>) {
   const router = useRouter();
   const online = useOnlineStatus();
   const update = useUpdateBrew();
-  const { brew, version } = data;
+  const { brew, recipe, version } = data;
   const [dirty, setDirty] = useState(false);
   const guard = useUnsavedGuard(dirty, `/brews/${brew.id}`);
   const initial = useMemo(() => formFromBrewRow(brew), [brew]);
   const note = version?.change_note?.startsWith(CHANGE_NOTE_PREFIX) ? version.change_note : null;
-  const showDrawdown =
-    brew.drawdown_s != null ||
-    (version ? version.drawdown_min_s != null || version.drawdown_max_s != null : false);
+  const showDrawdown = showsDrawdown({
+    method: recipe?.method,
+    hasTarget: version ? version.drawdown_min_s != null || version.drawdown_max_s != null : false,
+    drawdownS: brew.drawdown_s,
+  });
 
   function save(form: BrewLogForm) {
     if (!online) {

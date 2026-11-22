@@ -147,3 +147,16 @@ export function formFromBrewRow(row: {
 export function tastedAtText(temp: BrewLogForm['tastedTemp']): string | null {
   return temp ? `Tasted ${temp}` : null;
 }
+
+/**
+ * Whether the log asks for a drawdown: pour-over and hybrid brews always do (it is how they are read),
+ * and so does any brew whose version has a drawdown target or that already has a drawdown. One rule for
+ * the new log, the edit and the detail page.
+ */
+export function showsDrawdown(input: {
+  method: string | null | undefined;
+  hasTarget: boolean;
+  drawdownS: number | null;
+}): boolean {
+  return input.method === 'pour_over' || input.method === 'hybrid' || input.hasTarget || input.drawdownS != null;
+}

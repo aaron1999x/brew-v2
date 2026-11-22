@@ -13,7 +13,7 @@ import { LoadingRegion, SkeletonCard } from '@/components/ui/Skeleton/Skeleton';
 import { Sheet, SheetActions } from '@/components/ui/Sheet/Sheet';
 import { toast } from '@/components/ui/Toast/toast';
 import { describeChanges } from '@/lib/brews/change-note';
-import { draftFromForm, formFromDraft } from '@/lib/brews/form';
+import { draftFromForm, formFromDraft, showsDrawdown } from '@/lib/brews/form';
 import { useLogBrew } from '@/lib/brews/queries';
 import { applyQuickChange } from '@/lib/brews/quick-change';
 import { toLogBrewPayload, type BrewLogForm, type QuickChange } from '@/lib/brews/schema';
@@ -111,11 +111,11 @@ export function NewBrewScreen({ sessionId }: Readonly<{ sessionId: string | null
   const base = session.version;
   const applied = applyQuickChange(base, session.quickChange);
   const changes = describeChanges(base, session.quickChange, units);
-  const showDrawdown =
-    session.method === 'pour_over' ||
-    session.method === 'hybrid' ||
-    base.drawdown_min_s != null ||
-    base.drawdown_max_s != null;
+  const showDrawdown = showsDrawdown({
+    method: session.method,
+    hasTarget: base.drawdown_min_s != null || base.drawdown_max_s != null,
+    drawdownS: null,
+  });
 
   function setChange(change: QuickChange | null) {
     update((s) => ({ ...s, quickChange: change }));

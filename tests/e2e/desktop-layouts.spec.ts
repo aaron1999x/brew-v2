@@ -303,13 +303,12 @@ test.describe('narrow pages stay narrow', () => {
     expect((await box(form)).width).toBeLessThanOrEqual(641);
     expect((await box(form)).width).toBeGreaterThan(448);
 
-    // Home is wide now; a short column of text (the profile) keeps the reading width.
-    await page.goto('/home');
-    await waitForApp(page);
-    expect((await box(page.locator('main > div').last())).width).toBeGreaterThan(1100);
-    await page.goto('/profile');
-    await waitForApp(page);
-    expect((await box(page.locator('main > div').last())).width).toBeLessThanOrEqual(721);
+    // Wide is the default (Home, the profile); only auth and settings are narrow.
+    for (const wide of ['/home', '/profile']) {
+      await page.goto(wide);
+      await waitForApp(page);
+      expect((await box(page.locator('[data-page-width]').first())).width, wide).toBeGreaterThan(1100);
+    }
   });
 });
 

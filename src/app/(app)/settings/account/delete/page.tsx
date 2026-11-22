@@ -3,17 +3,18 @@ import { DeleteAccountForm } from '@/components/account/DeleteAccountForm';
 import { TopBar } from '@/components/shell/TopBar';
 import { requireUser } from '@/lib/auth/server';
 import styles from '../../../shell.module.css';
+import { PageShell } from '@/components/shell/PageShell';
 
 export const metadata: Metadata = { title: 'Delete account' };
 
 export default async function DeleteAccountPage() {
   await requireUser('/settings/account/delete');
   return (
-    <>
+    <PageShell width="narrow">
       <TopBar title="Delete account" backHref="/settings/account" />
-      <div className={styles.bodyForm}>
+      <div className={styles.body}>
         <DeleteAccountForm />
       </div>
-    </>
+    </PageShell>
   );
 }

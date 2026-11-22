@@ -1,8 +1,6 @@
 .page {
   display: grid;
   gap: var(--space-4);
-  max-width: var(--layout-wide);
-  margin: 0 auto;
   padding-block: var(--space-6);
 }
 

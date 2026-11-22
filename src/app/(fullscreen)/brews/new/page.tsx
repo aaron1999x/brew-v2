@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { NewBrewScreen } from '@/components/brews/log/NewBrewScreen';
+import { PageShell } from '@/components/shell/PageShell';
 
 export const metadata: Metadata = { title: 'Log brew', robots: { index: false, follow: false } };
 
@@ -9,5 +10,9 @@ type Search = { session?: string | string[] };
 export default async function NewBrewRoute({ searchParams }: { searchParams: Promise<Search> }) {
   const search = await searchParams;
   const session = Array.isArray(search.session) ? search.session[0] : search.session;
-  return <NewBrewScreen sessionId={session ?? null} />;
+  return (
+    <PageShell>
+      <NewBrewScreen sessionId={session ?? null} />
+    </PageShell>
+  );
 }

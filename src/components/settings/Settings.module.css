@@ -1,7 +1,6 @@
 .form {
   display: grid;
   gap: var(--space-6);
-  max-width: var(--layout-form);
 }
 
 .preview {

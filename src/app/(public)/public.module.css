@@ -3,8 +3,6 @@
 }
 
 .main {
-  max-width: 48rem;
-  margin: 0 auto;
   padding: var(--space-4) var(--space-4) var(--space-12);
 }
 

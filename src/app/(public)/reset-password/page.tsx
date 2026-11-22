@@ -4,6 +4,7 @@ import { ExpiredLink } from '@/components/auth/ExpiredLink';
 import { RECOVERY_COOKIE } from '@/lib/auth/constants';
 import { getUser } from '@/lib/auth/server';
 import { ResetPasswordForm } from './ResetPasswordForm';
+import { PageShell } from '@/components/shell/PageShell';
 
 export const metadata: Metadata = {
   title: 'Choose a new password',
@@ -14,6 +15,16 @@ export const metadata: Metadata = {
 export default async function ResetPasswordPage() {
   const hasRecovery = (await cookies()).has(RECOVERY_COOKIE);
   const user = hasRecovery ? await getUser() : null;
-  if (!user) return <ExpiredLink recovery />;
-  return <ResetPasswordForm />;
+  if (!user) {
+    return (
+      <PageShell width="narrow">
+        <ExpiredLink recovery />
+      </PageShell>
+    );
+  }
+  return (
+    <PageShell width="narrow">
+      <ResetPasswordForm />
+    </PageShell>
+  );
 }

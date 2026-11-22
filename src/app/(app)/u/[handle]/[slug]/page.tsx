@@ -3,6 +3,7 @@ import { HydratedRecipe } from '@/components/recipes/HydratedRecipe';
 import { RecipePage } from '@/components/recipes/RecipePage';
 import { getUser } from '@/lib/auth/server';
 import { getRecipeBySlug } from '@/lib/recipes/server';
+import { PageShell } from '@/components/shell/PageShell';
 
 type Params = { handle: string; slug: string };
 
@@ -20,8 +21,10 @@ export async function generateMetadata({ params }: { params: Promise<Params> }):
 export default async function RecipeRoute({ params }: { params: Promise<Params> }) {
   const { handle, slug } = await params;
   return (
-    <HydratedRecipe handle={handle} slug={slug}>
-      <RecipePage handle={handle} slug={slug} />
-    </HydratedRecipe>
+    <PageShell>
+      <HydratedRecipe handle={handle} slug={slug}>
+        <RecipePage handle={handle} slug={slug} />
+      </HydratedRecipe>
+    </PageShell>
   );
 }

@@ -1,8 +1,6 @@
 .page {
   display: grid;
   gap: var(--space-4);
-  max-width: var(--layout-wide);
-  margin: 0 auto;
   padding: var(--space-4);
 }
 
@@ -179,8 +177,8 @@
   font-weight: var(--type-label-weight);
 }
 
-/* The pour curve spans both columns. */
-@media (min-width: 1024px) {
+/* The pour curve spans both columns (when there are two). */
+@container (min-width: 56rem) {
   .wide {
     grid-column: 1 / -1;
   }

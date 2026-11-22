@@ -72,3 +72,17 @@
   display: block;
   white-space: nowrap;
 }
+
+/* Three tiles need about 19rem; in a narrower card they stack instead of cutting their text. */
+@container (max-width: 19rem) {
+  .panel {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.value,
+.label,
+.sub {
+  overflow-wrap: normal;
+  min-width: 0;
+}

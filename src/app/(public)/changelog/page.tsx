@@ -7,6 +7,7 @@ import { VisuallyHidden } from '@/components/ui/VisuallyHidden/VisuallyHidden';
 import { parseChangelog, releaseUrl, type ChangelogRelease } from '@/lib/changelog';
 import { ChangelogSeen } from './ChangelogSeen';
 import styles from './changelog.module.css';
+import { PageShell } from '@/components/shell/PageShell';
 
 export const metadata: Metadata = {
   title: "What's new",
@@ -33,7 +34,7 @@ export default function ChangelogPage() {
   const releases = loadReleases();
 
   return (
-    <>
+    <PageShell>
       <ChangelogSeen />
       <h1 className={styles.title}>What&apos;s new</h1>
       {releases.length === 0 ? (
@@ -94,6 +95,6 @@ export default function ChangelogPage() {
           ))}
         </div>
       )}
-    </>
+    </PageShell>
   );
 }

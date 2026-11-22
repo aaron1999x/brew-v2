@@ -11,6 +11,7 @@ The checklist the `ui-reviewer` subagent reads screenshots against (see `.claude
 7. **Hints are one short line** and never make one field taller than its neighbours in the row.
 8. **Text and numbers never wrap mid-value; labels never break.** Only a muted sub-line may wrap.
 9. **Charts get enough room:** a radar is at least 320 px wide on desktop, with no frame and no visible title of its own inside a card.
-10. **Wide layout by default** (the recipe page's width, two columns from 1024 px where the content suits it). Narrow only for auth (28rem) and settings (40rem). The timer screens are a centred phone-width column.
+10. **Wide layout by default** (the recipe page's width, two columns when the page container is wide enough (about 56rem)). Narrow only for auth (28rem) and settings (40rem). The timer screens are a centred phone-width column.
 11. **Nothing scrolls sideways** at 390 px or 1280 px, and nothing is cut off at the edge.
 12. **Targets and states are never colour alone**: an icon and words go with every In range / Below / Above and every error.
+13. **Every page uses `PageShell`; layouts respond to their container.** The shell sets the width (wide by default, narrow for auth and settings, timer for the timer screens), a unit test fails for a page outside it, and card grids and tile rows switch columns with container queries so a narrow container stacks them instead of overflowing. Tiles never cut off or overflow their text.

@@ -5,6 +5,7 @@ import type { PinnedBrew } from '@/components/recipes/editor/PinnedBrewNote';
 import { createClient } from '@/lib/supabase/server';
 import { parseVersionNo, versionByNo } from '@/lib/recipes/fetch';
 import { getOwnedRecipe } from '@/lib/recipes/server';
+import { PageShell } from '@/components/shell/PageShell';
 
 type Params = { handle: string; slug: string };
 type Search = { from?: string | string[]; brew?: string | string[] };
@@ -33,7 +34,9 @@ export default async function NewVersionRoute({
   let fromBrew: PinnedBrew | null = null;
   const brewId = Array.isArray(search.brew) ? search.brew[0] : search.brew;
   if (brewId && UUID.test(brewId)) {
-    const { data: brew } = await (await createClient())
+    const { data: brew } = await (
+      await createClient()
+    )
       .from('brews')
       .select('id, brewed_at, overall, notes, next_change, recipe_id')
       .eq('id', brewId)
@@ -45,10 +48,17 @@ export default async function NewVersionRoute({
     }
   }
   return (
-    <RecipeEditor
-      fromBrew={fromBrew}
-      mode="new-version"
-      base={{ handle: data.owner.handle, recipe: data.recipe, version, latestNo: data.version.version_no }}
-    />
+    <PageShell>
+      <RecipeEditor
+        fromBrew={fromBrew}
+        mode="new-version"
+        base={{
+          handle: data.owner.handle,
+          recipe: data.recipe,
+          version,
+          latestNo: data.version.version_no,
+        }}
+      />
+    </PageShell>
   );
 }

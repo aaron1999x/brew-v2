@@ -15,13 +15,13 @@ export type BrewRow = Database['public']['Tables']['brews']['Row'];
 export type BrewDetailData = {
   brew: BrewRow;
   /** Null when the recipe was deleted (the page then reads from the brew's snapshots). */
-  recipe: { slug: string; name: string } | null;
+  recipe: { slug: string; name: string; method: string } | null;
   /** Null when the version is gone. */
   version: VersionRow | null;
 };
 
 type DetailQueryRow = BrewRow & {
-  recipe: { slug: string; name: string; deleted_at: string | null } | null;
+  recipe: { slug: string; name: string; method: string; deleted_at: string | null } | null;
   version: Database['public']['Tables']['recipe_versions']['Row'] | null;
 };
 
@@ -29,7 +29,7 @@ type DetailQueryRow = BrewRow & {
 export async function fetchBrew(id: string): Promise<BrewDetailData | null> {
   const { data, error } = await createClient()
     .from('brews')
-    .select('*, recipe:recipes(slug, name, deleted_at), version:recipe_versions(*)')
+    .select('*, recipe:recipes(slug, name, method, deleted_at), version:recipe_versions(*)')
     .eq('id', id)
     .is('deleted_at', null)
     .maybeSingle();
@@ -39,7 +39,7 @@ export async function fetchBrew(id: string): Promise<BrewDetailData | null> {
   const recipeAlive = recipe && !recipe.deleted_at;
   return {
     brew: brew as BrewRow,
-    recipe: recipeAlive ? { slug: recipe.slug, name: recipe.name } : null,
+    recipe: recipeAlive ? { slug: recipe.slug, name: recipe.name, method: recipe.method } : null,
     version: recipeAlive && version ? toVersionRow(version) : null,
   };
 }

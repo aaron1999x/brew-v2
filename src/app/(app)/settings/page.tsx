@@ -4,6 +4,7 @@ import { TopBar } from '@/components/shell/TopBar';
 import { SignOutButton } from '@/components/auth/SignOutButton';
 import { getAccountStatus, requireUser } from '@/lib/auth/server';
 import styles from '../shell.module.css';
+import { PageShell } from '@/components/shell/PageShell';
 
 export const metadata: Metadata = { title: 'Settings' };
 
@@ -38,12 +39,12 @@ export default async function SettingsPage() {
   const status = await getAccountStatus();
   const links = [...LINKS, ACCOUNT_LINK, ...(status?.role === 'admin' ? [ADMIN_LINK] : [])];
   return (
-    <>
+    <PageShell width="narrow">
       <TopBar title="Settings" backHref="/profile" />
-      <div className={styles.bodyForm}>
+      <div className={styles.body}>
         <SettingsList links={links} />
         <SignOutButton />
       </div>
-    </>
+    </PageShell>
   );
 }

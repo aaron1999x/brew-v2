@@ -1,0 +1,23 @@
+/*
+ * The only page-level width rules in the app. Layouts inside a page respond to this container (see
+ * the container queries in the brew cards and the tiles), not to the window.
+ */
+.shell {
+  width: 100%;
+  min-width: 0;
+  margin-inline: auto;
+  /* Inside, `@container` rules measure this box. */
+  container-type: inline-size;
+}
+
+.wide {
+  max-width: var(--layout-wide);
+}
+
+.narrow {
+  max-width: var(--layout-form);
+}
+
+.timer {
+  max-width: var(--layout-form);
+}

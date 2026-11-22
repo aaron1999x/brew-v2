@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { EmptyState } from '@/components/ui/EmptyState/EmptyState';
 import { ButtonLink } from '@/components/ui/ButtonLink/ButtonLink';
 import { isDevToolsEnabled } from '@/lib/dev-tools';
+import { PageShell } from '@/components/shell/PageShell';
 
 export const metadata: Metadata = {
   title: 'Fullscreen layout',
@@ -13,14 +14,16 @@ export const metadata: Metadata = {
 export default function FullscreenPreview() {
   if (!isDevToolsEnabled(process.env.NEXT_PUBLIC_APP_ENV)) notFound();
   return (
-    <EmptyState
-      title="Fullscreen layout"
-      text="No tab bar and no top navigation. The guided timer will live here."
-      action={
-        <ButtonLink href="/dev/components" variant="secondary">
-          Back to components
-        </ButtonLink>
-      }
-    />
+    <PageShell>
+      <EmptyState
+        title="Fullscreen layout"
+        text="No tab bar and no top navigation. The guided timer will live here."
+        action={
+          <ButtonLink href="/dev/components" variant="secondary">
+            Back to components
+          </ButtonLink>
+        }
+      />
+    </PageShell>
   );
 }

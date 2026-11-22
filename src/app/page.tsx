@@ -1,14 +1,17 @@
 import { siteConfig } from '@/config/site';
 import { appVersion } from '@/lib/version';
 import styles from './page.module.css';
+import { PageShell } from '@/components/shell/PageShell';
 
 export default function Home() {
   return (
-    <main className={styles.main}>
-      <h1 className={styles.title}>{siteConfig.name} — coming soon</h1>
-      <p className={styles.meta}>
-        Version <span className="num">{appVersion}</span>
-      </p>
-    </main>
+    <PageShell>
+      <main className={styles.main}>
+        <h1 className={styles.title}>{siteConfig.name} — coming soon</h1>
+        <p className={styles.meta}>
+          Version <span className="num">{appVersion}</span>
+        </p>
+      </main>
+    </PageShell>
   );
 }

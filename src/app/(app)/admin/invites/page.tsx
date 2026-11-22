@@ -3,6 +3,7 @@ import { InvitesManager } from '@/components/admin/InvitesManager';
 import { TopBar } from '@/components/shell/TopBar';
 import { requireAdmin } from '@/lib/auth/server';
 import styles from '../../shell.module.css';
+import { PageShell } from '@/components/shell/PageShell';
 
 export const metadata: Metadata = { title: 'Invites' };
 
@@ -10,11 +11,11 @@ export const metadata: Metadata = { title: 'Invites' };
 export default async function InvitesPage() {
   await requireAdmin();
   return (
-    <>
+    <PageShell>
       <TopBar title="Invites" backHref="/settings" />
-      <div className={styles.bodyReading}>
+      <div className={styles.body}>
         <InvitesManager />
       </div>
-    </>
+    </PageShell>
   );
 }

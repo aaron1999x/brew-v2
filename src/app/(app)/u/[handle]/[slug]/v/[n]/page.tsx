@@ -4,6 +4,7 @@ import { HydratedRecipe } from '@/components/recipes/HydratedRecipe';
 import { RecipePage } from '@/components/recipes/RecipePage';
 import { parseVersionNo, versionByNo } from '@/lib/recipes/fetch';
 import { getOwnedRecipe } from '@/lib/recipes/server';
+import { PageShell } from '@/components/shell/PageShell';
 
 type Params = { handle: string; slug: string; n: string };
 
@@ -16,8 +17,10 @@ export default async function VersionRoute({ params }: { params: Promise<Params>
   // A version that doesn't exist is as "not available" as a recipe that doesn't (a real 404).
   if (versionNo === null || !versionByNo(data.versions, versionNo)) notFound();
   return (
-    <HydratedRecipe handle={handle} slug={slug}>
-      <RecipePage handle={handle} slug={slug} versionNo={versionNo} />
-    </HydratedRecipe>
+    <PageShell>
+      <HydratedRecipe handle={handle} slug={slug}>
+        <RecipePage handle={handle} slug={slug} versionNo={versionNo} />
+      </HydratedRecipe>
+    </PageShell>
   );
 }
