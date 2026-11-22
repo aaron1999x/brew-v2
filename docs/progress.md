@@ -306,7 +306,7 @@ Branch `feat/desktop-layouts`. Phone layouts (under 768 px) are unchanged: the n
 - **Known:** the version select on the recipe page stretches across the full width on desktop.
 
 ## M4 Guided timer and brew log
-## M4 in progress
+## M4 notes by stage
 
 Branch `feat/m4-brews`, draft PR (the full M4 prompt is in its description). Plan: `C:\Users\aaron\.claude\plans\linked-meandering-kahan.md` (stages 1–6). Decided at planning: keep the prototype's single 5 s warning beep before each step after 0:00; `log_brew` allows a plain log on a soft-deleted recipe (the detail page reads the snapshots) but raises `version_not_found` for a quick change on one.
 
@@ -434,8 +434,25 @@ Reference: prototype `Compare.tsx` (the picker, the radar overlay, the grouped s
 - **Tests:** unit `compare.test.ts` (rows, differs, missing values, ids); `brew-history.spec.ts` (7, both projects: counts and the real last-brewed order, My brews with the All versions switch and ticking, /brews 30 + Load more, empty `/brews`, compare with headline numbers, 7-axis radar text, marked rows, equal card heights, the phone's stacked list and the pick message, detail Compare, Home empty then Continue and 5 recent); `layout-widths.spec.ts` now includes `/brews` and `/brews/compare` automatically.
 - **Still to do in Stage 6:** Playwright for everything left in the prompt's list (timer coverage is in `brew-timer.spec.ts`; units switching across the log, detail and compare), `scripts/seed-brew.mjs` options, `verify:account-delete` with brews, the export test for brews, the reviewer subagent, the dark-theme ui review, final docs, PR ready.
 
-### Next
-Stage 6: tests and hand-over (see the PR prompt): the remaining Playwright coverage (units switching across log, detail and compare, delete keeps the lock, export), seed script options, `verify:account-delete` with brews, the `reviewer` subagent, one dark-theme `ui-reviewer` pass, final docs, mark the PR ready (don't merge).
+### Stage 6 done and M4 hand-over
+**Built:** the choice sheet and brew picker; the guided timer, long steep and stopwatch with the prototype's cues; the brew log (seven attribute sliders at 5.0, a separate required overall, radar of the seven attributes, extraction against targets, flavours, Hot/Warm/Cool, notes); detail, edit, soft delete with undo, Create next version with the pinned note; counts, My brews, `/brews`, compare of 2–3 brews, Home Continue and Recent brews; quick change (grind, temperature, dose, water) saved as vN+1 in the same call as the brew. Brews are owner-only throughout.
+
+**New database objects** (migrations `20261120000002` and `…03`, pgTAP `10_brews.sql`, 405 pgTAP tests in all): `log_brew(p_brew, p_new_version)` (security invoker, idempotent on the brew id, whitelisted columns, quick-change validation that raises `quick_change_invalid`, `version_not_found`, `brew_conflict`, `overall_required`), `my_recipe_brew_stats()`, constraints `brews_flavours_valid` and `brews_brewed_at_not_future`, and an update guard on `brews` (user, snapshots, source, created_at, recipe and version can't change). Neither new function is in the `anon` allowlist. Error codes and constraint names are in `src/lib/errors/messages.ts`.
+
+**Timer state machine** (`lib/brews/timer.ts`, pure, takes `now`): `prep → countin → running ⇄ paused → finishing → done`, with `steep` (no count-in, no wake lock) and `stopwatch` as modes chosen from the steps. Elapsed time is the stored wall-clock start minus paused time, saved in the session on every event, so a reload or a locked phone resumes with the right time; cues come from `cueSchedule` and `missedCues`.
+
+**Behaviours to know** (from the milestone review, none are blockers): `log_brew` returns the caller's existing brew when the id was already saved, whatever the payload says (a retry must be a no-op, so a reused session id with different content gets the first brew back; the device makes a new id per session). A malformed uuid sent straight to the RPC raises Postgres's own error rather than a named one (the app only sends valid ids, and row-level security is unaffected). A quick change is applied to the version the session started from and numbered after the recipe's latest, so a version added from another device during a session still gets the next number. Stale-base saves are not specially tested.
+
+**What M5 (offline) must use:** brew sessions already live on the device (`brew-sessions:v1:<userId>`, `lib/brews/sessions.ts`, `useBrewSessions`); `log_brew` is idempotent on the device-generated brew id and creates a quick-change version in the same call, so the outbox can queue `LogBrewPayload`s (`toLogBrewPayload`) exactly as they are and replay them; saving offline currently shows "Saving brews needs a connection for now. Your log is kept on this phone." in `NewBrewScreen` (the one place to change). The timer already works offline once loaded.
+
+**What M7 (sharing) must use:** the timer route (`/@handle/slug/v/N/brew?session=`, currently owner-only through `getOwnedRecipe`) and the choice sheet (`ChoiceSheet`, opened by `?brew=1`) for "I brewed this" and for visitors; `createSession` already takes a recipe, version and entry; `log_brew` already handles a public recipe's version through the existing brews trigger (`recipe_not_available` otherwise).
+
+**Tests added in Stage 6:** `brew-units.spec.ts` (°F/oz across timer prep, log, detail, edit, compare, and stored values unchanged, including that saving the edit doesn't rewrite the beverage weight), `brew-a11y.spec.ts` (axe in both themes: picker empty and filled, choice sheet, log empty/filled/errors/offline, detail, edit, My brews, `/brews`, compare, Home with in-progress, Continue and Recent, NotAvailable, detail with the recipe gone, empty states), more timer axe states (missed-cue summary, finishing, stopwatch), the export test with brews (a quick-change version, a soft-deleted brew, nothing of anyone else's), retry safety (same session twice = one brew and one version), the seed script test. `scripts/seed-brew.mjs` takes `--count N --scored`; `verify:account-delete` now gives user A plain, quick-change, history and soft-deleted brews and passes. Dark theme: one `ui-reviewer` pass at the end of the milestone (`UI_SHOTS_THEME=dark`).
+
+**Not verifiable from code (Aaron's iPhone checks at Stop 1 and Stop 2 cover them):** the beeps, the wake lock, the clock after locking the phone for 30 s and the missed-cue summary on a real device, the Home Screen app, survival after closing Safari, VoiceOver reading of the sliders and radar.
+
+### Next (M5)
+Offline and PWA (`docs/phase-5-roadmap.md` M5): queue `log_brew` payloads and the other writes in an outbox, sync status, install guidance; see "What M5 must use" above.
 
 ## M5 Offline and PWA
 ## M6 Public pages and publishing

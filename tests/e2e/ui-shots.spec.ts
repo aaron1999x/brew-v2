@@ -3,13 +3,15 @@ import { SHOT_SCREENS } from './helpers/ui-shots';
 import { expect, signIn, test, waitForApp } from './helpers/test-users';
 
 // Screenshots for the ui-reviewer subagent: only the screens named in UI_SHOTS (comma separated keys
-// of SHOT_SCREENS), at 390×844 and 1280×800, light theme, full page, into UI_SHOTS_DIR. Skipped in
+// of SHOT_SCREENS), at 390×844 and 1280×800, light theme (dark with UI_SHOTS_THEME=dark), full page, into UI_SHOTS_DIR. Skipped in
 // every normal run. Needs the staging secret key like the other specs that make a recipe.
+// Light by default; UI_SHOTS_THEME=dark takes the dark theme (one review at the end of each milestone).
+const theme = process.env.UI_SHOTS_THEME === 'dark' ? 'dark' : 'light';
 test.use({
   serviceWorkers: 'block',
   locale: 'en-GB',
   timezoneId: 'Europe/London',
-  colorScheme: 'light',
+  colorScheme: theme,
 });
 
 const wanted = (process.env.UI_SHOTS ?? '')
@@ -44,7 +46,10 @@ test.describe('ui screenshots', () => {
         await waitForApp(page);
         await page.waitForTimeout(1200);
         await page.screenshot({
-          path: path.join(dir, `${key}-${size.width}x${size.height}.png`),
+          path: path.join(
+            dir,
+            `${key}-${size.width}x${size.height}${theme === 'dark' ? '-dark' : ''}.png`,
+          ),
           fullPage: true,
         });
       }

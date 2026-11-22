@@ -70,7 +70,7 @@ export function ExtractionPanel({
       <div className={styles.cell}>
         <dt className={styles.label}>Brew ratio</dt>
         <dd className={styles.value}>{formatRatio(model.ratio) ?? dash}</dd>
-        <dd className={styles.sub}>coffee : water</dd>
+        <dd className={styles.sub}>by weight</dd>
       </div>
       <div className={styles.cell}>
         <dt className={styles.label}>Overall ratio</dt>

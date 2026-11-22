@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test';
 import { expectNoAxeViolations } from './helpers/axe';
 import { stubDevice } from './helpers/brew-device';
-import { createRecipe } from './helpers/recipes';
+import { baseVersion, createRecipe } from './helpers/recipes';
 import { expect, logIn, signIn, test, waitForApp, type TestUser } from './helpers/test-users';
 
 // The brew log, detail, edit, delete and "Create next version", from a Log only session. Needs the
@@ -27,7 +27,8 @@ async function openLog(page: Page, user: TestUser, slug: string) {
   await expect(page).toHaveTitle(/Log brew/);
 }
 
-const slider = (page: Page, label: string) => page.getByRole('slider', { name: new RegExp(`^${label}`) });
+const slider = (page: Page, label: string) =>
+  page.getByRole('slider', { name: new RegExp(`^${label}`) });
 
 /** Sets the Overall score with the keyboard: the first arrow gives 5.0, one more 5.5. */
 async function scoreOverall(page: Page) {
@@ -42,7 +43,8 @@ const notesField = (page: Page) => page.getByRole('textbox', { name: 'Notes', ex
 const nextField = (page: Page) => page.getByRole('textbox', { name: /^Next time/ });
 const tag = (page: Page, name: string) => page.getByRole('row', { name });
 
-const save = (page: Page) => page.getByRole('button', { name: 'Save', exact: true }).first().click();
+const save = (page: Page) =>
+  page.getByRole('button', { name: 'Save', exact: true }).first().click();
 
 test('the cards are in the prototype’s order, and axe passes', async ({ page, users }) => {
   const user = await signIn(page, users, 'log-order');
@@ -59,17 +61,30 @@ test('the cards are in the prototype’s order, and axe passes', async ({ page, 
   ]);
   await expect(page.getByLabel('Drawdown')).toBeVisible(); // a pour-over
   // One Drawdown tile, inside Results; no separate Extraction section.
-  await expect(page.getByRole('region', { name: 'Results' }).getByText('Target 2:45–3:15')).toBeVisible();
+  await expect(
+    page.getByRole('region', { name: 'Results' }).getByText('Target 2:45–3:15'),
+  ).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Extraction' })).toHaveCount(0);
   await expectNoAxeViolations(page);
 });
 
-test('attributes start at 5.0; overall starts empty, with no Clear buttons', async ({ page, users }) => {
+test('attributes start at 5.0; overall starts empty, with no Clear buttons', async ({
+  page,
+  users,
+}) => {
   const user = await signIn(page, users, 'log-sliders');
   const recipe = await createRecipe(users, user);
   await openLog(page, user, recipe.slug);
 
-  for (const label of ['Sweetness', 'Acidity', 'Brightness', 'Body', 'Clarity', 'Balance', 'Aftertaste']) {
+  for (const label of [
+    'Sweetness',
+    'Acidity',
+    'Brightness',
+    'Body',
+    'Clarity',
+    'Balance',
+    'Aftertaste',
+  ]) {
     await expect(slider(page, label)).toHaveAttribute('aria-valuetext', '5.0 out of 10');
   }
   await expect(page.getByRole('button', { name: /^Clear/ })).toHaveCount(0);
@@ -96,11 +111,16 @@ test('attributes start at 5.0; overall starts empty, with no Clear buttons', asy
   // The radar shows the seven attributes; its text alternative lists them and overall.
   const chart = page.getByRole('img', { name: /^Taste\./ });
   await expect(chart).toBeVisible();
-  await expect(chart).toHaveAccessibleName(/sweetness 10\.0, acidity 5\.0.*aftertaste 5\.0, overall 5\.5/);
+  await expect(chart).toHaveAccessibleName(
+    /sweetness 10\.0, acidity 5\.0.*aftertaste 5\.0, overall 5\.5/,
+  );
   await expect(chart).not.toHaveAccessibleName(/eight axes/);
 });
 
-test('saving without overall focuses the summary and links to the slider', async ({ page, users }) => {
+test('saving without overall focuses the summary and links to the slider', async ({
+  page,
+  users,
+}) => {
   const user = await signIn(page, users, 'log-overall');
   const recipe = await createRecipe(users, user);
   await openLog(page, user, recipe.slug);
@@ -108,11 +128,17 @@ test('saving without overall focuses the summary and links to the slider', async
   await save(page);
   await expect(page.locator(SUMMARY)).toBeFocused();
   await expect(page.getByRole('heading', { name: 'Fix 1 thing to continue' })).toBeVisible();
-  await page.locator(SUMMARY).getByRole('link', { name: 'Score the cup overall before saving' }).click();
+  await page
+    .locator(SUMMARY)
+    .getByRole('link', { name: 'Score the cup overall before saving' })
+    .click();
   await expect(slider(page, 'Overall')).toBeFocused();
   await expectNoAxeViolations(page);
 
-  const { count } = await users.admin.from('brews').select('id', { count: 'exact', head: true }).eq('user_id', user.id);
+  const { count } = await users.admin
+    .from('brews')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', user.id);
   expect(count).toBe(0);
 });
 
@@ -204,14 +230,35 @@ test('log, detail, edit, delete and undo, next version with the pinned note, and
   await expect(page.getByRole('img', { name: /^Pour curve\./ })).toBeVisible();
 
   const { data: row } = await users.admin.from('brews').select('*').eq('id', id).single();
-  expect(row).toMatchObject({ overall: 5.5, sweetness: 5.5, acidity: 5, brightness: 5, body: 5, clarity: 5, balance: 5, aftertaste: 5, source: 'manual', ey_pct: 19.6 });
+  expect(row).toMatchObject({
+    overall: 5.5,
+    sweetness: 5.5,
+    acidity: 5,
+    brightness: 5,
+    body: 5,
+    clarity: 5,
+    balance: 5,
+    aftertaste: 5,
+    source: 'manual',
+    ey_pct: 19.6,
+  });
   expect(row?.flavours).toEqual(['peach', 'toasted almond']);
-  const { data: version } = await users.admin.from('recipe_versions').select('locked_at').eq('id', recipe.v1Id).single();
+  const { data: version } = await users.admin
+    .from('recipe_versions')
+    .select('locked_at')
+    .eq('id', recipe.v1Id)
+    .single();
   expect(version?.locked_at).not.toBeNull();
   await expectNoAxeViolations(page);
 
   // The session is gone from the device.
-  expect(await page.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('brew-sessions')).map((k) => localStorage.getItem(k)))).toEqual(['[]']);
+  expect(
+    await page.evaluate(() =>
+      Object.keys(localStorage)
+        .filter((k) => k.startsWith('brew-sessions'))
+        .map((k) => localStorage.getItem(k)),
+    ),
+  ).toEqual(['[]']);
 
   // Edit.
   await page.getByRole('button', { name: 'More actions for this brew' }).click();
@@ -264,13 +311,20 @@ test('log, detail, edit, delete and undo, next version with the pinned note, and
   await page.getByRole('menuitem', { name: 'Delete' }).click();
   await page.getByRole('alertdialog').getByRole('button', { name: 'Delete' }).click();
   await expect(page.getByText('Brew deleted')).toBeVisible();
-  const still = await users.admin.from('recipe_versions').select('locked_at').eq('id', recipe.v1Id).single();
+  const still = await users.admin
+    .from('recipe_versions')
+    .select('locked_at')
+    .eq('id', recipe.v1Id)
+    .single();
   expect(still.data?.locked_at).not.toBeNull();
   const deleted = await page.goto(`/brews/${id}`);
   expect(deleted?.status()).toBe(404);
 });
 
-test('a quick change saves as the next version with its change note, once', async ({ page, users }) => {
+test('a quick change saves as the next version with its change note, once', async ({
+  page,
+  users,
+}) => {
   const user = await signIn(page, users, 'log-quick');
   const recipe = await createRecipe(users, user, 'Morning V60');
   await openLog(page, user, recipe.slug);
@@ -284,9 +338,15 @@ test('a quick change saves as the next version with its change note, once', asyn
 
   await page.waitForURL(/\/brews\/[0-9a-f-]{36}$/);
   await expect(page.getByText('Brew saved as v2')).toBeVisible();
-  await expect(page.getByText('Brewed with changes: grind 24 clicks → 22 clicks').first()).toBeVisible();
+  await expect(
+    page.getByText('Brewed with changes: grind 24 clicks → 22 clicks').first(),
+  ).toBeVisible();
   const id = page.url().split('/').pop()!;
-  const { data: brew } = await users.admin.from('brews').select('version_no_snapshot, recipe_version_id').eq('id', id).single();
+  const { data: brew } = await users.admin
+    .from('brews')
+    .select('version_no_snapshot, recipe_version_id')
+    .eq('id', id)
+    .single();
   expect(brew?.version_no_snapshot).toBe(2);
   const { data: versions } = await users.admin
     .from('recipe_versions')
@@ -302,7 +362,10 @@ test('a quick change saves as the next version with its change note, once', asyn
   expect(versions?.[1]?.locked_at).not.toBeNull();
 });
 
-test('the draft comes back after a reload, and Keep leaves the session on Home', async ({ page, users }) => {
+test('the draft comes back after a reload, and Keep leaves the session on Home', async ({
+  page,
+  users,
+}) => {
   const user = await signIn(page, users, 'log-draft');
   const recipe = await createRecipe(users, user);
   await openLog(page, user, recipe.slug);
@@ -312,9 +375,11 @@ test('the draft comes back after a reload, and Keep leaves the session on Home',
   await page.keyboard.press('ArrowRight');
   await tag(page, 'cocoa').click();
   // The draft is kept shortly after the last change.
-  await expect.poll(() =>
-    page.evaluate(() => Object.values(localStorage).some((v) => v.includes('half done'))),
-  ).toBe(true);
+  await expect
+    .poll(() =>
+      page.evaluate(() => Object.values(localStorage).some((v) => v.includes('half done'))),
+    )
+    .toBe(true);
 
   await page.reload();
   await waitForApp(page);
@@ -328,18 +393,30 @@ test('the draft comes back after a reload, and Keep leaves the session on Home',
   await sheet.getByRole('button', { name: 'Back to log' }).click();
   await expect(sheet).toBeHidden();
   await page.getByRole('button', { name: 'Cancel' }).click();
-  await page.getByRole('dialog', { name: 'Keep this brew for later?' }).getByRole('button', { name: 'Keep' }).click();
+  await page
+    .getByRole('dialog', { name: 'Keep this brew for later?' })
+    .getByRole('button', { name: 'Keep' })
+    .click();
   await page.waitForURL('**/home');
   await expect(page.getByText('Finish logging').first()).toBeVisible();
 
   // Discard (with its confirm) removes it and creates nothing.
   await page.getByRole('link', { name: /Finish logging/ }).click();
   await page.getByRole('button', { name: 'Cancel' }).click();
-  await page.getByRole('dialog', { name: 'Keep this brew for later?' }).getByRole('button', { name: 'Discard' }).click();
-  await page.getByRole('alertdialog', { name: 'Discard this brew?' }).getByRole('button', { name: 'Discard' }).click();
+  await page
+    .getByRole('dialog', { name: 'Keep this brew for later?' })
+    .getByRole('button', { name: 'Discard' })
+    .click();
+  await page
+    .getByRole('alertdialog', { name: 'Discard this brew?' })
+    .getByRole('button', { name: 'Discard' })
+    .click();
   await page.waitForURL('**/home');
   await expect(page.getByText('Finish logging')).toHaveCount(0);
-  const { count } = await users.admin.from('brews').select('id', { count: 'exact', head: true }).eq('user_id', user.id);
+  const { count } = await users.admin
+    .from('brews')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', user.id);
   expect(count).toBe(0);
 });
 
@@ -352,9 +429,16 @@ test('saving offline keeps the form and says why', async ({ page, users, context
 
   await context.setOffline(true);
   await save(page);
-  await expect(page.getByText('Saving brews needs a connection for now. Your log is kept on this phone.').first()).toBeVisible();
+  await expect(
+    page
+      .getByText('Saving brews needs a connection for now. Your log is kept on this phone.')
+      .first(),
+  ).toBeVisible();
   await expect(notesField(page)).toHaveValue('kept');
-  const { count } = await users.admin.from('brews').select('id', { count: 'exact', head: true }).eq('user_id', user.id);
+  const { count } = await users.admin
+    .from('brews')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', user.id);
   expect(count).toBe(0);
 
   await context.setOffline(false);
@@ -362,4 +446,54 @@ test('saving offline keeps the form and says why', async ({ page, users, context
   await page.getByRole('button', { name: 'Dismiss notification' }).first().click();
   await save(page);
   await page.waitForURL(/\/brews\/[0-9a-f-]{36}$/);
+});
+
+test('saving the same session twice (a retry) makes one brew and one new version', async ({
+  page,
+  users,
+}) => {
+  const user = await signIn(page, users, 'log-retry');
+  const recipe = await createRecipe(users, user, 'Morning V60');
+  const client = await users.clientFor(user);
+  const id = crypto.randomUUID();
+  const payload = {
+    p_brew: {
+      id,
+      recipe_version_id: recipe.v1Id,
+      brewed_at: new Date(Date.now() - 600_000).toISOString(),
+      source: 'timer',
+      overall: 8,
+    } as never,
+    p_new_version: {
+      grind_setting: '22 clicks',
+      temp_c: 93,
+      dose_g: 15,
+      brew_water_g: 250,
+      steps: baseVersion().steps,
+      change_note: 'Brewed with changes: grind 24 clicks → 22 clicks',
+    } as never,
+  };
+  const first = await client.rpc('log_brew', payload);
+  const second = await client.rpc('log_brew', payload);
+  expect(first.error).toBeNull();
+  expect(second.error).toBeNull();
+  expect((second.data as { id: string }).id).toBe(id);
+  const brews = await users.admin
+    .from('brews')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', user.id);
+  expect(brews.count).toBe(1);
+  const versions = await users.admin
+    .from('recipe_versions')
+    .select('id', { count: 'exact', head: true })
+    .eq('recipe_id', recipe.id);
+  expect(versions.count).toBe(2);
+  // The new version is the one that is locked; the base is not.
+  const locks = await users.admin
+    .from('recipe_versions')
+    .select('version_no, locked_at')
+    .eq('recipe_id', recipe.id)
+    .order('version_no');
+  expect(locks.data?.[0]?.locked_at).toBeNull();
+  expect(locks.data?.[1]?.locked_at).not.toBeNull();
 });

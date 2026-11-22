@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { expectNoAxeViolations } from './helpers/axe';
 import { baseVersion, createRecipe, saveNextVersion } from './helpers/recipes';
 import {
@@ -55,7 +56,7 @@ test('counts: the recipe header, the versions page, and the recipes list with a 
   // "Older recipe" was edited after its only brew, which was two days ago; "Brewed now" was brewed a
   // moment ago; "Never brewed" was edited last. The list sorts by the brew dates, not the edit dates.
   await log(older.v1Id, { brewed_at: minutesAgo(2 * 24 * 60) });
-  await log(brewedNow.v1Id, { brewed_at: new Date().toISOString() });
+  await log(brewedNow.v1Id, { brewed_at: new Date(Date.now() + 120_000).toISOString() }); // ahead of any clock skew with the database (up to 5 min is allowed)
   await saveNextVersion(
     users,
     user,
@@ -256,14 +257,12 @@ test('compare: a 7-axis radar, each overall as a headline and a row, and the row
   await expectNoAxeViolations(page);
 
   // The two cards of the row share a top and a height.
-  const cards = await page
-    .locator('section[aria-labelledby^="c-"]')
-    .evaluateAll((els) =>
-      els.map((e) => ({
-        top: Math.round(e.getBoundingClientRect().top),
-        bottom: Math.round(e.getBoundingClientRect().bottom),
-      })),
-    );
+  const cards = await page.locator('section[aria-labelledby^="c-"]').evaluateAll((els) =>
+    els.map((e) => ({
+      top: Math.round(e.getBoundingClientRect().top),
+      bottom: Math.round(e.getBoundingClientRect().bottom),
+    })),
+  );
   expect(cards).toHaveLength(2);
   expect(cards[0]).toEqual(cards[1]);
 
@@ -275,11 +274,14 @@ test('compare: a 7-axis radar, each overall as a headline and a row, and the row
   await expect(stacked).toContainText('differs');
   await expect(stacked.locator('dd').first()).toContainText('A');
   await expect(stacked.locator('dd').nth(1)).toContainText('B');
-  expect(
-    await page.evaluate(
-      () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
-    ),
-  ).toBeLessThanOrEqual(0);
+  // The chart resizes a moment after the window does, so wait for the page to settle.
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+      ),
+    )
+    .toBeLessThanOrEqual(0);
   await expectNoAxeViolations(page);
   await page.setViewportSize({ width: 1280, height: 900 });
 
@@ -341,4 +343,62 @@ test('Home: the empty state first, then Continue (Brew again opens the sheet) an
   await page.goto('/home');
   await page.getByRole('link', { name: 'See all' }).click();
   await page.waitForURL('**/brews');
+});
+
+test('scripts/seed-brew.mjs --count --scored seeds history that lists and compares', async ({
+  page,
+  users,
+}) => {
+  test.slow();
+  const user = await signIn(page, users, 'hist-seed');
+  const recipe = await createRecipe(users, user, 'Morning V60');
+  const out = execFileSync(
+    process.execPath,
+    [
+      'scripts/seed-brew.mjs',
+      '--handle',
+      user.handle,
+      '--slug',
+      recipe.slug,
+      '--version',
+      '1',
+      '--count',
+      '4',
+      '--scored',
+    ],
+    { encoding: 'utf8', env: process.env },
+  );
+  expect(out).toContain('Seeded 4 scored brews');
+  const seeded = await users.admin
+    .from('brews')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('brewed_at', { ascending: false });
+  expect(seeded.data).toHaveLength(4);
+  for (const row of seeded.data ?? []) {
+    for (const key of [
+      'sweetness',
+      'acidity',
+      'brightness',
+      'body',
+      'clarity',
+      'balance',
+      'aftertaste',
+      'overall',
+    ]) {
+      expect(row[key], key).not.toBeNull();
+    }
+    expect(row.flavours.length).toBeGreaterThan(0);
+    expect(row.ey_pct).not.toBeNull();
+  }
+  expect(new Set((seeded.data ?? []).map((r) => r.overall)).size).toBeGreaterThan(1);
+  await page.goto('/brews');
+  await waitForApp(page);
+  await expect(page.getByRole('list', { name: 'Brews' }).getByRole('listitem')).toHaveCount(4);
+  const ids = (seeded.data ?? []).slice(0, 3).map((r) => r.id as string);
+  await page.goto(`/brews/compare?ids=${ids.join(',')}`);
+  await waitForApp(page);
+  await expect(
+    page.getByRole('list', { name: 'Overall scores' }).getByRole('listitem'),
+  ).toHaveCount(3);
 });

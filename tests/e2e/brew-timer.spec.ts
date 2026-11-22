@@ -21,7 +21,10 @@ test.beforeEach(async ({ page }) => {
 });
 
 test.describe('choosing what to brew', () => {
-  test('the picker lists my recipes, searches them and opens the choice sheet', async ({ page, users }) => {
+  test('the picker lists my recipes, searches them and opens the choice sheet', async ({
+    page,
+    users,
+  }) => {
     const user = await signIn(page, users, 'picker');
     await createRecipe(users, user, 'Morning V60');
     await createRecipe(users, user, 'Evening Press', { method: 'french_press' });
@@ -63,7 +66,9 @@ test.describe('choosing what to brew', () => {
   test('a timer link without a session goes back to the choice sheet', async ({ page, users }) => {
     const user = await signIn(page, users, 'no-session');
     const recipe = await createRecipe(users, user);
-    await page.goto(`/@${user.handle}/${recipe.slug}/v/1/brew?session=00000000-0000-4000-8000-000000000000`);
+    await page.goto(
+      `/@${user.handle}/${recipe.slug}/v/1/brew?session=00000000-0000-4000-8000-000000000000`,
+    );
     await expect(page.getByRole('dialog', { name: 'Brew this recipe' })).toBeVisible();
     await expect(page).toHaveURL(/\?brew=1/);
   });
@@ -87,7 +92,11 @@ test.describe('the prep screen (Ready)', () => {
     // Two rows: dose, water, ratio; then temperature, the grind SETTING and the grinder's name.
     const rows = page.locator('[class*="summaryRow"]');
     await expect(rows).toHaveCount(2);
-    await expect(rows.nth(0).locator('[class*="summaryItem"]')).toHaveText(['15 g', '250 g', '1:16.7']);
+    await expect(rows.nth(0).locator('[class*="summaryItem"]')).toHaveText([
+      '15 g',
+      '250 g',
+      '1:16.7',
+    ]);
     await expect(rows.nth(1).locator('[class*="summaryItem"]')).toHaveText([
       '93 °C',
       'Grind 24 clicks',
@@ -115,7 +124,9 @@ test.describe('the prep screen (Ready)', () => {
     const user = await signIn(page, users, 'prep-varied');
     const recipe = await createRecipe(users, user, 'Varied', { version: VARIED });
     await openPrep(page, user, recipe.slug);
-    await expect(page.getByRole('heading', { name: /Steps · temperature varies by pour/ })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: /Steps · temperature varies by pour/ }),
+    ).toBeVisible();
     await expect(page.getByRole('listitem').filter({ hasText: '40 g' })).toContainText('65 °C');
     await expect(page.getByRole('listitem').filter({ hasText: '100 g' })).toContainText('92 °C');
 
@@ -125,9 +136,14 @@ test.describe('the prep screen (Ready)', () => {
     const box = (await pill.boundingBox())!;
     expect(box.height).toBeGreaterThanOrEqual(44);
     const title = (await page.getByRole('heading', { level: 1 }).boundingBox())!;
-    expect(Math.abs(box.y + box.height / 2 - (title.y + title.height / 2))).toBeLessThan(box.height);
+    expect(Math.abs(box.y + box.height / 2 - (title.y + title.height / 2))).toBeLessThan(
+      box.height,
+    );
     await pill.click();
-    await expect(page.getByRole('button', { name: 'Sound off' })).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.getByRole('button', { name: 'Sound off' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
     // It is remembered on this device, and the old switch is gone.
     await page.reload();
     await expect(page.getByRole('button', { name: 'Sound off' })).toBeVisible();
@@ -142,7 +158,9 @@ test.describe('the prep screen (Ready)', () => {
     const few = await createRecipe(users, user, 'Few steps');
     await openPrep(page, user, few.slug);
     const row = page.getByRole('list', { name: 'Steps' });
-    const widths = await row.getByRole('listitem').evaluateAll((els) => els.map((e) => e.getBoundingClientRect().width));
+    const widths = await row
+      .getByRole('listitem')
+      .evaluateAll((els) => els.map((e) => e.getBoundingClientRect().width));
     expect(widths).toHaveLength(4);
     for (const w of widths) expect(Math.abs(w - widths[0]!)).toBeLessThan(1);
     // They fill the row: no gap on the right.
@@ -174,7 +192,10 @@ test.describe('the prep screen (Ready)', () => {
     await expect(long).toHaveAttribute('data-before', 'true');
   });
 
-  test('"Change for this brew" previews the new version, and Reset puts it back', async ({ page, users }) => {
+  test('"Change for this brew" previews the new version, and Reset puts it back', async ({
+    page,
+    users,
+  }) => {
     const user = await signIn(page, users, 'prep-change');
     const recipe = await createRecipe(users, user);
     await openPrep(page, user, recipe.slug);
@@ -222,7 +243,9 @@ test.describe('the guided timer', () => {
     expect(await page.evaluate(() => window.__wakeRequests)).toBeGreaterThan(0);
     // Count-in ticks at 5, 4, 3, 2, 1 and two beeps for the start. The wait at 0:05 would warn
     // 5 s before it, which is the start itself; it plays as the quiet pip at 0:00 with the start beep.
-    expect(await page.evaluate(() => window.__beeps)).toEqual([880, 880, 880, 880, 880, 990, 990, 1480]);
+    expect(await page.evaluate(() => window.__beeps)).toEqual([
+      880, 880, 880, 880, 880, 990, 990, 1480,
+    ]);
   });
 
   test('one focus card says what is on the scale, what is next, the next weight and the kettle', async ({
@@ -256,7 +279,10 @@ test.describe('the guided timer', () => {
     // The status sits in a slim strip at the top of the card, above the next-pour block.
     const strip = card.locator('[class*="statusStrip"]');
     await expect(strip).toHaveText('Wait · scale stays at 40 g · 0:15 left');
-    const [stripBox, heroBox] = await Promise.all([strip.boundingBox(), card.locator('[class*="hero"]').first().boundingBox()]);
+    const [stripBox, heroBox] = await Promise.all([
+      strip.boundingBox(),
+      card.locator('[class*="hero"]').first().boundingBox(),
+    ]);
     expect(stripBox!.y + stripBox!.height).toBeLessThanOrEqual(heroBox!.y);
     // The countdown is the accent colour, and only gets bolder in the last 5 s (the warning beep).
     const countdown = card.getByText(/^in \d+ s$/);
@@ -277,7 +303,10 @@ test.describe('the guided timer', () => {
     await expect(page.getByRole('button', { name: 'End brew' })).toBeVisible();
   });
 
-  test('beeps for each step, pauses and resumes without counting the pause', async ({ page, users }) => {
+  test('beeps for each step, pauses and resumes without counting the pause', async ({
+    page,
+    users,
+  }) => {
     const user = await signIn(page, users, 'guided-beeps');
     const recipe = await createRecipe(users, user);
     await page.clock.install();
@@ -372,7 +401,9 @@ test.describe('the guided timer', () => {
     // The log opens with the drawdown filled in (2:40 to 2:42), against the 2:45–3:15 target.
     await expect(page.getByRole('heading', { level: 1, name: 'Log brew' })).toBeVisible();
     await expect(page.getByLabel('Drawdown')).toHaveValue(/^2:4[0-2]$/);
-    await expect(page.getByRole('region', { name: 'Results', exact: true })).toContainText('Below · 2:45–3:15');
+    await expect(page.getByRole('region', { name: 'Results', exact: true })).toContainText(
+      'Below · 2:45–3:15',
+    );
   });
 
   test('a French press ends with "Done", with no drawdown', async ({ page, users }) => {
@@ -411,7 +442,10 @@ test.describe('the guided timer', () => {
     await expect(page.getByLabel('Drawdown')).toHaveCount(0);
   });
 
-  test('End brew can keep brewing, or discard and take nothing with it', async ({ page, users }) => {
+  test('End brew can keep brewing, or discard and take nothing with it', async ({
+    page,
+    users,
+  }) => {
     const user = await signIn(page, users, 'end');
     const recipe = await createRecipe(users, user);
     await openPrep(page, user, recipe.slug);
@@ -428,7 +462,10 @@ test.describe('the guided timer', () => {
     await page.getByRole('button', { name: 'End brew' }).click();
     await dialog.getByRole('button', { name: 'Discard' }).click();
     await page.waitForURL('**/home');
-    const left = await page.evaluate((id) => localStorage.getItem(`brew-sessions:v1:${id}`), user.id);
+    const left = await page.evaluate(
+      (id) => localStorage.getItem(`brew-sessions:v1:${id}`),
+      user.id,
+    );
     expect(JSON.parse(left ?? '[]')).toEqual([]);
     // Nothing was written to the database, so nothing locked the version.
     const { data } = await users.admin
@@ -527,7 +564,10 @@ for (const scheme of ['light', 'dark'] as const) {
   test.describe(`accessibility, ${scheme} theme`, () => {
     test.use({ colorScheme: scheme });
 
-    test('prep, count-in, running and paused timer screens have no violations', async ({ page, users }) => {
+    test('prep, count-in, running and paused timer screens have no violations', async ({
+      page,
+      users,
+    }) => {
       const user = await signIn(page, users, `a11y-${scheme}`);
       const recipe = await createRecipe(users, user, 'Varied', { version: VARIED });
       await openPrep(page, user, recipe.slug);
@@ -544,6 +584,56 @@ for (const scheme of ['light', 'dark'] as const) {
 
       await page.getByRole('button', { name: 'Pause' }).click();
       await expect(page.getByText('Paused', { exact: true })).toBeVisible();
+      await expectNoAxeViolations(page);
+    });
+
+    test('the missed-cue summary, the finishing screen and the stopwatch have no violations', async ({
+      page,
+      users,
+    }) => {
+      const user = await signIn(page, users, `a11y-more-${scheme}`);
+      const recipe = await createRecipe(users, user);
+      await page.clock.install();
+      await openPrep(page, user, recipe.slug);
+      await pauseClockSoon(page);
+      await page.getByRole('button', { name: 'Start', exact: true }).click();
+      await page.clock.runFor(5200);
+      await page.clock.fastForward(50_000);
+      await page.clock.runFor(100);
+
+      // axe never finishes with a paused fake clock.
+      const missed = page.getByRole('alertdialog', { name: 'While you were away' });
+      await expect(missed).toBeVisible();
+      await page.clock.resume();
+      await expect(page.locator('[data-entering]')).toHaveCount(0);
+      // The sheet fades in on the page's clock, which this test has been driving by hand, so axe would read
+      // a colour mid-fade. With reduced motion (which the app honours) there is no fade to catch.
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await page.waitForTimeout(300);
+      await expectNoAxeViolations(page);
+      await missed.getByRole('button', { name: 'Got it' }).click();
+
+      // After the last pour: the finishing screen with Drawdown done.
+      await page.clock.fastForward(60_000);
+      await page.clock.runFor(150);
+      if (await page.getByRole('alertdialog', { name: 'While you were away' }).count()) {
+        await page
+          .getByRole('alertdialog', { name: 'While you were away' })
+          .getByRole('button', { name: 'Got it' })
+          .click();
+      }
+      await expect(page.getByRole('button', { name: 'Drawdown done' })).toBeVisible();
+      await expectNoAxeViolations(page);
+    });
+
+    test('the stopwatch has no violations', async ({ page, users }) => {
+      const user = await signIn(page, users, `a11y-stopwatch-${scheme}`);
+      const recipe = await createRecipe(users, user, 'Open brew', { version: { steps: [] } });
+      await openPrep(page, user, recipe.slug);
+      await expectNoAxeViolations(page); // the Ready screen of a recipe with no steps
+      await page.getByRole('button', { name: 'Start', exact: true }).click();
+      await page.getByRole('button', { name: 'Skip · start now' }).click();
+      await expect(page.getByLabel('Stopwatch')).toBeVisible();
       await expectNoAxeViolations(page);
     });
   });
