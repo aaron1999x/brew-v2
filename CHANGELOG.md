@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/aaron1999x/brew-v2/compare/v0.6.1...v0.7.0) (2026-11-22)
+
+
+### New features
+
+* guided timer and brew log ([#22](https://github.com/aaron1999x/brew-v2/issues/22)) ([d77d9ad](https://github.com/aaron1999x/brew-v2/commit/d77d9addd152f6f0dadfc0f550fdf3ea6c18476c))
+
 ## [0.6.1](https://github.com/aaron1999x/brew-v2/compare/v0.6.0...v0.6.1) (2026-11-20)
 
 
