@@ -255,6 +255,34 @@ export function clearPourTemperatures<T extends StepData>(steps: readonly T[]): 
   return steps.map((s) => (s.temp_c == null ? s : { ...s, temp_c: null }));
 }
 
+/**
+ * Turning "Vary temperature by pour" on or off. On: every pour without a temperature of its own
+ * starts at the recipe's (as in the prototype), so the field is filled in and easy to adjust. Off:
+ * every per-pour temperature is dropped.
+ */
+export function setVaryTemperature<T extends StepData>(
+  steps: readonly T[],
+  on: boolean,
+  defaultTempC: number | null,
+): T[] {
+  if (!on) return clearPourTemperatures(steps);
+  if (defaultTempC == null) return [...steps];
+  return steps.map((s) =>
+    s.kind === 'pour' && s.temp_c == null ? { ...s, temp_c: defaultTempC } : s,
+  );
+}
+
+/** The pour temperatures in order with repeats dropped: [70, 95, 90] for "70 → 95 → 90". */
+export function pourTemperatureTrail(steps: readonly StepData[], defaultTempC: number | null): number[] {
+  const trail: number[] = [];
+  for (const s of steps) {
+    if (s.kind !== 'pour') continue;
+    const t = s.temp_c ?? defaultTempC;
+    if (t != null && trail.at(-1) !== t) trail.push(t);
+  }
+  return trail;
+}
+
 // ---------------------------------------------------------------------------------------------
 // Derived numbers
 // ---------------------------------------------------------------------------------------------

@@ -1,0 +1,28 @@
+.row {
+  display: grid;
+  min-width: 0;
+}
+
+.required {
+  color: var(--color-text-secondary);
+  font-weight: normal;
+}
+
+/* Empty: no knob shows. The thumb is still there for the keyboard, and shows its focus ring. */
+.hidden::after {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.error {
+  margin: var(--space-1) 0 0;
+  color: var(--color-status-danger);
+  font-size: var(--type-body-small-size);
+  font-weight: var(--type-label-weight);
+}
+
+/* As in the prototype, the Overall label is in the accent colour. */
+.accent {
+  color: var(--color-accent-on-inset);
+}

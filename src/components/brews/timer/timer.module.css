@@ -1,0 +1,564 @@
+/*
+ * The brew timer screens: full screen, no tab bar, following the prototype's Timer page. Every
+ * running screen fits the visible height with no scrolling (an iPhone SE with Safari's toolbars
+ * showing is 548 px tall, an iPhone 14 664 px). The focus card is only as tall as its content; the
+ * spare height goes to the flip clock, which scales with the room it has (container query units).
+ * Only the prep screen's content and a steep's list of steps scroll, inside their own area.
+ */
+
+.screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  padding-block: var(--space-1) var(--space-3);
+}
+
+.top {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: var(--size-target-min);
+}
+
+.titleBlock {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  min-width: 0;
+  font-size: var(--type-h3-size);
+  font-weight: var(--type-h3-weight);
+  line-height: var(--type-h3-line-height);
+  color: var(--color-text-primary);
+}
+
+.titleText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.caption {
+  margin: 0;
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line-height);
+  color: var(--color-text-secondary);
+}
+
+/* ---------- the clock: takes all the height the card doesn't need ---------- */
+
+.clockBlock {
+  /* What sits under the cards: the progress bar and, when paused, the Paused tag. */
+  --reserve: 3rem;
+  display: grid;
+  flex: 1 1 0;
+  place-content: center;
+  justify-items: center;
+  gap: var(--space-2);
+  min-height: 0;
+  container-type: size;
+}
+
+/* A steep also has a label above the clock and a line under it. */
+.clockBlockSteep {
+  --reserve: 6.5rem;
+}
+
+.clockLabel {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-small-size);
+  line-height: var(--type-body-small-line-height);
+  text-align: center;
+}
+
+/* The card is 1.32em tall, so the font size is what's left of the height, divided by that. */
+.clockSize {
+  font-size: clamp(2rem, min(calc((100cqh - var(--reserve)) / 1.32), 29cqw), 8rem);
+}
+
+/* h:mm:ss (a steep) is wider, so the cards are narrower. */
+.clockSizeLong {
+  font-size: clamp(2rem, min(calc((100cqh - var(--reserve)) / 1.32), 19cqw), 8rem);
+}
+
+.paused {
+  margin: 0;
+  padding: 0 var(--space-3);
+  border: var(--border-width-default) solid var(--color-status-warning);
+  border-radius: var(--radius-full);
+  background: var(--color-status-warning-bg);
+  color: var(--color-status-warning-fg);
+  font-weight: var(--type-label-weight);
+  font-size: var(--type-body-small-size);
+}
+
+/* The prototype's thin progress bar under the clock. */
+.progress {
+  width: min(16rem, 70cqw);
+  height: 0.375rem;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--color-bg-inset);
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--color-accent-default);
+}
+
+/* ---------- the one focus card: a status strip, then the next step ---------- */
+
+.focus {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  overflow: hidden;
+  border: var(--border-width-default) solid var(--color-accent-default);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-surface);
+  text-align: center;
+}
+
+/* What is happening now, in a slim strip with a divider under it. */
+.statusStrip {
+  margin: 0;
+  padding: var(--space-1) var(--space-3);
+  border-bottom: var(--border-width-hairline) solid var(--color-border-strong);
+  background: var(--color-bg-inset);
+  font-size: var(--type-body-small-size);
+  line-height: var(--type-body-small-line-height);
+  font-weight: var(--type-label-weight);
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.focusBody {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-4) var(--space-3);
+}
+
+.nextLine {
+  margin: 0;
+  font-size: var(--type-body-small-size);
+  line-height: var(--type-body-small-line-height);
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.hero {
+  margin: 0;
+  font-family: var(--font-family-numeric);
+  font-size: clamp(2.25rem, min(9dvh, 18vw), 5.5rem);
+  font-weight: var(--type-timer-weight);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-primary);
+}
+
+.heroName {
+  margin: 0;
+  font-size: clamp(1.75rem, min(6.5dvh, 12vw), 3.5rem);
+  font-weight: var(--type-display-weight);
+  line-height: 1.05;
+  color: var(--color-text-primary);
+  overflow-wrap: anywhere;
+}
+
+.heroUnit {
+  font-size: 0.35em;
+  font-weight: var(--type-label-weight);
+  color: var(--color-text-secondary);
+}
+
+.delta {
+  margin: 0;
+  font-size: var(--type-body-small-size);
+  color: var(--color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The kettle chip and the countdown share a row. */
+.metaRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1) var(--space-3);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0 var(--space-3);
+  min-height: var(--size-target-compact);
+  border-radius: var(--radius-full);
+  background: var(--color-bg-inset);
+  color: var(--color-text-primary);
+  font-size: var(--type-body-small-size);
+  font-weight: var(--type-label-weight);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Switch kettle: an icon and words, not only a colour. */
+.chipSwitch {
+  border: var(--border-width-default) solid var(--color-status-warning);
+  background: var(--color-status-warning-bg);
+  color: var(--color-status-warning-fg);
+}
+
+/* "in 8 s": the accent colour, and bolder in the last 5 s, the same moment as the warning beep. */
+.countdown {
+  margin: 0;
+  font-size: var(--type-numeric-large-size);
+  line-height: var(--type-numeric-large-line-height);
+  font-weight: var(--type-label-weight);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-accent-default);
+}
+
+.countdownSoon {
+  font-weight: 800;
+}
+
+.doneTitle {
+  margin: 0;
+  font-size: clamp(1.5rem, min(5dvh, 10vw), 2.75rem);
+  font-weight: var(--type-display-weight);
+  line-height: 1.1;
+  color: var(--color-text-primary);
+}
+
+/* ---------- the count-in ---------- */
+
+.countin {
+  display: grid;
+  flex: 1 1 auto;
+  align-content: center;
+  justify-items: center;
+  gap: var(--space-3);
+  min-height: 0;
+  padding: var(--space-3) var(--space-4);
+  border: var(--border-width-default) solid var(--color-accent-default);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-surface);
+  text-align: center;
+}
+
+.countinNumber {
+  font-size: clamp(3.5rem, min(22dvh, 36vw), 9rem);
+  line-height: 1;
+}
+
+.first {
+  margin: 0;
+  font-size: var(--type-h3-size);
+  line-height: var(--type-h3-line-height);
+  font-weight: var(--type-h3-weight);
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- controls: at the bottom, within a thumb's reach ---------- */
+
+.controls {
+  display: grid;
+  flex: none;
+  /* End brew is as wide as its label needs, so the label can't spill out of the button: a Button's
+     hidden "Working…" layer sets its minimum width, and a fixed narrow column was too small for it. */
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-3);
+}
+
+/* The stopwatch has three buttons: Done across the top, Pause and End brew beneath. */
+.controlsStack {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.controlsStack > :first-child {
+  grid-column: 1 / -1;
+}
+
+.controlsOne {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* ---------- prep ("Ready") ---------- */
+
+.prepScroll {
+  /* The containing block for the switches' visually hidden inputs, so they scroll with the content. */
+  position: relative;
+  display: grid;
+  /* One column exactly as wide as the screen: without this the chip row's minimum width stretched the
+     whole column past the edge. */
+  grid-template-columns: minmax(0, 1fr);
+  flex: 1 1 0;
+  /* Spread the sections over the room there is; when there is too little, it just scrolls. */
+  align-content: space-evenly;
+  gap: var(--space-3);
+  min-height: 0;
+  overflow-y: auto;
+  padding-block: var(--space-2);
+}
+
+.ready {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-1);
+}
+
+.prepClock {
+  font-size: clamp(2rem, min(9dvh, 14vw), 4.5rem);
+}
+
+/* Two centred rows; an item never breaks in the middle, and the rows wrap between items. */
+.summary {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-1);
+  margin: 0;
+  text-align: center;
+}
+
+.summaryRow {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  column-gap: var(--space-2);
+  margin: 0;
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+  font-weight: var(--type-label-weight);
+  color: var(--color-text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.summaryItem {
+  white-space: nowrap;
+}
+
+.summaryItem:not(:last-child)::after {
+  content: '\00a0·';
+  content: '\00a0·' / '';
+  color: var(--color-text-secondary);
+}
+
+.was {
+  color: var(--color-changed-fg);
+}
+
+.sectionTitle {
+  margin: 0 0 var(--space-2);
+  text-align: center;
+  font-size: var(--type-body-small-size);
+  font-weight: var(--type-label-weight);
+  color: var(--color-text-secondary);
+}
+
+/* Steps as compact chips: time, then the scale weight (and the temperature when it varies by pour). */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Prep: the chips share the width equally; too many for the width and the row scrolls sideways. */
+.chipRow {
+  display: flex;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-1);
+  list-style: none;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scroll-padding-inline: var(--space-1);
+  scrollbar-width: none;
+}
+
+.chipRow::-webkit-scrollbar {
+  display: none;
+}
+
+.chipRow:focus-visible {
+  outline: var(--border-width-focus) solid var(--color-focus-ring);
+  outline-offset: -2px;
+  border-radius: var(--radius-md);
+}
+
+/* The fade on an edge that has more behind it is the hint to scroll. */
+.chipRow[data-after='true'] {
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - 2.5rem), transparent);
+  mask-image: linear-gradient(to right, black calc(100% - 2.5rem), transparent);
+}
+
+.chipRow[data-before='true'] {
+  -webkit-mask-image: linear-gradient(to left, black calc(100% - 2.5rem), transparent);
+  mask-image: linear-gradient(to left, black calc(100% - 2.5rem), transparent);
+}
+
+.chipRow[data-before='true'][data-after='true'] {
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 2.5rem,
+    black calc(100% - 2.5rem),
+    transparent
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    black 2.5rem,
+    black calc(100% - 2.5rem),
+    transparent
+  );
+}
+
+.chipRow .stepChip {
+  flex: 1 1 0;
+  min-width: 4.5rem;
+  scroll-snap-align: start;
+}
+
+.stepChip {
+  display: grid;
+  justify-items: center;
+  min-width: 4.25rem;
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width-hairline) solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.stepChipOther {
+  background: transparent;
+  border-color: var(--color-border-strong);
+}
+
+/* A finished step says "done" in words; dimming it would drop the text below 4.5:1 contrast. */
+.stepChipDone {
+  border-style: dashed;
+}
+
+.stepTime {
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line-height);
+  color: var(--color-accent-default);
+  font-weight: var(--type-label-weight);
+}
+
+.stepMain {
+  font-size: var(--type-body-size);
+  line-height: var(--type-body-line-height);
+  font-weight: var(--type-label-weight);
+  color: var(--color-text-primary);
+}
+
+.stepSub {
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line-height);
+  color: var(--color-text-secondary);
+}
+
+.options {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-3);
+}
+
+.help {
+  margin: 0;
+  text-align: center;
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-line-height);
+  color: var(--color-text-secondary);
+}
+
+.prepFooter {
+  flex: none;
+  padding-top: var(--space-3);
+  border-top: var(--border-width-hairline) solid var(--color-border-subtle);
+  background: var(--color-bg-canvas);
+}
+
+/* ---------- steep ---------- */
+
+.steepList {
+  position: relative;
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: 22dvh;
+  overflow-y: auto;
+}
+
+.steepList:focus-visible {
+  outline: var(--border-width-focus) solid var(--color-focus-ring);
+  outline-offset: -2px;
+}
+
+/* ---------- dialogs ---------- */
+
+.hint {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-small-size);
+}
+
+.missed {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding-left: var(--space-5);
+}
+
+.dialogActions {
+  display: grid;
+  gap: var(--space-3);
+}
+
+/* Announcements for screen readers: present, never seen. */
+.hiddenLive {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/*
+ * On a desktop the timer stays a centred phone-width column (it is a brew-bar tool), with a bigger
+ * split-flap clock: the same rule with a higher ceiling.
+ */
+@media (min-width: 768px) {
+  .clockSize {
+    font-size: clamp(2rem, min(calc((100cqh - var(--reserve)) / 1.32), 29cqw), 12rem);
+  }
+
+  .clockSizeLong {
+    font-size: clamp(2rem, min(calc((100cqh - var(--reserve)) / 1.32), 19cqw), 12rem);
+  }
+}

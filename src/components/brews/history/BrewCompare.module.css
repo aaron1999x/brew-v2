@@ -1,0 +1,235 @@
+.page {
+  display: grid;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+/* Radar on the left, the table on the right, when the page container has room. */
+@container (min-width: 56rem) {
+  .layout {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    /* The two cards share a top and a height. */
+    align-items: stretch;
+  }
+}
+
+.card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+  align-content: start;
+  min-width: 0;
+  padding: var(--space-3);
+  border: var(--border-width-hairline) solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-surface);
+  /* The table or the stacked list is chosen by the card's own width. */
+  container-type: inline-size;
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: var(--type-h3-size);
+  font-weight: var(--type-label-weight);
+  line-height: var(--type-h3-line-height);
+}
+
+.note {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-small-size);
+}
+
+/* The overall score of each brew, large, with its letter. */
+.headlines {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-around;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.headline {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.headlineScore {
+  line-height: 1;
+}
+
+.scoreValue {
+  font-size: var(--type-h1-size);
+  font-weight: var(--type-label-weight);
+  font-variant-numeric: tabular-nums;
+}
+
+.scoreOf {
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-small-size);
+}
+
+.headlineName {
+  max-width: 10rem;
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-small-size);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.letter {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: var(--space-6);
+  height: var(--space-6);
+  border: var(--border-width-default) solid var(--color-border-strong);
+  border-radius: var(--radius-full);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-label-weight);
+}
+
+/*
+ * In a narrow card the rows are stacked: a label, then one line per brew ("A  8.5"), so nothing is
+ * cut off or wrapped mid-value. From about 32rem the side-by-side table takes over.
+ */
+.stack {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.stackGroup {
+  margin: var(--space-3) 0 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-label-weight);
+}
+
+.stackRow {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: var(--space-1) var(--space-2);
+  border-top: var(--border-width-hairline) solid var(--color-border-subtle);
+  font-size: var(--type-body-small-size);
+}
+
+.stackRow[data-differs] {
+  background: var(--color-bg-inset);
+}
+
+.stackLabel {
+  font-weight: var(--type-label-weight);
+}
+
+.stackValue {
+  display: flex;
+  gap: var(--space-2);
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.letterText {
+  flex: none;
+  min-width: var(--space-4);
+  color: var(--color-text-secondary);
+  font-weight: var(--type-label-weight);
+}
+
+.scroll {
+  display: none;
+  min-width: 0;
+}
+
+@container (min-width: 32rem) {
+  .stack {
+    display: none;
+  }
+
+  .scroll {
+    display: block;
+    overflow-x: auto;
+  }
+}
+
+.table {
+  width: 100%;
+  min-width: 20rem;
+  border-collapse: collapse;
+  font-size: var(--type-body-small-size);
+}
+
+.table th,
+.table td {
+  padding: var(--space-1) var(--space-2);
+  text-align: start;
+  vertical-align: top;
+}
+
+/* A value is never broken in the middle; only the flavours (the last row) may wrap. */
+.table td {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.table tbody tr:last-child td {
+  white-space: normal;
+}
+
+.table thead th {
+  vertical-align: bottom;
+}
+
+.colLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: var(--size-target-min);
+  color: var(--color-text-primary);
+  font-weight: var(--type-label-weight);
+}
+
+.groupRow th {
+  padding-top: var(--space-3);
+  color: var(--color-text-secondary);
+  font-size: var(--type-caption-size);
+  font-weight: var(--type-label-weight);
+}
+
+.table tbody tr:not(.groupRow) {
+  border-top: var(--border-width-hairline) solid var(--color-border-subtle);
+}
+
+.table tr[data-differs] {
+  background: var(--color-bg-inset);
+}
+
+.rowLabel {
+  font-weight: normal;
+  white-space: nowrap;
+}
+
+.differs {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-weight: var(--type-label-weight);
+}
+
+.differsText {
+  color: var(--color-text-secondary);
+  font-size: var(--type-caption-size);
+  font-weight: normal;
+}

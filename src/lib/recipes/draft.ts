@@ -7,7 +7,13 @@ import {
   type GearSelection,
 } from './gear';
 import type { BrewMethod, BypassTiming, RoastLevel } from './methods';
-import { recipeFormSchema, type RecipeFormInput, type RecipeFormValues } from './schema';
+import {
+  NUMBER_HELP,
+  recipeFormSchema,
+  type NumberHelpKey,
+  type RecipeFormInput,
+  type RecipeFormValues,
+} from './schema';
 import { clearPourTemperatures, hasPourTemperatures, type StepData } from './steps';
 
 /**
@@ -57,6 +63,11 @@ export type RecipeDraft = {
   notes: string;
   /** What changed, in a few words (max 200). Saved with the version. */
   change_note: string;
+  /**
+   * Text typed into a number field that isn't a number ("abc", "7.5.0"). The field keeps it as typed;
+   * saving says what is wrong with it. The number itself is null while this is set.
+   */
+  typed: Partial<Record<NumberHelpKey, string>>;
 };
 
 /** A new recipe: nothing filled in, my default gear in each category. */
@@ -95,6 +106,7 @@ export function emptyDraft(gearItems: readonly GearItem[] = []): RecipeDraft {
     ey_max: null,
     notes: '',
     change_note: '',
+    typed: {},
   };
 }
 
@@ -144,6 +156,7 @@ export function draftFromVersion(
     ey_max: v.ey_max,
     notes: text(v.notes),
     change_note: options.keepChangeNote ? text(v.change_note) : '',
+    typed: {},
   };
 }
 
@@ -227,15 +240,24 @@ export type ParsedDraft =
 /** Validates a draft. Errors are one per field (the first message wins), in the schema's order. */
 export function parseDraft(draft: RecipeDraft): ParsedDraft {
   const result = recipeFormSchema.safeParse(draftToFormInput(draft));
-  if (result.success) return { ok: true, values: result.data };
   const seen = new Set<string>();
   const errors: DraftError[] = [];
-  for (const issue of result.error.issues) {
-    const id = issueFieldId(issue.path, draft.steps);
-    if (seen.has(id)) continue;
+  // Text in a number field that isn't a number: it was kept as typed, and is reported here.
+  for (const key of Object.keys(draft.typed ?? {}) as NumberHelpKey[]) {
+    if (draft.typed[key] === undefined) continue;
+    const id = fieldId(key);
     seen.add(id);
-    errors.push({ fieldId: id, message: issue.message });
+    errors.push({ fieldId: id, message: NUMBER_HELP[key] });
   }
+  if (!result.success) {
+    for (const issue of result.error.issues) {
+      const id = issueFieldId(issue.path, draft.steps);
+      if (seen.has(id)) continue;
+      seen.add(id);
+      errors.push({ fieldId: id, message: issue.message });
+    }
+  }
+  if (result.success && errors.length === 0) return { ok: true, values: result.data };
   return { ok: false, errors };
 }
 

@@ -28,9 +28,10 @@ export function editPath(handle: string, slug: string, versionNo: number): strin
   return `${recipePath(handle, slug)}/edit?v=${versionNo}`;
 }
 
-/** `/@handle/slug/new-version?from=3` */
-export function newVersionPath(handle: string, slug: string, fromNo: number): string {
-  return `${recipePath(handle, slug)}/new-version?from=${fromNo}`;
+/** `/@handle/slug/new-version?from=3`, with `&brew=<id>` to start from what a brew said to change. */
+export function newVersionPath(handle: string, slug: string, fromNo: number, brewId?: string): string {
+  const base = `${recipePath(handle, slug)}/new-version?from=${fromNo}`;
+  return brewId ? `${base}&brew=${encodeURIComponent(brewId)}` : base;
 }
 
 /** `/@handle/slug/versions` */

@@ -10,8 +10,16 @@ import { Marker, seriesStyles } from './series';
 export type RadarSeries = {
   key: string;
   name: string;
-  /** One value (0–10) per attribute, in the same order as `attributes`. */
-  values: readonly number[];
+  /** One value (0–10) per attribute, in the same order as `attributes`. Null = not scored (drawn at the centre, hollow). */
+  values: readonly (number | null)[];
+};
+
+type RawEntry = {
+  name?: string | number;
+  color?: string;
+  value?: string | number;
+  dataKey?: string;
+  payload?: Record<string, number>;
 };
 
 type Props = {
@@ -20,16 +28,23 @@ type Props = {
   attributes: readonly string[];
   /** One to three series. With several, each gets its own line style and marker. */
   series: readonly RadarSeries[];
+  /** Rows added under the attribute rows of the text table (e.g. a headline score that isn't an axis). */
+  extraRows?: readonly (string | number)[][];
+  /** No frame and no visible title (see ChartContainer). */
+  bare?: boolean;
   /** Hide the legend when there is a single series. */
   showLegend?: boolean;
 };
 
 /** 0–10 radar. Up to three series, told apart by colour, line style and marker. */
-export function SensoryRadar({ title, description, attributes, series, showLegend }: Props) {
+export function SensoryRadar({ title, description, attributes, series, extraRows = [], bare, showLegend }: Props) {
   const reduced = useReducedMotion();
   const data = attributes.map((attribute, i) => {
     const row: Record<string, string | number> = { attribute };
-    for (const s of series) row[s.key] = s.values[i] ?? 0;
+    for (const s of series) {
+      row[s.key] = s.values[i] ?? 0;
+      row[`${s.key}__unscored`] = s.values[i] == null ? 1 : 0;
+    }
     return row;
   });
   const multiple = series.length > 1;
@@ -39,10 +54,14 @@ export function SensoryRadar({ title, description, attributes, series, showLegen
       title={title}
       description={description}
       size="lg"
+      bare={bare}
       table={{
         caption: `${title}: score out of 10 for each attribute`,
         columns: ['Attribute', ...series.map((s) => s.name)],
-        rows: attributes.map((a, i) => [a, ...series.map((s) => s.values[i] ?? 0)]),
+        rows: [
+          ...attributes.map((a, i) => [a, ...series.map((s) => s.values[i] ?? 'Not scored')]),
+          ...extraRows,
+        ],
       }}
       legend={
         (showLegend ?? multiple) ? (
@@ -74,23 +93,46 @@ export function SensoryRadar({ title, description, attributes, series, showLegen
               fill={style.color}
               fillOpacity={multiple ? 0.06 : 0.2}
               isAnimationActive={!reduced}
-              dot={(p: { cx?: number; cy?: number; index?: number }) => (
-                <Marker
-                  key={p.index}
-                  kind={style.marker}
-                  cx={p.cx ?? 0}
-                  cy={p.cy ?? 0}
-                  color={style.color}
-                  size={4}
-                />
-              )}
+              dot={(p: { cx?: number; cy?: number; index?: number }) =>
+                s.values[p.index ?? 0] == null ? (
+                  // Not scored: a hollow ring at the centre, so it reads without colour.
+                  <circle
+                    key={p.index}
+                    cx={p.cx ?? 0}
+                    cy={p.cy ?? 0}
+                    r={4}
+                    fill="var(--color-bg-surface)"
+                    stroke={style.color}
+                    strokeWidth={1.5}
+                  />
+                ) : (
+                  <Marker
+                    key={p.index}
+                    kind={style.marker}
+                    cx={p.cx ?? 0}
+                    cy={p.cy ?? 0}
+                    color={style.color}
+                    size={4}
+                  />
+                )
+              }
               activeDot={false}
             />
           );
         })}
         <Tooltip
           isAnimationActive={false}
-          content={(p) => <ChartTooltip {...(p as unknown as TooltipLike)} />}
+          content={(p) => {
+            const like = p as unknown as TooltipLike;
+            const raw = (p as unknown as { payload?: readonly RawEntry[] }).payload;
+            // A series with no score on this axis says so, instead of "0".
+            const payload = raw?.map((entry) => ({
+              name: entry.name,
+              color: entry.color,
+              value: entry.payload?.[`${entry.dataKey}__unscored`] === 1 ? 'not scored' : entry.value,
+            }));
+            return <ChartTooltip active={like.active} label={like.label} payload={payload} />;
+          }}
         />
       </RadarChart>
     </ChartContainer>

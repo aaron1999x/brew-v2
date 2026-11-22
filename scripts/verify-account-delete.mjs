@@ -149,6 +149,54 @@ try {
       `save_recipe (${note})`,
     );
   }
+  // 3c. A: brew history. Two plain brews (log_brew) on the first version, one brew with a quick change
+  // (log_brew creates version 4 in the same call), and one brew that is soft-deleted. Deleting A must
+  // remove all of it, the quick-change version included.
+  const logBrew = async (extra, newVersion = null) => {
+    const id = randomUUID();
+    must(
+      await a.rpc('log_brew', {
+        p_brew: {
+          id,
+          recipe_version_id: multi.latest_version_id,
+          brewed_at: new Date(Date.now() - 3_600_000).toISOString(),
+          source: 'manual',
+          overall: 7.5,
+          sweetness: 7,
+          acidity: 6.5,
+          brightness: 6,
+          body: 7,
+          clarity: 7.5,
+          balance: 7,
+          aftertaste: 6.5,
+          flavours: ['peach'],
+          ...extra,
+        },
+        ...(newVersion ? { p_new_version: newVersion } : {}),
+      }),
+      'log_brew',
+    );
+    return id;
+  };
+  const aBrewIds = [
+    await logBrew({}),
+    await logBrew({ overall: 8, brewed_at: new Date(Date.now() - 7_200_000).toISOString() }),
+    await logBrew(
+      { overall: 6.5 },
+      { grind_setting: '22 clicks', change_note: 'Brewed with changes: grind 24 clicks → 22 clicks' },
+    ),
+  ];
+  const deletedBrewId = await logBrew({ overall: 5 });
+  must(
+    await a.from('brews').update({ deleted_at: new Date().toISOString() }).eq('id', deletedBrewId),
+    'soft delete a brew',
+  );
+  aBrewIds.push(deletedBrewId);
+  check(
+    'before deleting: A has 4 brews and the quick change made a 4th version',
+    (await countRows('brews', 'user_id', users.a.id)) === 4 &&
+      (await countRows('recipe_versions', 'recipe_id', multi.id)) === 4,
+  );
   const archivedRecipe = must(
     await a.rpc('create_recipe', {
       p_name: `Verify archived ${runId}`,
@@ -241,6 +289,12 @@ try {
   ]) {
     check(`A's ${table} rows are gone`, (await countRows(table, column, users.a.id)) === 0);
   }
+  check(
+    "A's brews (plain, quick change, history and a soft-deleted one) are gone",
+    (
+      await Promise.all(aBrewIds.map((id) => countRows('brews', 'id', id)))
+    ).every((n) => n === 0),
+  );
   check(
     "A's recipe versions are gone",
     (await countRows('recipe_versions', 'recipe_id', recipe.id)) === 0,

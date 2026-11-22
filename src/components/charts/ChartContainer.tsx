@@ -19,6 +19,8 @@ type Props = {
   table: ChartTable;
   legend?: ReactNode;
   size?: 'md' | 'lg';
+  /** No card around the chart and no visible title (the page's own heading names it); the title still names the picture. */
+  bare?: boolean;
   /** A Recharts chart element, e.g. <RadarChart>. */
   children: ReactElement;
 };
@@ -34,11 +36,12 @@ export function ChartContainer({
   table,
   legend,
   size = 'md',
+  bare = false,
   children,
 }: Props) {
   return (
-    <figure className={styles.figure}>
-      <figcaption className={styles.title}>{title}</figcaption>
+    <figure className={cx(styles.figure, bare && styles.bare)}>
+      <figcaption className={cx(styles.title, bare && styles.hiddenTitle)}>{title}</figcaption>
       <div
         role="img"
         aria-label={`${title}. ${description}`}

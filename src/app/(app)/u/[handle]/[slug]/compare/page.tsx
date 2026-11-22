@@ -4,11 +4,15 @@ import { CompareView } from '@/components/recipes/CompareView';
 import { HydratedRecipe } from '@/components/recipes/HydratedRecipe';
 import { parseVersionNo, versionByNo } from '@/lib/recipes/fetch';
 import { getOwnedRecipe } from '@/lib/recipes/server';
+import { PageShell } from '@/components/shell/PageShell';
 
 type Params = { handle: string; slug: string };
 type Search = { a?: string | string[]; b?: string | string[] };
 
-export const metadata: Metadata = { title: 'Compare versions', robots: { index: false, follow: false } };
+export const metadata: Metadata = {
+  title: 'Compare versions',
+  robots: { index: false, follow: false },
+};
 
 export default async function CompareRoute({
   params,
@@ -30,8 +34,10 @@ export default async function CompareRoute({
     if (raw !== undefined && (parsed === null || !versionByNo(data.versions, parsed))) notFound();
   }
   return (
-    <HydratedRecipe handle={handle} slug={slug}>
-      <CompareView handle={handle} slug={slug} a={a} b={b} />
-    </HydratedRecipe>
+    <PageShell>
+      <HydratedRecipe handle={handle} slug={slug}>
+        <CompareView handle={handle} slug={slug} a={a} b={b} />
+      </HydratedRecipe>
+    </PageShell>
   );
 }

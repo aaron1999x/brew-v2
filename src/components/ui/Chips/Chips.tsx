@@ -1,7 +1,7 @@
 'use client';
 
 import { Check, X } from 'lucide-react';
-import { useState, type FormEvent } from 'react';
+import { useState } from 'react';
 import {
   Button as AriaButton,
   Input,
@@ -125,8 +125,7 @@ export function AddTagField({
 }) {
   const [text, setText] = useState('');
 
-  function submit(event: FormEvent) {
-    event.preventDefault();
+  function submit() {
     const value = text.trim();
     if (!value) return;
     onAdd(value);
@@ -134,7 +133,8 @@ export function AddTagField({
   }
 
   return (
-    <form onSubmit={submit} className={styles.add}>
+    // Not a <form>: it sits inside other forms (the brew log), and nested forms would submit the outer one.
+    <div className={styles.add}>
       <label className={styles.groupLabel} htmlFor="add-tag-input">
         {label}
       </label>
@@ -143,15 +143,21 @@ export function AddTagField({
           id="add-tag-input"
           value={text}
           onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              submit();
+            }
+          }}
           maxLength={30}
           placeholder="e.g. toasted almond"
           className={cx(styles.addInput)}
           data-primary-control=""
         />
-        <Button type="submit" variant="secondary">
+        <Button variant="secondary" onPress={submit}>
           Add
         </Button>
       </div>
-    </form>
+    </div>
   );
 }

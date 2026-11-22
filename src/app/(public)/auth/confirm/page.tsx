@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { ExpiredLink } from '@/components/auth/ExpiredLink';
 import { isConfirmType } from '@/lib/auth/constants';
 import { ConfirmForm } from './ConfirmForm';
+import { PageShell } from '@/components/shell/PageShell';
 
 // The link carries a one-time token: keep it out of search engines and out of Referer headers.
 export const metadata: Metadata = {
@@ -18,6 +19,16 @@ type Props = { searchParams: Promise<{ token_hash?: string; type?: string }> };
  */
 export default async function ConfirmPage({ searchParams }: Props) {
   const { token_hash, type } = await searchParams;
-  if (!token_hash || !isConfirmType(type)) return <ExpiredLink recovery={type === 'recovery'} />;
-  return <ConfirmForm tokenHash={token_hash} type={type} />;
+  if (!token_hash || !isConfirmType(type)) {
+    return (
+      <PageShell width="narrow">
+        <ExpiredLink recovery={type === 'recovery'} />
+      </PageShell>
+    );
+  }
+  return (
+    <PageShell width="narrow">
+      <ConfirmForm tokenHash={token_hash} type={type} />
+    </PageShell>
+  );
 }

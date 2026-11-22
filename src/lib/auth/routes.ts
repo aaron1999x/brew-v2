@@ -9,6 +9,7 @@ export const PROTECTED_PREFIXES = [
   '/home',
   '/recipes',
   '/brew',
+  '/brews',
   '/profile',
   '/welcome',
   '/settings',

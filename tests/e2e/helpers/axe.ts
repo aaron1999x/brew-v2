@@ -16,6 +16,9 @@ function summarise(violations: Violations): string[] {
 export async function expectNoAxeViolations(page: Page) {
   const results = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'])
+    // React Aria's visually hidden live announcer copies a pending button's spinner (an unlabelled
+    // role=img) into itself after a client-side navigation. It is not page content.
+    .exclude('[data-live-announcer]')
     .analyze();
   expect(summarise(results.violations)).toEqual([]);
 }

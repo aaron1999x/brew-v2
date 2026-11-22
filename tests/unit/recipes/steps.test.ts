@@ -13,7 +13,9 @@ import {
   lastPourWarningMessage,
   moveStep,
   pourDeltas,
+  pourTemperatureTrail,
   removeStep,
+  setVaryTemperature,
   sortStepsByTime,
   stepHeading,
   stepLabel,
@@ -280,6 +282,39 @@ describe('editing helpers', () => {
     expect(hasPourTemperatures(cleared)).toBe(false);
     expect(cleared[1]).toBe(warm[1]);
     expect(warm[0]!.temp_c).toBe(93);
+  });
+});
+
+describe('Vary temperature by pour', () => {
+  const steps: StepData[] = [
+    pour('a', 0, 40),
+    { id: 's', kind: 'swirl', at_s: 10, duration_s: 5 },
+    pour('b', 30, 100, { temp_c: 95 }),
+    pour('c', 60, 160, { temp_c: 95 }),
+    pour('d', 90, 250, { temp_c: 90 }),
+  ];
+
+  it('turning it on starts every pour without a temperature at the recipe temperature (as the prototype does)', () => {
+    const out = setVaryTemperature(steps, true, 92);
+    expect(out.filter((s) => s.kind === 'pour').map((s) => s.temp_c)).toEqual([92, 95, 95, 90]);
+    expect(out[1]!.temp_c).toBeUndefined();
+    expect(steps[0]!.temp_c).toBeUndefined();
+  });
+
+  it('turning it on with no recipe temperature leaves the pours as they are', () => {
+    expect(setVaryTemperature(steps, true, null)).toEqual(steps);
+  });
+
+  it('turning it off drops every pour temperature', () => {
+    const out = setVaryTemperature(steps, false, 92);
+    expect(out.every((s) => s.temp_c == null)).toBe(true);
+  });
+
+  it('lists the pour temperatures in order, without repeats', () => {
+    expect(pourTemperatureTrail(setVaryTemperature(steps, true, 92), 92)).toEqual([92, 95, 90]);
+    expect(pourTemperatureTrail(steps, 93)).toEqual([93, 95, 90]);
+    expect(pourTemperatureTrail([], 93)).toEqual([]);
+    expect(pourTemperatureTrail(steps.slice(0, 1), null)).toEqual([]);
   });
 });
 

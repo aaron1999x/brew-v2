@@ -3,6 +3,7 @@ import { getPublicEnv } from '@/lib/env';
 import { createClient } from '@/lib/supabase/server';
 import { appVersion, commitSha } from '@/lib/version';
 import styles from './page.module.css';
+import { PageShell } from '@/components/shell/PageShell';
 
 export const metadata: Metadata = { title: 'Status', robots: { index: false } };
 // Always check the database at request time, never at build time.
@@ -35,30 +36,32 @@ export default async function StatusPage() {
   const check = await runChecks();
 
   return (
-    <main className={styles.main}>
-      <h1 className={styles.title}>Status</h1>
-      <dl className={styles.list}>
-        <div className={styles.row}>
-          <dt>Version</dt>
-          <dd className="num">{appVersion}</dd>
-        </div>
-        <div className={styles.row}>
-          <dt>Commit</dt>
-          <dd className="num">{commitSha}</dd>
-        </div>
-        <div className={styles.row}>
-          <dt>Environment</dt>
-          <dd>{check.environment}</dd>
-        </div>
-        <div className={styles.row}>
-          <dt>Supabase host</dt>
-          <dd>{check.host}</dd>
-        </div>
-        <div className={styles.row}>
-          <dt>Database</dt>
-          <dd>{check.databaseReachable ? 'reachable' : 'not reachable'}</dd>
-        </div>
-      </dl>
-    </main>
+    <PageShell>
+      <main className={styles.main}>
+        <h1 className={styles.title}>Status</h1>
+        <dl className={styles.list}>
+          <div className={styles.row}>
+            <dt>Version</dt>
+            <dd className="num">{appVersion}</dd>
+          </div>
+          <div className={styles.row}>
+            <dt>Commit</dt>
+            <dd className="num">{commitSha}</dd>
+          </div>
+          <div className={styles.row}>
+            <dt>Environment</dt>
+            <dd>{check.environment}</dd>
+          </div>
+          <div className={styles.row}>
+            <dt>Supabase host</dt>
+            <dd>{check.host}</dd>
+          </div>
+          <div className={styles.row}>
+            <dt>Database</dt>
+            <dd>{check.databaseReachable ? 'reachable' : 'not reachable'}</dd>
+          </div>
+        </dl>
+      </main>
+    </PageShell>
   );
 }

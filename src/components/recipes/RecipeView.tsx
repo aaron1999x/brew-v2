@@ -7,7 +7,6 @@ import { Badge, VersionBadge, VisibilityBadge } from '@/components/ui/Badge/Badg
 import { Icon } from '@/components/ui/Icon/Icon';
 import { Notice } from '@/components/ui/Notice/Notice';
 import { VisuallyHidden } from '@/components/ui/VisuallyHidden/VisuallyHidden';
-import { formatRatio, recipeNumbers } from '@/lib/recipes/calc';
 import type { RecipeRow, VersionRow } from '@/lib/recipes/fetch';
 import { formatRange, formatRoastDate } from '@/lib/recipes/format';
 import { GEAR_CATEGORY_LABELS, RECIPE_GEAR_CATEGORIES } from '@/lib/recipes/gear';
@@ -15,25 +14,17 @@ import { ROAST_LEVEL_LABELS, methodLabel } from '@/lib/recipes/methods';
 import { STEP_KIND_LABELS, pourDeltas, stepLabel, type StepData } from '@/lib/recipes/steps';
 import { useUnits } from '@/lib/settings/useSettings';
 import { formatRate } from '@/lib/units';
+import { KeyNumbers } from './KeyNumbers';
 import { LazyPourCurve } from './LazyPourCurve';
 import styles from './RecipePage.module.css';
 
 /** The side column's distance from the top of the window while it sticks (matches the CSS). */
 const STICKY_GAP_PX = 16;
 
-function Row({
-  label,
-  children,
-  extra = false,
-}: {
-  label: string;
-  children: ReactNode;
-  /** A key number outside the six core ones; on a wide screen it wraps to a second row. */
-  extra?: boolean;
-}) {
+function Row({ label, children }: { label: string; children: ReactNode }) {
   if (children == null || children === '') return null;
   return (
-    <div className={extra ? `${styles.row} ${styles.extra}` : styles.row}>
+    <div className={styles.row}>
       <dt>{label}</dt>
       <dd>{children}</dd>
     </div>
@@ -62,6 +53,10 @@ type Props = Readonly<{
   actions?: ReactNode;
   /** A line above the details, e.g. "You're looking at v2; the latest is v5". */
   notice?: ReactNode;
+  /** The owner's brews of this recipe, shown under the header: "6 brews". Left out on a public page. */
+  brewCount?: number | null;
+  /** Owner-only sections after the recipe (My brews). */
+  after?: ReactNode;
   /** Move focus to the heading on arrival (a page reached after saving or by navigation). */
   focusHeading?: boolean;
 }>;
@@ -78,9 +73,11 @@ export function RecipeView({
   switcher,
   actions,
   notice,
+  brewCount = null,
+  after,
   focusHeading = true,
 }: Props) {
-  const { weight, temp, duration, date } = useUnits();
+  const { date } = useUnits();
   const headingRef = useRef<HTMLHeadingElement>(null);
   const sideRef = useRef<HTMLDivElement>(null);
   const [sideFits, setSideFits] = useState(false);
@@ -106,20 +103,6 @@ export function RecipeView({
     if (focusHeading) headingRef.current?.focus();
   }, [focusHeading, version.id]);
 
-  const numbers = recipeNumbers({
-    dose_g: version.dose_g,
-    brew_water_g: version.brew_water_g,
-    bypass_g: version.bypass_g,
-    retention_ratio: version.retention_ratio,
-    steps: version.steps,
-  });
-  const overall = numbers.overallRatio !== numbers.ratio ? formatRatio(numbers.overallRatio) : null;
-  const grind = [
-    version.grind_setting,
-    version.grind_microns != null ? `${version.grind_microns} µm` : null,
-  ]
-    .filter(Boolean)
-    .join(' · ');
   const grinder = version.gear.grinder?.name;
   const drawdown =
     version.drawdown_min_s != null || version.drawdown_max_s != null
@@ -153,7 +136,10 @@ export function RecipeView({
               </Badge>
             ) : null}
           </div>
-          <p className={styles.muted}>Last edited {date(recipe.edited_at)}</p>
+          <p className={styles.muted}>
+            Last edited {date(recipe.edited_at)}
+            {brewCount != null ? ` · ${brewCount === 1 ? '1 brew' : `${brewCount} brews`}` : ''}
+          </p>
         </div>
       </header>
 
@@ -177,27 +163,7 @@ export function RecipeView({
         ) : null}
 
         <div className={styles.mainColumn}>
-          <dl className={styles.key} aria-label="Key numbers">
-            <Row label="Dose">{weight(version.dose_g)}</Row>
-            <Row label="Brew water">{weight(version.brew_water_g)}</Row>
-            <Row label="Ratio">{formatRatio(numbers.ratio)}</Row>
-            <Row label="Temperature">{version.temp_c != null ? temp(version.temp_c) : null}</Row>
-            <Row label="Grind">{grind ? (grinder ? `${grind} (${grinder})` : grind) : null}</Row>
-            <Row label="Bypass" extra>
-              {version.bypass_g > 0
-                ? `${weight(version.bypass_g)}, ${version.bypass_timing === 'before' ? 'before' : 'after'} brewing`
-                : null}
-            </Row>
-            <Row label="Overall ratio" extra>
-              {overall}
-            </Row>
-            <Row label="Expected volume" extra>
-              {numbers.expectedFinalVolumeG != null ? weight(numbers.expectedFinalVolumeG) : null}
-            </Row>
-            <Row label="Total time">
-              {numbers.totalTimeS != null ? duration(numbers.totalTimeS) : null}
-            </Row>
-          </dl>
+          <KeyNumbers version={version} grinderName={grinder} />
 
           {version.steps.length > 0 ? (
             <LazyPourCurve
@@ -227,6 +193,7 @@ export function RecipeView({
           ) : null}
         </div>
       </div>
+      {after}
     </div>
   );
 }

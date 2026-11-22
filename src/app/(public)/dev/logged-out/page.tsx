@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { EmptyState } from '@/components/ui/EmptyState/EmptyState';
 import { isDevToolsEnabled } from '@/lib/dev-tools';
+import { PageShell } from '@/components/shell/PageShell';
 
 export const metadata: Metadata = {
   title: 'Logged-out shell',
@@ -12,12 +13,12 @@ export const metadata: Metadata = {
 export default function LoggedOutPreview() {
   if (!isDevToolsEnabled(process.env.NEXT_PUBLIC_APP_ENV)) notFound();
   return (
-    <>
+    <PageShell>
       <h1>Logged-out layout</h1>
       <EmptyState
         title="Verified recipes from trusted brewers will appear here soon."
         text="This page only shows the logged-out layout: a slim top bar and no tab bar."
       />
-    </>
+    </PageShell>
   );
 }

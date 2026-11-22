@@ -1,0 +1,88 @@
+/* Three compact tiles in one row. */
+.panel {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.cell {
+  display: grid;
+  align-content: start;
+  gap: var(--space-1);
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+  border: var(--border-width-hairline) solid var(--color-border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-inset);
+}
+
+.label {
+  white-space: nowrap;
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-small-size);
+  line-height: var(--type-body-small-line-height);
+}
+
+.value {
+  margin: 0;
+  font-size: var(--type-body-size);
+  font-weight: var(--type-label-weight);
+  line-height: var(--type-body-line-height);
+  font-variant-numeric: tabular-nums;
+}
+
+.sub {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--type-body-small-size);
+  line-height: var(--type-body-small-line-height);
+}
+
+/* The status under an input or in a tile: icon and words. */
+.note,
+.noteMuted {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-1);
+  margin: 0;
+  font-size: var(--type-body-small-size);
+  line-height: var(--type-body-small-line-height);
+}
+
+.note {
+  color: var(--color-text-primary);
+  font-weight: var(--type-label-weight);
+}
+
+.noteMuted {
+  color: var(--color-text-secondary);
+}
+
+.noteText {
+  min-width: 0;
+}
+
+/* A value or a range is never broken in the middle; the label and the range may sit on two lines. */
+.nowrap {
+  white-space: nowrap;
+}
+
+.nowrapBlock {
+  display: block;
+  white-space: nowrap;
+}
+
+/* Three tiles need about 19rem; in a narrower card they stack instead of cutting their text. */
+@container (max-width: 19rem) {
+  .panel {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.value,
+.label,
+.sub {
+  overflow-wrap: normal;
+  min-width: 0;
+}

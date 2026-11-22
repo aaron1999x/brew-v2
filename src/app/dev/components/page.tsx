@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { DevComponents } from '@/components/dev/DevComponents';
+import { PageShell } from '@/components/shell/PageShell';
 
 export const metadata: Metadata = {
   title: 'Components',
@@ -9,5 +10,9 @@ export const metadata: Metadata = {
 
 /** The component gallery renders in every environment, production included. */
 export default function ComponentsPage() {
-  return <DevComponents />;
+  return (
+    <PageShell>
+      <DevComponents />
+    </PageShell>
+  );
 }

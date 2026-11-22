@@ -14,6 +14,7 @@ import { TextField } from '@/components/ui/TextField/TextField';
 import { VisuallyHidden } from '@/components/ui/VisuallyHidden/VisuallyHidden';
 import { useProfileMe } from '@/lib/profile/useProfileMe';
 import { formatRatio, brewRatio } from '@/lib/recipes/calc';
+import { brewCountText, summariseByRecipe, useBrewStats } from '@/lib/brews/stats';
 import { useMyRecipes } from '@/lib/recipes/hooks';
 import {
   DEFAULT_LIST_PARAMS,
@@ -56,6 +57,8 @@ export function MyRecipes() {
   const search = useSearchParams();
   const params = useMemo(() => parseListParams(search), [search]);
   const recipes = useMyRecipes();
+  const stats = useBrewStats();
+  const byRecipe = useMemo(() => summariseByRecipe(stats.data ?? []), [stats.data]);
   const profile = useProfileMe();
 
   // What is typed shows at once; the URL follows a moment later. `null` means "follow the URL".
@@ -80,7 +83,14 @@ export function MyRecipes() {
     });
   };
 
-  const all = useMemo(() => recipes.data ?? [], [recipes.data]);
+  // Last brewed comes from my brews (soft-deleted ones don't count); a recipe never brewed sorts by last edited.
+  const all = useMemo(
+    () =>
+      (recipes.data ?? []).map((r) =>
+        stats.data ? { ...r, last_brewed_at: byRecipe.get(r.id)?.lastBrewedAt ?? null } : r,
+      ),
+    [recipes.data, stats.data, byRecipe],
+  );
   const visible = useMemo(
     () => sortRecipes(filterRecipes(all, { ...params, q: query }), params.sort),
     [all, params, query],
@@ -169,7 +179,14 @@ export function MyRecipes() {
               aria-label={params.tab === 'archived' ? 'Archived recipes' : 'Recipes'}
             >
               {handle
-                ? visible.map((item) => <Row key={item.id} item={item} handle={handle} />)
+                ? visible.map((item) => (
+                    <Row
+                      key={item.id}
+                      item={item}
+                      handle={handle}
+                      brewCount={stats.data ? (byRecipe.get(item.id)?.count ?? 0) : undefined}
+                    />
+                  ))
                 : null}
             </ul>
           </>
@@ -213,7 +230,11 @@ function Empty({
   );
 }
 
-function Row({ item, handle }: Readonly<{ item: RecipeListItem; handle: string }>) {
+function Row({
+  item,
+  handle,
+  brewCount,
+}: Readonly<{ item: RecipeListItem; handle: string; brewCount?: number }>) {
   const { weight, date } = useUnits();
   const ratio = formatRatio(brewRatio(item.dose_g, item.brew_water_g));
   const numbers = [
@@ -227,6 +248,7 @@ function Row({ item, handle }: Readonly<{ item: RecipeListItem; handle: string }
         <span className={styles.name}>{item.name}</span>
         <span className={styles.meta}>
           {methodLabel(item.method, item.method_custom)} · v{item.latest_version_no}
+          {brewCount !== undefined ? ` · ${brewCountText(brewCount)}` : ''}
         </span>
         {numbers.length > 0 ? (
           <span className={`${styles.meta} ${styles.joined} num`}>{numbers.join(' · ')}</span>

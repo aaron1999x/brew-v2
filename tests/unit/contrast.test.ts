@@ -65,6 +65,9 @@ const pairs: ReadonlyArray<readonly [string, string, number, string]> = [
   ),
   ['--color-text-muted', '--color-bg-field', 4.5, 'placeholder text'],
   ['--color-text-on-accent', '--color-accent-default', 4.5, 'primary button label'],
+  ['--color-flip-text', '--color-flip-bg', 4.5, 'split-flap clock digits'],
+  ['--color-text-primary', '--color-bg-inset', 4.5, 'status strip on the focus card'],
+  ['--color-accent-default', '--color-bg-surface', 4.5, 'step time on a chip'],
   ['--color-accent-default', '--color-bg-canvas', 4.5, 'ghost button and link text'],
   ['--color-accent-default', '--color-bg-surface', 4.5, 'ghost button and link text'],
   ['--color-accent-on-inset', '--color-bg-inset', 4.5, 'ghost button hover and current nav link'],
@@ -90,6 +93,7 @@ const pairs: ReadonlyArray<readonly [string, string, number, string]> = [
   ['--color-status-danger', '--color-bg-field', 3, 'invalid field border'],
   ['--color-accent-default', '--color-bg-field', 3, 'focused field border'],
   ['--color-accent-default', '--color-bg-canvas', 3, 'filled control edge'],
+  ['--color-accent-default', '--color-bg-inset', 3, 'progress bar fill on its track'],
 ];
 
 describe.each([

@@ -3,14 +3,12 @@
 import { useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/Button/Button';
 import { Notice } from '@/components/ui/Notice/Notice';
-import { Switch } from '@/components/ui/Switch/Switch';
 import { toast } from '@/components/ui/Toast/toast';
 import { STEPS_ADD_ID, stepFieldId } from '@/lib/recipes/draft';
 import {
   STEP_KINDS,
   STEP_KIND_LABELS,
   MAX_STEPS,
-  clearPourTemperatures,
   defaultNewStep,
   insertStep,
   lastPourWarning,
@@ -32,8 +30,8 @@ import styles from './Steps.module.css';
 type Props = {
   steps: readonly StepData[];
   onChange: (steps: StepData[]) => void;
+  /** From the Numbers section's "Vary temperature by pour" switch: each pour then has a Temperature field. */
   varyTemp: boolean;
-  onVaryTempChange: (on: boolean) => void;
   /** Dose and brew water, for the defaults of a new pour and the last-pour warning. */
   context: StepContext;
   /** Error messages by field id (see `stepFieldId`). */
@@ -52,7 +50,6 @@ export function StepsEditor({
   steps,
   onChange,
   varyTemp,
-  onVaryTempChange,
   context,
   errors,
 }: Props) {
@@ -110,15 +107,6 @@ export function StepsEditor({
         </p>
       ) : (
         <>
-          <Switch
-            isSelected={varyTemp}
-            onChange={(on) => {
-              if (!on) onChange(clearPourTemperatures(steps));
-              onVaryTempChange(on);
-            }}
-          >
-            Vary temperature by pour
-          </Switch>
           <ol className={styles.list}>
             {steps.map((step, index) => (
               <li key={step.id}>

@@ -7,6 +7,7 @@ import { QueryBoundary } from '@/components/feedback/QueryBoundary';
 import { Badge } from '@/components/ui/Badge/Badge';
 import { ButtonLink } from '@/components/ui/ButtonLink/ButtonLink';
 import { Icon } from '@/components/ui/Icon/Icon';
+import { brewsText, countsByVersion, useBrewStats } from '@/lib/brews/stats';
 import { useRecipe } from '@/lib/recipes/hooks';
 import { comparePath, recipePath, versionOrLatestPath } from '@/lib/recipes/paths';
 import { useUnits } from '@/lib/settings/useSettings';
@@ -16,6 +17,8 @@ import styles from './Versions.module.css';
 export function VersionHistory({ handle, slug }: Readonly<{ handle: string; slug: string }>) {
   const query = useRecipe(handle, slug);
   const { date } = useUnits();
+  const stats = useBrewStats();
+  const counts = countsByVersion(stats.data ?? []);
   return (
     <div className={styles.page}>
       <QueryBoundary
@@ -53,17 +56,25 @@ export function VersionHistory({ handle, slug }: Readonly<{ handle: string; slug
                     <div className={styles.itemHead}>
                       <h2 className={styles.version}>v{v.version_no}</h2>
                       {latest ? <Badge tone="info">Latest</Badge> : null}
-                      {v.locked_at ? (
-                        <Badge icon={Lock}>Locked</Badge>
-                      ) : null}
+                      {v.locked_at ? <Badge icon={Lock}>Locked</Badge> : null}
                       <span className={styles.when}>{date(v.created_at)}</span>
+                      <span className={styles.when}>{brewsText(counts.get(v.id))}</span>
                     </div>
                     <p className={styles.change}>
-                      {v.change_note ? v.change_note : <span className={styles.muted}>No change note</span>}
+                      {v.change_note ? (
+                        v.change_note
+                      ) : (
+                        <span className={styles.muted}>No change note</span>
+                      )}
                     </p>
                     <div className={styles.actions}>
                       <ButtonLink
-                        href={versionOrLatestPath(handle, slug, v.version_no, query.data!.version.version_no)}
+                        href={versionOrLatestPath(
+                          handle,
+                          slug,
+                          v.version_no,
+                          query.data!.version.version_no,
+                        )}
                         variant="secondary"
                       >
                         View

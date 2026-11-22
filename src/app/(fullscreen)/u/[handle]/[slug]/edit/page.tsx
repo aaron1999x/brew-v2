@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { RecipeEditor } from '@/components/recipes/editor/RecipeEditor';
 import { parseVersionNo, versionByNo } from '@/lib/recipes/fetch';
 import { getOwnedRecipe } from '@/lib/recipes/server';
+import { PageShell } from '@/components/shell/PageShell';
 
 type Params = { handle: string; slug: string };
 type Search = { v?: string | string[] };
@@ -24,9 +25,16 @@ export default async function EditRoute({
   const version = versionByNo(data.versions, wanted);
   if (!version) notFound();
   return (
-    <RecipeEditor
-      mode="edit"
-      base={{ handle: data.owner.handle, recipe: data.recipe, version, latestNo: data.version.version_no }}
-    />
+    <PageShell>
+      <RecipeEditor
+        mode="edit"
+        base={{
+          handle: data.owner.handle,
+          recipe: data.recipe,
+          version,
+          latestNo: data.version.version_no,
+        }}
+      />
+    </PageShell>
   );
 }

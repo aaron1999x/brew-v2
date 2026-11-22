@@ -1,31 +1,18 @@
 import type { Metadata } from 'next';
-import { Coffee } from 'lucide-react';
+import { BrewPicker } from '@/components/brews/BrewPicker';
 import { TopBar } from '@/components/shell/TopBar';
-import { ButtonLink } from '@/components/ui/ButtonLink/ButtonLink';
-import { EmptyState } from '@/components/ui/EmptyState/EmptyState';
 import styles from '../shell.module.css';
+import { PageShell } from '@/components/shell/PageShell';
 
 export const metadata: Metadata = { title: 'Brew' };
 
 export default function BrewPage() {
   return (
-    <>
+    <PageShell>
       <TopBar title="Brew" />
       <div className={styles.body}>
-        <EmptyState
-          icon={Coffee}
-          title="You need a recipe to brew."
-          text="Create one or pick one from Verified."
-          action={
-            <>
-              <ButtonLink href="/recipes/new">New recipe</ButtonLink>
-              <ButtonLink href="/verified" variant="secondary">
-                Verified
-              </ButtonLink>
-            </>
-          }
-        />
+        <BrewPicker />
       </div>
-    </>
+    </PageShell>
   );
 }
