@@ -112,7 +112,7 @@
   .sensory {
     grid-template-columns: minmax(0, 55fr) minmax(0, 45fr);
     column-gap: var(--space-8);
-    align-items: start;
+    align-items: center;
   }
 
   /* More room between the sliders, and longer tracks (the column is wider). */

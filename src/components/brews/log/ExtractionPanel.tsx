@@ -21,14 +21,15 @@ const STATUS_ICON: Record<TargetStatus, LucideIcon> = {
 export function TargetNote({
   status,
   range,
-}: Readonly<{ status: TargetStatus | null; range: string | null }>) {
+  stacked = false,
+}: Readonly<{ status: TargetStatus | null; range: string | null; stacked?: boolean }>) {
   if (status) {
     return (
       <p className={styles.note} data-status={status}>
         <Icon icon={STATUS_ICON[status]} size="sm" />
-        <span>
-          {TARGET_STATUS_LABEL[status]}
-          {range ? ` · ${range}` : ''}
+        <span className={styles.noteText}>
+          <span className={styles.nowrap}>{TARGET_STATUS_LABEL[status]}</span>
+          {range ? (stacked ? <span className={styles.nowrapBlock}>{range}</span> : <span className={styles.nowrap}>{` · ${range}`}</span>) : null}
         </span>
       </p>
     );
@@ -69,6 +70,7 @@ export function ExtractionPanel({
       <div className={styles.cell}>
         <dt className={styles.label}>Brew ratio</dt>
         <dd className={styles.value}>{formatRatio(model.ratio) ?? dash}</dd>
+        <dd className={styles.sub}>coffee:water</dd>
       </div>
       <div className={styles.cell}>
         <dt className={styles.label}>Overall ratio</dt>
@@ -79,7 +81,7 @@ export function ExtractionPanel({
         <dt className={styles.label}>Extraction</dt>
         <dd className={styles.value}>{model.ey == null ? dash : `${number(model.ey)}%`}</dd>
         <dd className={styles.sub}>
-          <TargetNote status={model.eyStatus} range={range} />
+          <TargetNote status={model.eyStatus} range={range} stacked />
         </dd>
       </div>
     </dl>

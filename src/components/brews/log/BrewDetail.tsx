@@ -124,6 +124,7 @@ function Detail({ data }: Readonly<{ data: BrewDetailData }>) {
           <Icon icon={ChevronLeft} size="md" />
         </Link>
         <div className={styles.headerText}>
+          <div className={styles.nameRow}>
           <h1 id="brew-title" className={styles.title}>
             {alive && handle && recipe ? (
               <Link href={versionPath(handle, recipe.slug, brew.version_no_snapshot)} className={styles.recipeLink}>
@@ -133,10 +134,13 @@ function Detail({ data }: Readonly<{ data: BrewDetailData }>) {
               brew.recipe_name_snapshot
             )}
           </h1>
-          <div className={styles.badges}>
             <Badge>{`v${brew.version_no_snapshot}`}</Badge>
-            {note ? <Badge tone="changed" icon={Pencil}>{note}</Badge> : null}
           </div>
+          {note ? (
+            <div className={styles.badges}>
+              <Badge tone="changed" icon={Pencil}>{note}</Badge>
+            </div>
+          ) : null}
           <p className={styles.muted}>Brewed {dateTime(brew.brewed_at)}</p>
         </div>
         <p className={styles.overall} aria-label={`Overall score ${overall} out of 10`}>
@@ -193,6 +197,9 @@ function Detail({ data }: Readonly<{ data: BrewDetailData }>) {
           <dl className={styles.facts}>
             <Fact label="Recipe" value={`${brew.recipe_name_snapshot} · v${brew.version_no_snapshot}`} />
             <Fact label="Brewed at" value={dateTime(brew.brewed_at)} />
+            <Fact label="Dose" value={weight(brew.dose_g_snapshot)} />
+            {version ? <Fact label="Brew water" value={weight(version.brew_water_g)} /> : null}
+            {version?.grind_setting ? <Fact label="Grind" value={version.grind_setting} /> : null}
             {tasted ? <Fact label="Tasted at" value={tasted.replace(/^Tasted /, '')} /> : null}
             {note ? <Fact label="Changes" value={note.replace(CHANGE_NOTE_PREFIX, '')} /> : null}
           </dl>
@@ -283,6 +290,7 @@ function Detail({ data }: Readonly<{ data: BrewDetailData }>) {
               Pour curve
             </h2>
             <LazyPourCurve
+              bare
               series={[{ id: version.id, label: `v${version.version_no}`, steps: version.steps }]}
               drawdown={
                 version.drawdown_min_s != null || version.drawdown_max_s != null

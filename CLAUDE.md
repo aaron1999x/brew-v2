@@ -18,6 +18,7 @@ Read only the docs a task needs, and only the sections you need. Don't paste who
 | `docs/product-context.md` | Original product vision and product insights from real use |
 | `docs/release-and-versioning.md` | Commits, releases, environments, workflow files |
 | `docs/claude-code-workflow.md` | Session routine and subagents (its §2 docs layout is outdated; ignore it) |
+| `docs/ui-rules.md` | The visual checklist the `ui-reviewer` subagent checks screenshots against; add a rule when a review finds something new |
 | `docs/designer-brief.md` | Component list, key screens, accessibility rules for the UI |
 | `docs/designer-brief-token-samples.md` | Token naming and placeholder values |
 | `docs/decision-log.md` | Decisions with reasons; newest wins when docs disagree |
@@ -58,6 +59,7 @@ Next.js App Router · TypeScript strict · CSS Modules + CSS custom properties �
 12. Use the `test-runner` subagent for checks and the `reviewer` subagent at the end of a milestone.
 13. End every milestone by updating `docs/progress.md`. Don't rename, move or reformat the planning docs; when a doc is wrong, note it in `docs/progress.md` instead.
 14. For screens the prototype also has, the prototype (`aaron1999x/Brew-Recipe`) is the reference for layout, wording and interaction; differences must be listed.
+15. Visual review: run the `ui-reviewer` subagent **once per stage, before reporting the stage done** (not after every small fix), on only the screens that stage changed (add new screens to `tests/e2e/helpers/ui-shots.ts`). Fix what it finds and list the fixes in the stage summary. Dark theme gets one review at the end of each milestone.
 
 ## Layout conventions
 

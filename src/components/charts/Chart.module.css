@@ -165,3 +165,8 @@
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/* Inside a card the plot needs less height than a framed chart. */
+.bare .plotLarge {
+  height: calc(var(--space-16) * 5);
+}

@@ -18,6 +18,7 @@
 }
 
 .label {
+  white-space: nowrap;
   color: var(--color-text-secondary);
   font-size: var(--type-body-small-size);
   line-height: var(--type-body-small-line-height);
@@ -56,4 +57,18 @@
 
 .noteMuted {
   color: var(--color-text-secondary);
+}
+
+.noteText {
+  min-width: 0;
+}
+
+/* A value or a range is never broken in the middle; the label and the range may sit on two lines. */
+.nowrap {
+  white-space: nowrap;
+}
+
+.nowrapBlock {
+  display: block;
+  white-space: nowrap;
 }

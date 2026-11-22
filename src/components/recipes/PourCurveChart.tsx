@@ -49,6 +49,8 @@ type Props = Readonly<{
   /** A logged drawdown (a brew's), drawn as a vertical line: when the water finished draining. */
   marker?: { atS: number; label: string } | null;
   title?: string;
+  /** No frame and no visible title: the chart sits inside a card of the page's own. */
+  bare?: boolean;
 }>;
 
 /** Each kind of step has its own shape, so the markers read without colour. */
@@ -69,7 +71,7 @@ const SNAP_SHARE = 0.015;
  * dashed line without a fill. The picture is one image to assistive technology, with the same data
  * as a table behind "Show data table". Loaded on demand (see LazyPourCurve).
  */
-export function PourCurveChart({ series, drawdown, marker, title = 'Pour curve' }: Props) {
+export function PourCurveChart({ series, drawdown, marker, title = 'Pour curve', bare }: Props) {
   const { units, duration } = useUnits();
   const reduced = useReducedMotion();
   const gradientId = `pour-fill-${useId().replaceAll(':', '')}`;
@@ -168,6 +170,7 @@ export function PourCurveChart({ series, drawdown, marker, title = 'Pour curve' 
           : ''
       }${marker ? ` ${marker.label} at ${duration(marker.atS)}.` : ''} The data is in the table below.`}
       size="lg"
+      bare={bare}
       table={{
         caption: `Steps: time and cumulative water in ${unitLabel === 'g' ? 'grams' : 'ounces'}`,
         columns: [...(multiple ? ['Version'] : []), 'Step', 'Time', 'Water'],

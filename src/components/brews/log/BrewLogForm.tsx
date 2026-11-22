@@ -179,13 +179,15 @@ export function BrewLogFormView({
                 <p className={styles.recipeName}>{header.recipeName}</p>
                 <Badge>{header.versionLabel}</Badge>
               </div>
-              <div className={styles.chips}>
-                {header.changes.map((c) => (
-                  <Badge key={c} tone="changed" icon={Pencil}>
-                    {`Changed: ${c}`}
-                  </Badge>
-                ))}
-              </div>
+              {header.changes.length > 0 ? (
+                <div className={styles.chips}>
+                  {header.changes.map((c) => (
+                    <Badge key={c} tone="changed" icon={Pencil}>
+                      {`Changed: ${c}`}
+                    </Badge>
+                  ))}
+                </div>
+              ) : null}
               {header.note ? <p className={styles.note}>{header.note}</p> : null}
               {setupExtra}
               <TextField
@@ -225,7 +227,6 @@ export function BrewLogFormView({
                 <WeightField
                   id={brewFieldId('beverageG')}
                   label="Beverage weight"
-                  description="Before bypass"
                   min={0}
                   value={form.beverageG}
                   onChange={(v) => set('beverageG', v)}
@@ -236,7 +237,7 @@ export function BrewLogFormView({
                   <TypedNumberField
                     id={brewFieldId('tdsPct')}
                     label="TDS (%)"
-                    description="e.g. 1.38"
+                    placeholder="e.g. 1.38"
                     value={form.tdsPct}
                     typed={typed.tdsPct}
                     error={errorOf('tdsPct')}

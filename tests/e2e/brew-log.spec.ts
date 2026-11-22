@@ -129,15 +129,18 @@ test('EY and the target flags: in range, below and above', async ({ page, users 
   // EY is a tile (three tiles in one row); TDS shows its status directly under its input.
   const results = page.getByRole('region', { name: 'Results', exact: true });
   await expect(extraction).toContainText('19.6%');
-  await expect(extraction).toContainText('In range · 19–21%');
+  await expect(extraction).toContainText('In range');
+  await expect(extraction).toContainText('19–21%');
   await expect(results).toContainText('In range · 1.3–1.5');
 
   await page.getByLabel('TDS (%)').fill('1.2'); // 16.8%: below
-  await expect(extraction).toContainText('Below · 19–21%');
+  await expect(extraction).toContainText('Below');
+  await expect(extraction).toContainText('19–21%');
   await expect(results).toContainText('Below · 1.3–1.5');
 
   await page.getByLabel('TDS (%)').fill('1.7'); // 23.8%: above
-  await expect(extraction).toContainText('Above · 19–21%');
+  await expect(extraction).toContainText('Above');
+  await expect(extraction).toContainText('19–21%');
   await expect(results).toContainText('Above · 1.3–1.5');
 
   // Drawdown (2:45–3:15 target): its status is under the input, too.

@@ -123,7 +123,7 @@
   .sensory {
     grid-template-columns: minmax(0, 55fr) minmax(0, 45fr);
     column-gap: var(--space-8);
-    align-items: start;
+    align-items: center;
   }
 
   .scores {
@@ -208,4 +208,12 @@
   grid-template-columns: minmax(0, 1fr);
   gap: var(--space-3);
   min-width: 0;
+}
+
+/* The recipe name and its version chip on one line. */
+.nameRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
 }
